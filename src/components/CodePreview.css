@@ -1,0 +1,88 @@
+.code-preview-container {
+  width: 100%;
+  height: 100%;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.code-preview-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background-color: white;
+}
+
+.code-preview-error {
+  padding: 16px;
+  background-color: #fff0f0;
+  color: #d32f2f;
+  border-radius: 4px;
+  overflow: auto;
+  height: 100%;
+}
+
+.code-preview-error pre {
+  margin: 0;
+  white-space: pre-wrap;
+  font-family: monospace;
+}
+
+.code-preview-example {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+.editors {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.editor {
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 10px;
+  background-color: #f5f5f5;
+}
+
+.editor h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.editor textarea {
+  resize: vertical;
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.preview {
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 16px;
+  background-color: #f9f9f9;
+  height: 500px;
+}
+
+.preview h3 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  color: #333;
+}
+
+@media (min-width: 768px) {
+  .editors {
+    flex-direction: row;
+  }
+  
+  .editor {
+    flex: 1;
+  }
+}
