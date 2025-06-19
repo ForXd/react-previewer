@@ -13,6 +13,7 @@ export interface ErrorInfo {
   fileName?: string;
   lineNumber?: number;
   columnNumber?: number;
+  codeFrame?: string;
 }
 
 export interface SourceInfo {

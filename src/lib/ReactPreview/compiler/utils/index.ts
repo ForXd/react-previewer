@@ -1,36 +1,30 @@
-import type { JSXAttribute } from '@swc/types';
 
 /**
  * 创建 JSX 属性
  */
-export function createJSXAttribute(name: string, value: string): JSXAttribute {
+export function createJSXAttribute(name: string, value: string): any {
   return {
     type: 'JSXAttribute',
-    span: { start: 0, end: 0, ctxt: 0 },
     name: {
-      type: 'Identifier',
-      span: { start: 0, end: 0, ctxt: 0 },
-      value: name,
-      optional: false,
+      type: 'JSXIdentifier',
+      name: name
     },
     value: {
       type: 'StringLiteral',
-      span: { start: 0, end: 0, ctxt: 0 },
-      value,
-      raw: `"${value}"`,
-    },
+      value: value
+    }
   };
 }
 
 /**
  * 检查是否已存在指定属性
  */
-export function hasAttribute(attributes: (JSXAttribute | any)[], attrName: string): boolean {
+export function hasAttribute(attributes: any[], attrName: string): boolean {
   return attributes.some(
     (attr) =>
       attr.type === 'JSXAttribute' && 
-      attr.name?.type === 'Identifier' && 
-      attr.name?.value === attrName,
+      attr.name?.type === 'JSXIdentifier' && 
+      attr.name?.name === attrName,
   );
 }
 

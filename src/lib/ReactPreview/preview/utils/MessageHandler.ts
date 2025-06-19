@@ -4,13 +4,13 @@ import { ErrorHandler } from './ErrorHandler';
 
 export class MessageHandler {
   private errorHandler: ErrorHandler;
-  private onError?: (error: Error) => void;
+  private onError?: (error: ErrorInfo) => void;
   private onElementClick?: (data: any) => void;
 
   constructor(
     errorHandler: ErrorHandler,
     callbacks: {
-      onError?: (error: Error) => void;
+      onError?: (error: ErrorInfo) => void;
       onElementClick?: (data: any) => void;
     }
   ) {
@@ -52,7 +52,7 @@ export class MessageHandler {
   private handleRuntimeError(errorData: any): void {
     try {
       const errorInfo = this.errorHandler.processRuntimeError(errorData);
-      this.onError?.(new Error(errorInfo.message));
+      this.onError?.(errorInfo);
     } catch (error) {
       console.error('Error processing runtime error:', error);
     }

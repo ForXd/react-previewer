@@ -54,21 +54,16 @@ export const ReactPreviewer: React.FC<ReactPreviewerProps> = ({
       console.log('Processing file content for:', data.file);
       const lines = fileContent.split('\n');
       let textStr = '';
-
-      console.log('lines', lines[data.startLine - 1]);
-      
-      for (let i = data.startLine; i < data.endLine; i++) {
-        if (i === data.startLine) {
-        //   textStr += lines[i].slice(data.startColumn);
-          textStr += lines[i];
-
-        } else if (i === data.endLine - 1) {
-        //   textStr += lines[i].slice(0, data.endColumn);
-          textStr += lines[i];
-
-        } else {
-          textStr += lines[i];
+      if (data.startLine === data.endLine) {
+        // 单行
+        textStr = lines[data.startLine - 1].slice(data.startColumn, data.endColumn);
+      } else {
+        // 多行
+        textStr += lines[data.startLine - 1].slice(data.startColumn) + '\n';
+        for (let i = data.startLine; i < data.endLine - 1; i++) {
+          textStr += lines[i] + '\n';
         }
+        textStr += lines[data.endLine - 1].slice(0, data.endColumn);
       }
 
       console.log("text Str is: ", textStr)
@@ -93,13 +88,10 @@ export const ReactPreviewer: React.FC<ReactPreviewerProps> = ({
   // 初始化消息处理器
   useEffect(() => {
     messageHandler.current = new MessageHandler(errorHandler.current, {
-      onError: (err) => {
-        try {
-          const errorInfo = errorHandler.current.processRuntimeError(err);
-          setError(errorInfo);
-          onError?.(err);
-        } catch (error) {
-          console.error('Error in onError callback:', error);
+      onError: (errorInfo) => {
+        setError(errorInfo);
+        if (onError) {
+          onError(new Error(errorInfo.message));
         }
       },
       onElementClick: handleElementClick,
@@ -149,7 +141,7 @@ export const ReactPreviewer: React.FC<ReactPreviewerProps> = ({
 
       await fileProcessor.current.initialize();
       const fileUrls = await fileProcessor.current.processFiles(files, depsInfo);
-      
+      // fileUrls: Map<fileName, blobUrl>
       errorHandler.current.setBlobToFileMap(fileUrls);
       setTransformedFiles(fileUrls);
       renderPreview(fileUrls, entryFile);
@@ -211,7 +203,7 @@ export const ReactPreviewer: React.FC<ReactPreviewerProps> = ({
           onToggleInspect={toggleInspect}
         />
 
-        {error && <ErrorDisplay error={error} />}
+        {error && <ErrorDisplay error={error} files={files} />}
 
         <div className="flex-1 relative w-full">
           {isLoading && <LoadingOverlay />}

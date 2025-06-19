@@ -37,13 +37,12 @@ export class CodeTransformer {
     }
 
     console.log('Building dependency graph...');
-    
     // 构建依赖图并获取处理顺序
     const dependencyGraph = await this.dependencyGraphBuilder.build(files);
     const processingOrder = dependencyGraph.getProcessingOrder();
     console.log('Processing order:', processingOrder);
 
-    // 按依赖顺序处理文件
+    // 按依赖顺序处理文件，返回 Map<fileName, blobUrl>
     return await this.processFilesInOrder(files, processingOrder, depsInfo);
   }
 
@@ -52,12 +51,10 @@ export class CodeTransformer {
     processingOrder: string[],
     depsInfo: Record<string, string>
   ): Promise<Map<string, string>> {
-    const transformedFiles = new Map<string, string>();
     const fileUrls = new Map<string, string>();
 
     for (const fileName of processingOrder) {
       const fileContent = files[fileName];
-      
       if (!fileContent) {
         console.warn(`File not found: ${fileName}`);
         continue;
@@ -72,9 +69,7 @@ export class CodeTransformer {
       };
 
       let processedContent: string;
-
       try {
-        // 使用文件处理器管理器处理文件
         processedContent = await this.fileProcessorManager.processFile(
           fileContent, 
           fileName, 
@@ -82,18 +77,16 @@ export class CodeTransformer {
         );
       } catch (error) {
         console.error(`Failed to process ${fileName}:`, error);
-        processedContent = fileContent; // 使用原始内容作为后备
+        processedContent = fileContent;
       }
 
-      // 保存转换后的内容并生成 URL
-      transformedFiles.set(fileName, processedContent);
+      // 生成 blob url 并保存
       const url = this.createBlobURL(processedContent);
       fileUrls.set(fileName, url);
-
       console.log(`Processed: ${fileName} -> ${url}`);
     }
 
-    return transformedFiles;
+    return fileUrls;
   }
 
   private createBlobURL(content: string): string {

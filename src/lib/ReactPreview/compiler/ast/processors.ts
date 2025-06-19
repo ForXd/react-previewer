@@ -1,46 +1,55 @@
-import type { JSXOpeningElement, ImportDeclaration } from '@swc/types';
 import type { ASTProcessor, TransformOptions } from '../types';
-import { createJSXAttribute, hasAttribute, calculateColumnNumber, calculateLineNumber, resolveRelativePath, getResolvedFilename } from '../utils';
+import { transform } from '@babel/standalone';
+import { createJSXAttribute, hasAttribute, resolveRelativePath, getResolvedFilename } from '../utils';
 
 export class JSXDebugProcessor implements ASTProcessor {
   process(node: any, source: string, options: TransformOptions): void {
     if (node.type === 'JSXOpeningElement') {
-      this.processJSXOpeningElement(node as JSXOpeningElement, source, options);
+      this.processJSXOpeningElement(node, source, options);
     }
   }
 
-  private processJSXOpeningElement(node: JSXOpeningElement, source: string, options: TransformOptions): void {
-    // const { filename, files } = options;
+  private processJSXOpeningElement(node: any, source: string, options: TransformOptions): void {
+    const { filename, files } = options;
 
-    // if (!node.span) return;
+    if (!node.loc) return;
 
-    // const line = calculateLineNumber(source, node.span.start);
+    const line = node.loc.start.line;
+    const column = node.loc.start.column;
 
-    // if (!node.attributes) {
-    //   node.attributes = [];
-    // }
+    if (!node.attributes) {
+      node.attributes = [];
+    }
 
-    // if (!hasAttribute(node.attributes, 'data-line')) {
-    //   const lineAttr = createJSXAttribute('data-line', line.toString());
-    //   node.attributes.push(lineAttr);
-    // }
+    // 添加行号
+    if (!hasAttribute(node.attributes, 'data-pipo-line')) {
+      const lineAttr = createJSXAttribute('data-pipo-line', line.toString());
+      node.attributes.push(lineAttr);
+    }
 
-    // if (!hasAttribute(node.attributes, 'data-file') && filename) {
-    //   const resolvedFilename = getResolvedFilename(filename, files);
-    //   const fileAttr = createJSXAttribute('data-file', resolvedFilename);
-    //   node.attributes.push(fileAttr);
-    // }
+    // 添加列号
+    if (!hasAttribute(node.attributes, 'data-pipo-column')) {
+      const columnAttr = createJSXAttribute('data-pipo-column', column.toString());
+      node.attributes.push(columnAttr);
+    }
+
+    // 添加文件位置
+    if (!hasAttribute(node.attributes, 'data-pipo-file') && filename) {
+      const resolvedFilename = getResolvedFilename(filename, files);
+      const fileAttr = createJSXAttribute('data-pipo-file', resolvedFilename);
+      node.attributes.push(fileAttr);
+    }
   }
 }
 
 export class ImportProcessor implements ASTProcessor {
   process(node: any, source: string, options: TransformOptions): void {
     if (node.type === 'ImportDeclaration') {
-      this.processImportDeclaration(node as ImportDeclaration, source, options);
+      this.processImportDeclaration(node, source, options);
     }
   }
 
-  private processImportDeclaration(node: ImportDeclaration, source: string, options: TransformOptions): void {
+  private processImportDeclaration(node: any, source: string, options: TransformOptions): void {
     const { filename, files, fileUrls, depsInfo } = options;
     const moduleName = node.source.value;
 
@@ -55,7 +64,7 @@ export class ImportProcessor implements ASTProcessor {
 
       const url = fileUrls?.get(finalPath);
       if (url) {
-        node.source.raw = `'${url}'`;
+        node.source.value = url;
         console.log('Resolved local import:', finalPath, '-> URL:', url);
       } else {
         console.warn('URL not found for local file:', finalPath);
@@ -63,15 +72,24 @@ export class ImportProcessor implements ASTProcessor {
     } else {
       // 处理三方依赖导入
       const esmUrl = depsInfo?.[moduleName] || moduleName;
-      node.source.raw = `'${esmUrl}'`;
+      node.source.value = esmUrl;
       console.log('Resolved external import in ast:', moduleName, '-> ESM URL:', esmUrl, depsInfo);
     }
   }
 }
 
+// 工具函数：自动注入 import React
+function ensureReactImport(code: string): string {
+  // 检查是否已 import React
+  if (/import\s+React(\s|,|\{|$)/.test(code) || /from\s+['"]react['"]/.test(code)) {
+    return code;
+  }
+  // 强制注入
+  return `import React from 'react';\n${code}`;
+}
+
 export class ASTProcessorManager {
   private processors: ASTProcessor[] = [];
-  private nodeParentMap = new WeakMap<any, any>();
 
   addProcessor(processor: ASTProcessor): void {
     this.processors.push(processor);
@@ -83,98 +101,51 @@ export class ASTProcessorManager {
     });
   }
 
-  traverseAndProcess(node: any, source: string, options: TransformOptions, parent?: any): void {
-    if (!node || typeof node !== 'object') return;
+  traverseAndProcess(code: string, source: string, options: TransformOptions): string {
+    // 自动注入 import React
+    const codeWithReact = ensureReactImport(code);
 
-    // 建立父子关系映射
-    if (parent) {
-      this.nodeParentMap.set(node, parent);
-    }
+    console.log("codeWithReact: =======", codeWithReact);
+    // 使用Babel解析代码并遍历AST
+    const result = transform(codeWithReact, {
+      ast: true,
+      presets: ['react', 'typescript'],
+      filename: options.filename, // 添加filename参数
+      plugins: [
+        // 自定义插件，用于处理AST
+        () => ({
+          visitor: {
+            JSXOpeningElement: (path: any) => {
+              const node = path.node;
+              this.processNode(node, source, options);
+            },
+            ImportDeclaration: (path: any) => {
+              const node = path.node;
+              this.processNode(node, source, options);
+            },
+            JSXElement: (path: any) => {
+              const node = path.node;
+              const openingElement = node.openingElement;
+              const closingElement = node.closingElement;
+              
+              if (openingElement && closingElement && openingElement.loc && closingElement.loc) {
+                // 添加结束行号和列号
+                if (!hasAttribute(openingElement.attributes, 'data-pipo-end-line')) {
+                  const endLineAttr = createJSXAttribute('data-pipo-end-line', closingElement.loc.end.line.toString());
+                  openingElement.attributes.push(endLineAttr);
+                }
 
-    // 特殊处理JSX元素，确保能正确获取结束位置
-    if (node.type === 'JSXElement') {
-      this.processJSXElement(node, source, options);
-    } else {
-      this.processNode(node, source, options);
-    }
+                if (!hasAttribute(openingElement.attributes, 'data-pipo-end-column')) {
+                  const endColumnAttr = createJSXAttribute('data-pipo-end-column', closingElement.loc.end.column.toString());
+                  openingElement.attributes.push(endColumnAttr);
+                }
+              }
+            }
+          }
+        })
+      ]
+    });
 
-    // 递归遍历子节点
-    for (const key in node) {
-      if (node.hasOwnProperty(key)) {
-        const value = node[key];
-        if (Array.isArray(value)) {
-          value.forEach((item) => this.traverseAndProcess(item, source, options, node));
-        } else if (typeof value === 'object' && value !== null) {
-          this.traverseAndProcess(value, source, options, node);
-        }
-      }
-    }
-  }
-
-  private processJSXElement(jsxElement: any, source: string, options: TransformOptions): void {
-    // 处理JSX元素的开始标签
-    if (jsxElement.opening) {
-      this.processJSXOpeningElementWithClosing(
-        jsxElement.opening,
-        jsxElement.closing,
-        source,
-        options
-      );
-    }
-  }
-
-  private processJSXOpeningElementWithClosing(
-    openingElement: any,
-    closingElement: any,
-    source: string,
-    options: TransformOptions
-  ): void {
-    const { filename, files } = options;
-
-    if (!openingElement.span) return;
-
-    // 计算开始行号和列号
-    const startLine = calculateLineNumber(source, openingElement.span.start);
-    const startColumn = calculateColumnNumber(source, openingElement.span.start);
-
-    // 确保attributes数组存在
-    if (!openingElement.attributes) {
-      openingElement.attributes = [];
-    }
-
-    // 添加开始行号
-    if (!hasAttribute(openingElement.attributes, 'data-pipo-line')) {
-      const lineAttr = createJSXAttribute('data-pipo-line', startLine.toString());
-      openingElement.attributes.push(lineAttr);
-    }
-
-    // 添加开始列号
-    if (!hasAttribute(openingElement.attributes, 'data-pipo-column')) {
-      const columnAttr = createJSXAttribute('data-pipo-column', startColumn.toString());
-      openingElement.attributes.push(columnAttr);
-    }
-
-    // 添加结束行号（如果有闭合标签）
-    if (closingElement?.span) {
-      const endLine = calculateLineNumber(source, closingElement.span.end);
-      const endColumn = calculateColumnNumber(source, closingElement.span.end);
-
-      if (!hasAttribute(openingElement.attributes, 'data-pipo-end-line')) {
-        const endLineAttr = createJSXAttribute('data-pipo-end-line', endLine.toString());
-        openingElement.attributes.push(endLineAttr);
-      }
-
-      if (!hasAttribute(openingElement.attributes, 'data-pipo-end-column')) {
-        const endColumnAttr = createJSXAttribute('data-pipo-end-column', endColumn.toString());
-        openingElement.attributes.push(endColumnAttr);
-      }
-    }
-
-    // 添加文件位置
-    if (!hasAttribute(openingElement.attributes, 'data-pipo-file') && filename) {
-      const resolvedFilename = getResolvedFilename(filename, files);
-      const fileAttr = createJSXAttribute('data-pipo-file', resolvedFilename);
-      openingElement.attributes.push(fileAttr);
-    }
+    return result.code ?? '';
   }
 }

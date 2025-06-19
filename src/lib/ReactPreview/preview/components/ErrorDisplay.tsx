@@ -1,13 +1,30 @@
 // components/ErrorDisplay.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { ErrorInfo } from '../types';
 
 interface ErrorDisplayProps {
   error: ErrorInfo;
+  files?: Record<string, string>;
 }
 
-export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ error }) => {
+export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ error, files }) => {
   const [isStackExpanded, setIsStackExpanded] = useState(false);
+  const [codeLines, setCodeLines] = useState<string[]>([]);
+  const [errorLine, setErrorLine] = useState<number | null>(null);
+
+  useEffect(() => {
+    console.log("error: =======", error);
+    if (error.type === 'compile' && error.fileName && error.lineNumber && files && files[error.fileName]) {
+      const lines = files[error.fileName].split('\n');
+      const start = Math.max(0, error.lineNumber - 4);
+      const end = Math.min(lines.length, error.lineNumber + 3);
+      setCodeLines(lines.slice(start, end));
+      setErrorLine(error.lineNumber - start - 1);
+    } else {
+      setCodeLines([]);
+      setErrorLine(null);
+    }
+  }, [error, files]);
 
   return (
     <div className="mx-4 my-3 bg-red-50 border border-red-200 rounded-lg overflow-hidden shadow-sm">
@@ -31,6 +48,30 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ error }) => {
             </pre>
           </div>
         </div>
+        
+        {/* 源码片段展示 */}
+        {error.type === 'compile' && error.codeFrame ? (
+          <div>
+            <div className="text-xs text-gray-500 mb-1">{error.fileName}{typeof error.lineNumber === 'number' ? ` (第${error.lineNumber}行)` : ''}</div>
+            <pre className="bg-[#23272e] text-xs text-gray-100 rounded-md p-3 overflow-auto border border-gray-700 font-mono leading-6 whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: error.codeFrame.replace(/\u001b\[[0-9;]*m/g, '') }} />
+          </div>
+        ) : error.type === 'compile' && error.fileName && typeof error.lineNumber === 'number' && codeLines.length > 0 && (
+          <div>
+            <div className="text-xs text-gray-500 mb-1">{error.fileName} (第{error.lineNumber}行)</div>
+            <div className="flex bg-[#23272e] rounded-md overflow-auto border border-gray-700">
+              <div className="py-2 px-2 text-right select-none bg-[#20232a] text-gray-500 border-r border-gray-700">
+                {codeLines.map((_, i) => (
+                  <div key={i} className={`leading-6 h-6 ${i === errorLine ? 'text-red-400 font-bold' : ''}`}>{(error.lineNumber ?? 0) - (errorLine ?? 0) + i}</div>
+                ))}
+              </div>
+              <pre className="py-2 px-3 m-0 whitespace-pre leading-6 text-xs bg-transparent font-mono min-w-[60px]">
+                {codeLines.map((line, i) => (
+                  <div key={i} className={i === errorLine ? 'bg-red-900/40 text-red-200 rounded' : ''}>{line}</div>
+                ))}
+              </pre>
+            </div>
+          </div>
+        )}
         
         {error.fileName && (
           <div className="flex items-center text-sm">

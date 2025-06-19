@@ -41,51 +41,13 @@ export class TypeScriptProcessor implements FileProcessor {
 
   async process(content: string, fileName: string, options?: TransformOptions): Promise<string> {
     try {
-      const initSwc = await import('@swc/wasm-web');
-
-      // 解析为 AST
-      const ast = await initSwc.parseSync(content, {
-        syntax: 'typescript',
-        tsx: true,
-        decorators: true,
-        dynamicImport: true,
-      });
-
-      console.log('origin ast', ast)
-
-      // 如果提供了选项，则处理 AST（添加调试信息和处理导入）
-      if (options) {
-        this.astProcessorManager.traverseAndProcess(ast, content, options);
-      }
-
-      // 将修改后的 AST 打印回代码
-      const modifiedCode = await initSwc.print(ast, {
-        minify: false,
-      });
-
-      // 转换代码
-      const result = await initSwc.transform(modifiedCode.code, {
-        filename: fileName,
-        jsc: {
-          parser: {
-            syntax: fileName.endsWith('.ts') || fileName.endsWith('.tsx') ? 'typescript' : 'ecmascript',
-            tsx: fileName.endsWith('.tsx') || fileName.endsWith('.jsx'),
-            decorators: true,
-          },
-          transform: {
-            react: {
-              runtime: 'automatic',
-              importSource: 'https://esm.sh/react@18.2.0',
-            },
-          },
-          target: 'es2020',
-        },
-        module: {
-          type: 'es6',
-        },
-      });
-
-      return result.code;
+      // 统一走 traverseAndProcess，保证自动注入 import React
+      const transformedCode = this.astProcessorManager.traverseAndProcess(
+        content,
+        content,
+        { ...options, filename: fileName }
+      );
+      return transformedCode;
     } catch (error) {
       throw new Error(`Failed to transform ${fileName}: ${error}`);
     }

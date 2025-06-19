@@ -58,14 +58,14 @@ export const SourceTooltip: React.FC<SourceTooltipProps> = ({ sourceInfo, onClos
     <>
       {/* 遮罩层 */}
       <div
-        className="fixed inset-0 bg-black bg-opacity-10 z-[9999]"
+        className="fixed inset-0 bg-transparent z-[9999]"
         onClick={handleOverlayClick}
       />
       
       {/* 源码浮窗 */}
       <div
         ref={tooltipRef}
-        className="fixed bg-gray-800 text-gray-200 p-4 rounded-lg text-xs font-mono shadow-2xl z-[10000] max-w-[500px] max-h-[300px] border border-gray-600 overflow-auto"
+        className="fixed bg-gray-800 text-gray-200 p-4 rounded-lg text-xs font-mono shadow-2xl z-[10001] max-w-[500px] max-h-[300px] border border-gray-600 overflow-auto pointer-events-auto"
         style={{ left: `${left}px`, top: `${top}px` }}
         onClick={handleTooltipClick}
       >
@@ -87,9 +87,18 @@ export const SourceTooltip: React.FC<SourceTooltipProps> = ({ sourceInfo, onClos
         </div>
         
         {/* 代码内容 */}
-        <pre className="m-0 whitespace-pre-wrap leading-6 text-xs">
-          {sourceInfo.content}
-        </pre>
+        <div className="flex bg-[#23272e] rounded-md overflow-auto border border-gray-700">
+          {/* 行号列 */}
+          <div className="py-2 px-2 text-right select-none bg-[#20232a] text-gray-500 border-r border-gray-700">
+            {Array.from({ length: sourceInfo.endLine - sourceInfo.startLine + 1 }, (_, i) => (
+              <div key={i} className="leading-6 h-6">{sourceInfo.startLine + i}</div>
+            ))}
+          </div>
+          {/* 代码内容列 */}
+          <pre className="py-2 px-3 m-0 whitespace-pre leading-6 text-xs text-gray-100 bg-transparent font-mono min-w-[60px]">
+            {sourceInfo.content}
+          </pre>
+        </div>
       </div>
     </>
   );

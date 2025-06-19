@@ -84,7 +84,8 @@ export class HTMLGenerator {
 
   private getPreviewScript(entryUrl: string): string {
     return `
-      import React from 'react';
+      import * as React from 'react';
+      window.React = React;
       import { createRoot } from 'react-dom/client';
       import App from '${entryUrl}';
       
@@ -217,42 +218,34 @@ export class HTMLGenerator {
         }
       });
 
+      // 捕获阶段，无条件拦截所有点击，并主动处理源码元素点击
       document.addEventListener('click', (event) => {
-        console.log('Click detected, isInspecting:', isInspecting);
-        if (!isInspecting) return;
-        
-        const target = event.target.closest('[data-pipo-line][data-pipo-column][data-pipo-end-line][data-pipo-end-column][data-pipo-file]');
-        console.log('Target element found:', !!target);
-        if (!target) return;
-        
-        event.preventDefault();
-        event.stopPropagation();
-
-        // 安全地提取属性值
-        const startLine = target.getAttribute('data-pipo-line');
-        const endLine = target.getAttribute('data-pipo-end-line');
-        const startColumn = target.getAttribute('data-pipo-column');
-        const endColumn = target.getAttribute('data-pipo-end-column');
-        const file = target.getAttribute('data-pipo-file');
-        
-        console.log('Extracted data:', { file, startLine, endLine, startColumn, endColumn });
-        
-        if (file && startLine && endLine && startColumn && endColumn) {
-          // 创建纯数据对象，避免 DOM 引用
-          const clickData = {
-            file: String(file),
-            startLine: parseInt(startLine, 10),
-            endLine: parseInt(endLine, 10),
-            startColumn: parseInt(startColumn, 10),
-            endColumn: parseInt(endColumn, 10),
-            x: Number(event.clientX),
-            y: Number(event.clientY)
-          };
-          
-          console.log('Sending element-click message:', clickData);
-          sendMessage('element-click', clickData);
+        if (isInspecting) {
+          const target = event.target.closest('[data-pipo-line][data-pipo-column][data-pipo-end-line][data-pipo-end-column][data-pipo-file]');
+          if (target) {
+            // 主动处理 element-click 逻辑
+            const startLine = target.getAttribute('data-pipo-line');
+            const endLine = target.getAttribute('data-pipo-end-line');
+            const startColumn = target.getAttribute('data-pipo-column');
+            const endColumn = target.getAttribute('data-pipo-end-column');
+            const file = target.getAttribute('data-pipo-file');
+            if (file && startLine && endLine && startColumn && endColumn) {
+              const clickData = {
+                file: String(file),
+                startLine: parseInt(startLine, 10),
+                endLine: parseInt(endLine, 10),
+                startColumn: parseInt(startColumn, 10),
+                endColumn: parseInt(endColumn, 10),
+                x: Number(event.clientX),
+                y: Number(event.clientY)
+              };
+              sendMessage('element-click', clickData);
+            }
+          }
+          event.preventDefault();
+          event.stopPropagation();
         }
-      });
+      }, true);
 
       try {
         const root = createRoot(document.getElementById('root'));
