@@ -22,12 +22,7 @@ export class CodeTransformer {
 
   async initialize(): Promise<void> {
     if (this.initialized) return;
-
-    const wasmUrl = new URL('@swc/wasm-web/wasm_bg.wasm', import.meta.url);
-    const initSwc = (await import('@swc/wasm-web')).default;
-    
-    console.log('Initializing SWC...');
-    await initSwc(wasmUrl);
+    // 直接标记为已初始化，不再加载 swc/wasm
     this.initialized = true;
   }
 

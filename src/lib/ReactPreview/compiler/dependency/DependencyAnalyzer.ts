@@ -1,16 +1,13 @@
 import type { DependencyAnalyzer } from '../types';
 import { resolveRelativePath, getResolvedFilename } from '../utils';
+// import {parser} from '@babel/standalone';
 
 export class TypeScriptDependencyAnalyzer implements DependencyAnalyzer {
   async analyze(content: string, fileName: string, files: Record<string, string>): Promise<string[]> {
     try {
-      const initSwc = await import('@swc/wasm-web');
-      
-      const ast = await initSwc.parse(content, {
-        syntax: 'typescript',
-        tsx: true,
-        decorators: true,
-        dynamicImport: true,
+      const ast = (await import('@babel/parser')).parse(content, {
+        sourceType: 'module',
+        plugins: ['jsx', 'typescript'],
       });
 
       const dependencies: string[] = [];
