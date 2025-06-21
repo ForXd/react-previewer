@@ -4,10 +4,11 @@ import type { SourceInfo } from '../types';
 
 interface SourceTooltipProps {
   sourceInfo: SourceInfo;
+  containerElement: HTMLElement;
   onClose: () => void;
 }
 
-export const SourceTooltip: React.FC<SourceTooltipProps> = ({ sourceInfo, onClose }) => {
+export const SourceTooltip: React.FC<SourceTooltipProps> = ({ sourceInfo, containerElement, onClose }) => {
   const tooltipRef = useRef<HTMLDivElement>(null);
 
   const calculatePosition = () => {
@@ -15,21 +16,32 @@ export const SourceTooltip: React.FC<SourceTooltipProps> = ({ sourceInfo, onClos
     const tooltipHeight = 300;
     const padding = 20;
     
-    let left = sourceInfo.position.x + 10;
-    let top = sourceInfo.position.y + 10;
+    // 获取容器的位置和尺寸
+    const containerRect = containerElement.getBoundingClientRect();
     
-    if (left + tooltipWidth > window.innerWidth - padding) {
-      left = sourceInfo.position.x - tooltipWidth - 10;
+    // 计算相对于容器的位置
+    let left = sourceInfo.position.x - containerRect.left + 10;
+    let top = sourceInfo.position.y - containerRect.top + 10;
+    
+    // 检查是否超出容器右边界
+    if (left + tooltipWidth > containerRect.width - padding) {
+      left = sourceInfo.position.x - containerRect.left - tooltipWidth - 10;
     }
     
-    if (top + tooltipHeight > window.innerHeight - padding) {
-      top = sourceInfo.position.y - tooltipHeight - 10;
+    // 检查是否超出容器下边界
+    if (top + tooltipHeight > containerRect.height - padding) {
+      top = sourceInfo.position.y - containerRect.top - tooltipHeight - 10;
     }
     
+    // 确保不超出容器左边界和上边界
     left = Math.max(padding, left);
     top = Math.max(padding, top);
     
-    return { left, top };
+    // 转换为相对于视口的位置
+    return { 
+      left: left + containerRect.left, 
+      top: top + containerRect.top 
+    };
   };
 
   const { left, top } = calculatePosition();

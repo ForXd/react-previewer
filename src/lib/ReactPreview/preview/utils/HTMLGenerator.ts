@@ -14,6 +14,8 @@ export class HTMLGenerator {
           ${this.getBaseStyles()}
         </style>
         ${this.getComponentLibraryStyles()}
+        <!-- Tailwind CSS -->
+        <script src="https://cdn.tailwindcss.com"></script>
         <script type="importmap">
         {
           "imports": {
@@ -44,6 +46,7 @@ export class HTMLGenerator {
         width: 100%;
         height: 100vh;
       }
+      /* 检查模式相关样式，使用更高优先级避免被 Tailwind 覆盖 */
       .inspect-highlight {
         outline: 2px dashed #007acc !important;
         outline-offset: 2px !important;

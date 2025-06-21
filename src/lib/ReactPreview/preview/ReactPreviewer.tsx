@@ -24,6 +24,7 @@ export const ReactPreviewer: React.FC<ReactPreviewerProps> = ({
   const [sourceInfo, setSourceInfo] = useState<SourceInfo | null>(null);
   
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const fileProcessor = useRef(new FileProcessor());
   const errorHandler = useRef(new ErrorHandler());
   const htmlGenerator = useRef(new HTMLGenerator());
@@ -53,25 +54,53 @@ export const ReactPreviewer: React.FC<ReactPreviewerProps> = ({
 
       console.log('Processing file content for:', data.file);
       const lines = fileContent.split('\n');
+      
+      // 边界检查：确保行号在有效范围内
+      const maxLine = lines.length;
+      const startLine = Math.max(1, Math.min(data.startLine, maxLine));
+      const endLine = Math.max(1, Math.min(data.endLine, maxLine));
+      
+      console.log(`Line range: ${startLine}-${endLine}, max lines: ${maxLine}`);
+      
       let textStr = '';
-      if (data.startLine === data.endLine) {
+      if (startLine === endLine) {
         // 单行
-        textStr = lines[data.startLine - 1].slice(data.startColumn, data.endColumn);
+        const line = lines[startLine - 1];
+        if (line) {
+          const maxColumn = line.length;
+          const startColumn = Math.max(0, Math.min(data.startColumn, maxColumn));
+          const endColumn = Math.max(startColumn, Math.min(data.endColumn, maxColumn));
+          textStr = line.slice(startColumn, endColumn);
+        }
       } else {
         // 多行
-        textStr += lines[data.startLine - 1].slice(data.startColumn) + '\n';
-        for (let i = data.startLine; i < data.endLine - 1; i++) {
-          textStr += lines[i] + '\n';
+        for (let i = startLine - 1; i < endLine; i++) {
+          const line = lines[i];
+          if (line) {
+            if (i === startLine - 1) {
+              // 第一行：从 startColumn 开始
+              const maxColumn = line.length;
+              const startColumn = Math.max(0, Math.min(data.startColumn, maxColumn));
+              textStr += line.slice(startColumn) + '\n';
+            } else if (i === endLine - 1) {
+              // 最后一行：到 endColumn 结束
+              const maxColumn = line.length;
+              const endColumn = Math.max(0, Math.min(data.endColumn, maxColumn));
+              textStr += line.slice(0, endColumn);
+            } else {
+              // 中间行：完整行
+              textStr += line + '\n';
+            }
+          }
         }
-        textStr += lines[data.endLine - 1].slice(0, data.endColumn);
       }
 
-      console.log("text Str is: ", textStr)
+      console.log("text Str is: ", textStr);
 
       const newSourceInfo: SourceInfo = {
         file: data.file,
-        startLine: data.startLine,
-        endLine: data.endLine,
+        startLine: startLine,
+        endLine: endLine,
         startColumn: data.startColumn,
         endColumn: data.endColumn,
         content: textStr,
@@ -195,7 +224,7 @@ export const ReactPreviewer: React.FC<ReactPreviewerProps> = ({
 
   return (
     <ErrorBoundary>
-      <div className="flex flex-col h-full w-full">
+      <div ref={containerRef} className="flex flex-col h-full w-full">
         <PreviewerToolbar
           isLoading={isLoading}
           isInspecting={isInspecting}
@@ -217,10 +246,11 @@ export const ReactPreviewer: React.FC<ReactPreviewerProps> = ({
           />
         </div>
 
-        {sourceInfo && (
+        {sourceInfo && containerRef.current && (
           <ErrorBoundary>
             <SourceTooltip
               sourceInfo={sourceInfo}
+              containerElement={containerRef.current}
               onClose={() => {
                 console.log('Closing source tooltip');
                 setSourceInfo(null);

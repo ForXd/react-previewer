@@ -254,3 +254,136 @@ export const demo3 = {
   "App.tsx": "import React, { useEffect, useRef } from 'react';\nimport * as echarts from 'echarts';\n\nconst App: React.FC = () => {\n  const chartRef = useRef<HTMLDivElement>(null);\n\n  useEffect(() => {\n    if (chartRef.current) {\n      const chart = echarts.init(chartRef.current);\n      const option = {\n        title: {\n          text: 'ECharts 示例'\n        },\n        tooltip: {},\n        xAxis: {\n          data: ['衬衫', '羊毛衫', '雪纺衫', '裤子', '高跟鞋', '袜子']\n        },\n        yAxis: {},\n        series: [\n          {\n            name: '销量',\n            type: 'bar',\n            data: [5, 20, 36, 10, 10, 20]\n          }\n        ]\n      };\n      chart.setOption(option);\n    }\n  }, []);\n\n  return <div ref={chartRef} style={{ width: '100%', height: '400px' }} />;\n};\n\nexport default App;\n",
   "deps.json": "{\n    \"echarts\": \"^5.4.0\"\n  }"
 }
+
+export const demo4 = {
+  "App.tsx": `
+import React, { useState } from 'react';
+import "@arco-design/web-react/dist/css/arco.css";
+
+const App: React.FC = () => {
+  const [count, setCount] = useState(0);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+          <h1 className="text-3xl font-bold text-gray-800 mb-4">
+            Tailwind CSS + Arco Design 测试
+          </h1>
+          <p className="text-gray-600 mb-4">
+            这个 demo 展示了 Tailwind CSS 和远程 CSS 导入的功能
+          </p>
+          
+          <div className="flex items-center space-x-4">
+            <button 
+              onClick={() => setCount(count - 1)}
+              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+            >
+              减少
+            </button>
+            
+            <span className="text-2xl font-bold text-blue-600 px-4 py-2 bg-blue-100 rounded">
+              {count}
+            </span>
+            
+            <button 
+              onClick={() => setCount(count + 1)}
+              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+            >
+              增加
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">卡片 1</h3>
+            <p className="text-gray-600">这是一个使用 Tailwind CSS 样式的卡片</p>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">卡片 2</h3>
+            <p className="text-gray-600">响应式网格布局</p>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">卡片 3</h3>
+            <p className="text-gray-600">悬停效果和过渡动画</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default App;
+  `,
+  "deps.json": "{\"@arco-design/web-react\": \"^2.45.0\"}"
+}
+
+export const demo5 = {
+  "App.tsx": `
+import React from 'react';
+
+const App: React.FC = () => {
+  return (
+    <div className="min-h-screen bg-blue-100 flex items-center justify-center">
+      <div className="bg-white p-8 rounded-lg shadow-lg">
+        <h1 className="text-3xl font-bold text-blue-600 mb-4">
+          Tailwind CSS 测试
+        </h1>
+        <p className="text-gray-600 mb-4">
+          如果你看到这个卡片有样式，说明 Tailwind CSS 工作正常！
+        </p>
+        <button className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
+          测试按钮
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default App;
+  `,
+  "deps.json": "{}"
+}
+
+// 统一的 demo 配置 map
+export const demoMap = {
+  demo1: {
+    name: 'Arco Design 基础',
+    description: '基础的 Arco Design 组件使用示例',
+    files: demo1,
+    entryFile: 'App.tsx'
+  },
+  demo2: {
+    name: '用户管理',
+    description: '完整的用户管理 CRUD 功能',
+    files: demo2,
+    entryFile: 'App.tsx'
+  },
+  demo3: {
+    name: 'ECharts 图表',
+    description: 'ECharts 图表库集成示例',
+    files: demo3,
+    entryFile: 'App.tsx'
+  },
+  demo4: {
+    name: 'Tailwind CSS + 远程 CSS',
+    description: 'Tailwind CSS 和远程 CSS 导入功能测试',
+    files: demo4,
+    entryFile: 'App.tsx'
+  },
+  demo5: {
+    name: '纯 Tailwind CSS 测试',
+    description: '纯 Tailwind CSS 样式测试',
+    files: demo5,
+    entryFile: 'App.tsx'
+  }
+};
+
+// 导出 demo 列表，方便在组件中使用
+export const demoList = Object.entries(demoMap).map(([key, config]) => ({
+  key,
+  ...config
+}));

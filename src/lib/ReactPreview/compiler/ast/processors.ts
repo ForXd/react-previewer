@@ -104,8 +104,6 @@ export class ASTProcessorManager {
   traverseAndProcess(code: string, source: string, options: TransformOptions): string {
     // 自动注入 import React
     const codeWithReact = ensureReactImport(code);
-
-    console.log("codeWithReact: =======", codeWithReact);
     // 使用Babel解析代码并遍历AST
     const result = transform(codeWithReact, {
       ast: true,
