@@ -47,15 +47,15 @@ export class FileProcessorManager {
     
     for (const processor of this.processors) {
       if (processor.canProcess(fileName)) {
-        try {
+        // try {
           if (processor instanceof TypeScriptProcessor) {
             processedContent = await processor.process(processedContent, fileName, options);
           } else {
             processedContent = await processor.process(processedContent, fileName);
           }
-        } catch (error) {
-          console.warn(`Processor ${processor.constructor.name} failed for ${fileName}:`, error);
-        }
+        // } catch (error) {
+        //   console.warn(`Processor ${processor.constructor.name} failed for ${fileName}:`, error);
+        // }
       }
     }
     

@@ -3,6 +3,9 @@ import { ReactPreviewer } from './preview/ReactPreviewer';
 import { SourceTooltip } from './preview/components/SourceTooltip';
 import { demoList } from './test/demo';
 import type { SourceInfo } from './preview/types';
+import { createModuleLogger } from './preview/utils/Logger';
+
+const logger = createModuleLogger('Example');
 
 const ExampleUsage: React.FC = () => {
   const [selectedDemo, setSelectedDemo] = useState(demoList[0]);
@@ -11,6 +14,11 @@ const ExampleUsage: React.FC = () => {
   const [sourceInfo, setSourceInfo] = useState<SourceInfo | null>(null);
   const [editingMode, setEditingMode] = useState(false);
   const [editedFiles, setEditedFiles] = useState<Record<string, string>>({});
+  const [loggerConfig, setLoggerConfig] = useState({
+    enabled: true,
+    level: 2, // INFO level
+    showTimestamp: false
+  });
   const containerRef = useRef<HTMLDivElement>(null);
 
   // 初始化编辑文件
@@ -37,19 +45,19 @@ const ExampleUsage: React.FC = () => {
       }
       return {};
     } catch (error) {
-      console.error('Parse deps.json error:', error);
+      logger.error('Parse deps.json error:', error);
       return {};
     }
   };
 
   const handleElementClick = (sourceInfo: SourceInfo) => {
-    console.log('Element clicked in example:', sourceInfo);
+    logger.debug('Element clicked in example:', sourceInfo);
     setLastClickedElement(sourceInfo);
     setSourceInfo(sourceInfo);
   };
 
   const handleCloseSourceTooltip = () => {
-    console.log('Closing source tooltip from example');
+    logger.debug('Closing source tooltip from example');
     setSourceInfo(null);
   };
 
@@ -68,7 +76,7 @@ const ExampleUsage: React.FC = () => {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (sourceInfo && !event.defaultPrevented) {
-        console.log('Closing source info due to outside click');
+        logger.debug('Closing source info due to outside click');
         setSourceInfo(null);
       }
     };
@@ -81,7 +89,14 @@ const ExampleUsage: React.FC = () => {
 
   // 获取当前要显示的文件（编辑模式使用编辑后的文件，否则使用原始文件）
   const getCurrentFiles = () => {
-    return editingMode ? editedFiles : getFiles();
+    const files = editingMode ? editedFiles : getFiles();
+    logger.debug('getCurrentFiles called:', {
+      editingMode,
+      selectedDemo: selectedDemo.key,
+      filesKeys: Object.keys(files),
+      filesHash: JSON.stringify(Object.keys(files).sort())
+    });
+    return files;
   };
 
   return (
@@ -156,6 +171,47 @@ const ExampleUsage: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* 日志配置区域 */}
+        {!sidebarCollapsed && (
+          <div className="p-4 border-t border-gray-200">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">日志配置</h3>
+            <div className="space-y-2">
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={loggerConfig.enabled}
+                  onChange={(e) => setLoggerConfig(prev => ({ ...prev, enabled: e.target.checked }))}
+                  className="mr-2"
+                />
+                <span className="text-xs text-gray-700">启用日志</span>
+              </label>
+              <div>
+                <label className="text-xs text-gray-700 block mb-1">日志级别</label>
+                <select
+                  value={loggerConfig.level}
+                  onChange={(e) => setLoggerConfig(prev => ({ ...prev, level: parseInt(e.target.value) }))}
+                  className="w-full text-xs border border-gray-300 rounded px-2 py-1"
+                >
+                  <option value={0}>ERROR</option>
+                  <option value={1}>WARN</option>
+                  <option value={2}>INFO</option>
+                  <option value={3}>DEBUG</option>
+                  <option value={4}>TRACE</option>
+                </select>
+              </div>
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={loggerConfig.showTimestamp}
+                  onChange={(e) => setLoggerConfig(prev => ({ ...prev, showTimestamp: e.target.checked }))}
+                  className="mr-2"
+                />
+                <span className="text-xs text-gray-700">显示时间戳</span>
+              </label>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 右侧主区域 */}
@@ -193,28 +249,23 @@ const ExampleUsage: React.FC = () => {
               )}
             </div>
           </div>
-        
         </div>
 
         {/* 主要内容区域 */}
         <div className="flex-1 flex">
           {/* 编辑区域 */}
           {editingMode && (
-            <div className="w-1/2 border-r border-gray-200 flex flex-col">
-              <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
-                <h3 className="text-sm font-medium text-gray-700">代码编辑器</h3>
-              </div>
-              <div className="flex-1 overflow-auto">
-                {Object.keys(editedFiles).map((fileName) => (
-                  <div key={fileName} className="border-b border-gray-200">
-                    <div className="bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700">
-                      {fileName}
-                    </div>
+            <div className="w-1/2 bg-white border-r border-gray-200 p-4 overflow-y-auto">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">文件编辑</h3>
+              <div className="space-y-4">
+                {Object.entries(getCurrentFiles()).map(([fileName, content]) => (
+                  <div key={fileName}>
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">{fileName}</h4>
                     <textarea
-                      value={editedFiles[fileName]}
+                      value={content}
                       onChange={(e) => handleFileEdit(fileName, e.target.value)}
-                      className="w-full h-64 p-4 text-sm font-mono bg-white border-none outline-none resize-none"
-                      placeholder="在这里编辑代码..."
+                      className="w-full h-32 p-2 border border-gray-300 rounded text-xs font-mono resize-none"
+                      placeholder="输入代码..."
                     />
                   </div>
                 ))}
@@ -223,30 +274,40 @@ const ExampleUsage: React.FC = () => {
           )}
 
           {/* 预览区域 */}
-          <div className={`${editingMode ? 'w-1/2' : 'w-full'} flex flex-col`}>
-            <div className="flex-1 p-6 relative">
-              <div ref={containerRef} className="w-full h-full bg-white rounded-lg shadow-lg overflow-hidden">
-                <ReactPreviewer
-                  files={getCurrentFiles()}
-                  depsInfo={getDeps()}
-                  entryFile={selectedDemo.entryFile}
-                  onError={(error) => console.error('Preview error:', error)}
-                  onElementClick={handleElementClick}
-                />
-              </div>
-              
-              {/* 外层控制的 SourceTooltip */}
-              {sourceInfo && (
-                <SourceTooltip
-                  sourceInfo={sourceInfo}
-                  containerElement={containerRef.current || document.body}
-                  onClose={handleCloseSourceTooltip}
-                />
-              )}
+          <div className={`${editingMode ? 'w-1/2' : 'w-full'} relative`}>
+            <div className="absolute inset-0">
+              {(() => {
+                const currentFiles = getCurrentFiles();
+                const currentDeps = getDeps();
+                logger.debug('Rendering ReactPreviewer:', {
+                  selectedDemo: selectedDemo.key,
+                  files: Object.keys(currentFiles),
+                  deps: Object.keys(currentDeps),
+                  entryFile: selectedDemo.entryFile
+                });
+                return (
+                  <ReactPreviewer
+                    files={currentFiles}
+                    depsInfo={currentDeps}
+                    entryFile={selectedDemo.entryFile}
+                    onElementClick={handleElementClick}
+                    loggerConfig={loggerConfig}
+                  />
+                );
+              })()}
             </div>
           </div>
         </div>
       </div>
+
+      {/* 源代码提示浮窗 */}
+      {sourceInfo && (
+        <SourceTooltip
+          sourceInfo={sourceInfo}
+          containerElement={containerRef.current || document.body}
+          onClose={handleCloseSourceTooltip}
+        />
+      )}
     </div>
   );
 };

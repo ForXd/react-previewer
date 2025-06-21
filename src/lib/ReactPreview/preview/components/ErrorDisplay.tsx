@@ -1,6 +1,9 @@
 // components/ErrorDisplay.tsx
 import React, { useState, useEffect } from 'react';
 import type { ErrorInfo } from '../types';
+import { createModuleLogger } from '../utils/Logger';
+
+const logger = createModuleLogger('ErrorDisplay');
 
 interface ErrorDisplayProps {
   error: ErrorInfo;
@@ -13,7 +16,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ error, files }) => {
   const [errorLine, setErrorLine] = useState<number | null>(null);
 
   useEffect(() => {
-    console.log("error: =======", error);
+    logger.debug("error: =======", error);
     if (error.type === 'compile' && error.fileName && error.lineNumber && files && files[error.fileName]) {
       const lines = files[error.fileName].split('\n');
       const start = Math.max(0, error.lineNumber - 4);

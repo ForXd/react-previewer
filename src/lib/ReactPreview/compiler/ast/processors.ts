@@ -1,6 +1,9 @@
 import type { ASTProcessor, TransformOptions } from '../types';
 import { transform } from '@babel/standalone';
 import { createJSXAttribute, hasAttribute, resolveRelativePath, getResolvedFilename } from '../utils';
+import { createModuleLogger } from '../../preview/utils/Logger';
+
+const logger = createModuleLogger('ASTProcessors');
 
 export class JSXDebugProcessor implements ASTProcessor {
   process(node: any, source: string, options: TransformOptions): void {
@@ -66,20 +69,20 @@ export class ImportProcessor implements ASTProcessor {
       const resolvedPath = resolveRelativePath(filename, moduleName);
       const finalPath = getResolvedFilename(resolvedPath, files);
 
-      console.log("moduleName: =======", moduleName, resolvedPath, finalPath);
+      logger.debug("moduleName: =======", moduleName, resolvedPath, finalPath);
 
       const url = fileUrls?.get(finalPath);
       if (url) {
         node.source.value = url;
-        console.log('Resolved local import:', finalPath, '-> URL:', url);
+        logger.debug('Resolved local import:', finalPath, '-> URL:', url);
       } else {
-        console.warn('URL not found for local file:', finalPath);
+        logger.warn('URL not found for local file:', finalPath);
       }
     } else {
       // 处理三方依赖导入
       const esmUrl = depsInfo?.[moduleName] || moduleName;
       node.source.value = esmUrl;
-      console.log('Resolved external import in ast:', moduleName, '-> ESM URL:', esmUrl, depsInfo);
+      logger.debug('Resolved external import in ast:', moduleName, '-> ESM URL:', esmUrl, depsInfo);
     }
   }
 
@@ -116,13 +119,13 @@ export class ImportProcessor implements ASTProcessor {
       if (files?.[path]) {
         cssContent = files[path];
         foundPath = path;
-        console.log(`Found CSS file: ${cssPath} -> ${path}`);
+        logger.debug(`Found CSS file: ${cssPath} -> ${path}`);
         break;
       }
     }
 
     if (!cssContent) {
-      console.warn(`CSS file not found: ${cssPath}`);
+      logger.warn(`CSS file not found: ${cssPath}`);
       // 将 CSS 导入替换为空导入，避免运行时错误
       node.source.value = '""';
       return;
@@ -210,7 +213,7 @@ export class ImportProcessor implements ASTProcessor {
       arguments: []
     };
 
-    console.log('Transformed remote CSS import:', cssPath, '-> dynamic link loading');
+    logger.debug('Transformed remote CSS import:', cssPath, '-> dynamic link loading');
   }
 
   private transformToLocalCSSLoader(node: any, cssPath: string, cssContent: string): void {
@@ -293,7 +296,7 @@ export class ImportProcessor implements ASTProcessor {
       arguments: []
     };
 
-    console.log('Transformed local CSS import:', cssPath, '-> dynamic style injection');
+    logger.debug('Transformed local CSS import:', cssPath, '-> dynamic style injection');
   }
 }
 

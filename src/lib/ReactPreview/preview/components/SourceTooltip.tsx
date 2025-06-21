@@ -1,6 +1,9 @@
 // components/SourceTooltip.tsx (修复版本)
 import React, { useEffect, useRef } from 'react';
 import type { SourceInfo } from '../types';
+import { createModuleLogger } from '../utils/Logger';
+
+const logger = createModuleLogger('SourceTooltip');
 
 interface SourceTooltipProps {
   sourceInfo: SourceInfo;
@@ -60,11 +63,21 @@ export const SourceTooltip: React.FC<SourceTooltipProps> = ({ sourceInfo, contai
   };
 
   useEffect(() => {
-    console.log('SourceTooltip mounted with:', sourceInfo);
-    return () => {
-      console.log('SourceTooltip unmounted');
+    logger.debug('SourceTooltip mounted with:', sourceInfo);
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (tooltipRef.current && !tooltipRef.current.contains(event.target as Node)) {
+        onClose();
+      }
     };
-  }, [sourceInfo]);
+
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      logger.debug('SourceTooltip unmounted');
+    };
+  }, [sourceInfo, onClose]);
 
   return (
     <>

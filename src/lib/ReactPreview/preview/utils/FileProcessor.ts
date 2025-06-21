@@ -2,6 +2,9 @@
 import { CodeTransformer } from '../../compiler/CodeTransformer';
 import { transformDepsToEsmLinks } from '../DependencyResolver';
 import { DEFAULT_DEPENDENCIES, TRANSFORM_OPTIONS } from '../constant';
+import { createModuleLogger } from './Logger';
+
+const logger = createModuleLogger('FileProcessor');
 
 export class FileProcessor {
   private codeTransformer: CodeTransformer;
@@ -19,23 +22,28 @@ export class FileProcessor {
     files: Record<string, string>,
     depsInfo: Record<string, string>
   ): Promise<Map<string, string>> {
-    // 清理之前的 blob URLs
-    this.cleanup();
+    try {
+      // 清理之前的 blob URLs
+      await this.cleanup();
 
-    const advancedResult = transformDepsToEsmLinks(
-      { ...DEFAULT_DEPENDENCIES, ...depsInfo },
-      TRANSFORM_OPTIONS
-    );
+      const advancedResult = transformDepsToEsmLinks(
+        { ...DEFAULT_DEPENDENCIES, ...depsInfo },
+        TRANSFORM_OPTIONS
+      );
 
-    const transformed = await this.codeTransformer.transformFiles(
-      files,
-      advancedResult.dependencies
-    );
+      const transformed = await this.codeTransformer.transformFiles(
+        files,
+        advancedResult.dependencies
+      );
 
-    console.log('transformed', transformed);
+      logger.debug('transformed', transformed);
 
-    // 直接返回 transform 阶段的 Map<fileName, blobUrl>
-    return transformed;
+      // 直接返回 transform 阶段的 Map<fileName, blobUrl>
+      return transformed;
+    } catch (error) {
+      logger.error('Error processing files:', error);
+      throw error;
+    }
   }
 
   // private createBlobUrls(files: Map<string, string>): Map<string, string> {
@@ -69,8 +77,11 @@ export class FileProcessor {
   //   }
   // }
 
-  cleanup(): void {
-    this.blobUrls.forEach((url) => URL.revokeObjectURL(url));
-    this.blobUrls.clear();
+  async cleanup(): Promise<void> {
+    // 清理 CodeTransformer 的资源
+    if (this.blobUrls.size > 0) {
+      this.codeTransformer.cleanup(this.blobUrls);
+      this.blobUrls.clear();
+    }
   }
 }

@@ -1,6 +1,9 @@
 // utils/MessageHandler.ts (修复版本)
 import type { MessageData, ErrorInfo, SourceInfo } from '../types';
 import { ErrorHandler } from './ErrorHandler';
+import { createModuleLogger } from './Logger';
+
+const logger = createModuleLogger('MessageHandler');
 
 export class MessageHandler {
   private errorHandler: ErrorHandler;
@@ -23,11 +26,11 @@ export class MessageHandler {
     try {
       const { type, data }: MessageData = event.data;
       
-      console.log('MessageHandler received:', type, data);
+      logger.debug('MessageHandler received:', type, data);
       
       // 验证消息格式
       if (!type || typeof type !== 'string') {
-        console.warn('Invalid message type:', type);
+        logger.warn('Invalid message type:', type);
         return;
       }
       
@@ -41,11 +44,14 @@ export class MessageHandler {
         case 'console-log':
           this.handleConsoleLog(data);
           break;
+        case 'toggle-inspect':
+          this.handleToggleInspect(data);
+          break;
         default:
-          console.warn('Unknown message type:', type);
+          logger.warn('Unknown message type:', type);
       }
     } catch (error) {
-      console.error('Error handling message:', error);
+      logger.error('Error handling message:', error);
     }
   }
 
@@ -54,7 +60,7 @@ export class MessageHandler {
       const errorInfo = this.errorHandler.processRuntimeError(errorData);
       this.onError?.(errorInfo);
     } catch (error) {
-      console.error('Error processing runtime error:', error);
+      logger.error('Error processing runtime error:', error);
     }
   }
 
@@ -62,7 +68,7 @@ export class MessageHandler {
     try {
       // 验证数据格式
       if (!data || typeof data !== 'object') {
-        console.warn('Invalid element click data:', data);
+        logger.warn('Invalid element click data:', data);
         return;
       }
 
@@ -71,24 +77,33 @@ export class MessageHandler {
       if (typeof file !== 'string' || typeof startLine !== 'number' || typeof endLine !== 'number' ||
           typeof startColumn !== 'number' || typeof endColumn !== 'number' ||
           typeof x !== 'number' || typeof y !== 'number') {
-        console.warn('Invalid element click data format:', data);
+        logger.warn('Invalid element click data format:', data);
         return;
       }
 
-      console.log('MessageHandler calling onElementClick with:', data);
+      logger.debug('MessageHandler calling onElementClick with:', data);
       this.onElementClick?.(data);
     } catch (error) {
-      console.error('Error handling element click:', error);
+      logger.error('Error handling element click:', error);
     }
   }
 
   private handleConsoleLog(data: any): void {
     try {
       if (data && Array.isArray(data.args)) {
-        console.log('[Preview]', ...data.args);
+        logger.debug('[Preview]', ...data.args);
       }
     } catch (error) {
-      console.error('Error handling console log:', error);
+      logger.error('Error handling console log:', error);
+    }
+  }
+
+  private handleToggleInspect(data: any): void {
+    try {
+      // 处理检查模式切换
+      logger.debug('Toggle inspect mode:', data);
+    } catch (error) {
+      logger.error('Error handling toggle inspect:', error);
     }
   }
 }

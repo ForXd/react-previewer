@@ -1,5 +1,8 @@
 // utils/HTMLGenerator.ts
 import { COMPONENT_LIBRARY_STYLE } from '../constant';
+import { createModuleLogger } from './Logger';
+
+const logger = createModuleLogger('HTMLGenerator');
 
 export class HTMLGenerator {
   generatePreviewHTML(entryUrl: string): string {
@@ -270,5 +273,76 @@ export class HTMLGenerator {
         });
       }
     `;
+  }
+
+  private addInspectStyles(): void {
+    const style = document.createElement('style');
+    style.textContent = `
+      .preview-inspect-mode * {
+        cursor: crosshair !important;
+        position: relative;
+      }
+      .preview-inspect-mode *:hover {
+        outline: 2px solid #007bff !important;
+        outline-offset: 1px;
+      }
+      .preview-inspect-mode *:active {
+        outline: 2px solid #ff6b6b !important;
+      }
+    `;
+    document.head.appendChild(style);
+    logger.debug('Initial inspect styles added');
+  }
+
+  private addInspectListeners(): void {
+    const elements = document.querySelectorAll('[data-source-file]');
+    logger.debug('Found elements with data attributes:', elements.length);
+
+    elements.forEach(element => {
+      element.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const mouseEvent = event as MouseEvent;
+        const file = element.getAttribute('data-source-file');
+        const startLine = parseInt(element.getAttribute('data-source-start-line') || '0');
+        const endLine = parseInt(element.getAttribute('data-source-end-line') || '0');
+        const startColumn = parseInt(element.getAttribute('data-source-start-column') || '0');
+        const endColumn = parseInt(element.getAttribute('data-source-end-column') || '0');
+
+        if (file && startLine && endLine) {
+          window.parent.postMessage({
+            type: 'element-click',
+            data: {
+              file,
+              startLine,
+              endLine,
+              startColumn,
+              endColumn,
+              x: mouseEvent.clientX,
+              y: mouseEvent.clientY
+            }
+          }, '*');
+        }
+      });
+    });
+  }
+
+  private setupMessageListener(): void {
+    window.addEventListener('message', (event) => {
+      logger.debug('iframe received message:', event.data);
+      
+      if (event.data.type === 'toggle-inspect') {
+        const isInspecting = event.data.isInspecting;
+        logger.debug('Setting inspect mode to:', isInspecting);
+        
+        if (isInspecting) {
+          document.body.classList.add('preview-inspect-mode');
+          this.addInspectListeners();
+        } else {
+          document.body.classList.remove('preview-inspect-mode');
+        }
+      }
+    });
   }
 }

@@ -1,6 +1,9 @@
 import type { FileSystem, TransformOptions } from './types';
 import { DependencyGraphBuilder } from './dependency/DependencyGraphBuilder';
 import { FileProcessorManager, TypeScriptProcessor } from './processors';
+import { createModuleLogger } from '../preview/utils/Logger';
+
+const logger = createModuleLogger('CodeTransformer');
 
 export class CodeTransformer {
   private initialized = false;
@@ -30,11 +33,11 @@ export class CodeTransformer {
       throw new Error('CodeTransformer not initialized');
     }
 
-    console.log('Building dependency graph...');
+    logger.info('Building dependency graph...');
     // 构建依赖图并获取处理顺序
     const dependencyGraph = await this.dependencyGraphBuilder.build(files);
     const processingOrder = dependencyGraph.getProcessingOrder();
-    console.log('Processing order:', processingOrder);
+    logger.debug('Processing order:', processingOrder);
 
     // 按依赖顺序处理文件，返回 Map<fileName, blobUrl>
     return await this.processFilesInOrder(files, processingOrder, depsInfo);
@@ -50,7 +53,7 @@ export class CodeTransformer {
     for (const fileName of processingOrder) {
       const fileContent = files[fileName];
       if (!fileContent) {
-        console.warn(`File not found: ${fileName}`);
+        logger.warn(`File not found: ${fileName}`);
         continue;
       }
 
@@ -70,14 +73,14 @@ export class CodeTransformer {
           transformOptions
         );
       } catch (error) {
-        console.error(`Failed to process ${fileName}:`, error);
-        processedContent = fileContent;
+        logger.error(`Failed to process ${fileName}:`, error);
+        throw error;
       }
 
       // 生成 blob url 并保存
       const url = this.createBlobURL(processedContent);
       fileUrls.set(fileName, url);
-      console.log(`Processed: ${fileName} -> ${url}`);
+      logger.debug(`Processed: ${fileName} -> ${url}`);
     }
 
     return fileUrls;
@@ -96,6 +99,6 @@ export class CodeTransformer {
     for (const url of fileUrls.values()) {
       URL.revokeObjectURL(url);
     }
-    console.log('Cleanup completed');
+    logger.info('Cleanup completed');
   }
 }

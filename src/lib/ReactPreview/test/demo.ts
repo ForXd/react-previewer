@@ -355,6 +355,237 @@ export default App;
   `,
 }
 
+export const demo6 = {
+  'App.tsx': `
+import React, { useState, useEffect } from 'react';
+
+const App: React.FC = () => {
+  const [errorType, setErrorType] = useState<string>('none');
+  const [shouldThrow, setShouldThrow] = useState<boolean>(false);
+
+  // 模拟异步错误
+  useEffect(() => {
+    if (shouldThrow && errorType === 'async') {
+      setTimeout(() => {
+        throw new Error('这是一个异步错误！');
+      }, 1000);
+    }
+  }, [shouldThrow, errorType]);
+
+  // 模拟事件处理错误
+  const handleEventError = () => {
+    throw new Error('这是一个事件处理错误！');
+  };
+
+  // 模拟状态更新错误
+  const handleStateError = () => {
+    setErrorType('state');
+    // 在下一个渲染周期抛出错误
+    setTimeout(() => {
+      setShouldThrow(true);
+    }, 100);
+  };
+
+  // 模拟引用错误
+  const handleReferenceError = () => {
+    // @ts-ignore
+    // 这个 console.log 是故意保留的，用于测试错误捕获功能
+    console.log(undefinedVariable);
+  };
+
+  // 模拟类型错误
+  const handleTypeError = () => {
+    const obj = null;
+    // @ts-ignore
+    obj.someMethod();
+  };
+
+  // 模拟语法错误（在运行时通过 eval）
+  const handleSyntaxError = () => {
+    try {
+      eval('const x = {;');
+    } catch (error) {
+      throw new Error('语法错误：' + error.message);
+    }
+  };
+
+  // 模拟网络错误
+  const handleNetworkError = () => {
+    fetch('/non-existent-endpoint')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('网络请求失败：' + response.status);
+        }
+        return response.json();
+      })
+      .catch(error => {
+        throw new Error('网络错误：' + error.message);
+      });
+  };
+
+  // 模拟递归错误
+  const handleRecursionError = () => {
+    const recursiveFunction = () => {
+      recursiveFunction();
+    };
+    recursiveFunction();
+  };
+
+  // 模拟内存错误
+  const handleMemoryError = () => {
+    const arr = [];
+    while (true) {
+      arr.push(new Array(1000000));
+    }
+  };
+
+  // 模拟自定义错误
+  const handleCustomError = () => {
+    class CustomError extends Error {
+      constructor(message: string) {
+        super(message);
+        this.name = 'CustomError';
+      }
+    }
+    throw new CustomError('这是一个自定义错误！');
+  };
+
+  // 模拟组件渲染错误
+  const ErrorComponent: React.FC = () => {
+    if (shouldThrow && errorType === 'render') {
+      throw new Error('这是一个组件渲染错误！');
+    }
+    return <div>正常渲染的组件</div>;
+  };
+
+  return (
+    <div className="p-8 bg-gradient-to-r from-red-50 to-orange-50 min-h-screen">
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+          <h1 className="text-3xl font-bold text-gray-800 mb-4">
+            运行时错误测试
+          </h1>
+          <p className="text-gray-600 mb-6">
+            点击下面的按钮来测试不同类型的运行时错误捕获功能
+          </p>
+          
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <button 
+              onClick={handleEventError}
+              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+            >
+              事件错误
+            </button>
+            
+            <button 
+              onClick={handleReferenceError}
+              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+            >
+              引用错误
+            </button>
+            
+            <button 
+              onClick={handleTypeError}
+              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+            >
+              类型错误
+            </button>
+            
+            <button 
+              onClick={handleSyntaxError}
+              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+            >
+              语法错误
+            </button>
+            
+            <button 
+              onClick={handleNetworkError}
+              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+            >
+              网络错误
+            </button>
+            
+            <button 
+              onClick={handleCustomError}
+              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+            >
+              自定义错误
+            </button>
+            
+            <button 
+              onClick={() => {
+                setErrorType('async');
+                setShouldThrow(true);
+              }}
+              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+            >
+              异步错误
+            </button>
+            
+            <button 
+              onClick={handleStateError}
+              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+            >
+              状态错误
+            </button>
+            
+            <button 
+              onClick={() => {
+                setErrorType('render');
+                setShouldThrow(true);
+              }}
+              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+            >
+              渲染错误
+            </button>
+            
+            <button 
+              onClick={handleRecursionError}
+              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+            >
+              递归错误
+            </button>
+            
+            <button 
+              onClick={handleMemoryError}
+              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+            >
+              内存错误
+            </button>
+            
+            <button 
+              onClick={() => {
+                setShouldThrow(false);
+                setErrorType('none');
+              }}
+              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+            >
+              重置状态
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">当前状态</h3>
+          <div className="space-y-2 text-sm">
+            <p><span className="font-medium">错误类型:</span> {errorType}</p>
+            <p><span className="font-medium">是否抛出错误:</span> {shouldThrow ? '是' : '否'}</p>
+          </div>
+          
+          <div className="mt-4 p-4 bg-gray-50 rounded">
+            <h4 className="font-medium text-gray-700 mb-2">错误组件测试区域:</h4>
+            <ErrorComponent />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default App;
+  `,
+}
+
 // 统一的 demo 配置 map
 export const demoMap = {
   demo1: {
@@ -385,6 +616,12 @@ export const demoMap = {
     name: '检查模式测试',
     description: '测试 iframe 刷新后检查模式状态恢复',
     files: demo5,
+    entryFile: 'App.tsx'
+  },
+  demo6: {
+    name: '运行时错误测试',
+    description: '测试各种运行时错误的捕获和显示功能',
+    files: demo6,
     entryFile: 'App.tsx'
   }
 };

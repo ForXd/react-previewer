@@ -6,6 +6,9 @@ import { ErrorHandler } from '../utils/ErrorHandler';
 import { HTMLGenerator } from '../utils/HTMLGenerator';
 import { MessageHandler } from '../utils/MessageHandler';
 import { LoadingOverlay } from './LoadingOverlay';
+import { createModuleLogger } from '../utils/Logger';
+
+const logger = createModuleLogger('PreviewFrame');
 
 export interface PreviewFrameProps {
   files: Record<string, string>;
@@ -17,6 +20,21 @@ export interface PreviewFrameProps {
   onInspectToggle?: (enabled: boolean) => void;
   key?: string | number;
 }
+
+// 创建文件内容的哈希值用于比较
+const createFilesHash = (files: Record<string, string>) => {
+  const sortedFiles = Object.keys(files).sort();
+  // 使用简单的字符串哈希算法，基于文件内容的前100个字符和总长度
+  return sortedFiles.map(fileName => {
+    const content = files[fileName];
+    // 使用更简单的哈希：文件名 + 内容长度 + 内容前50个字符的哈希
+    const preview = content.substring(0, 50);
+    const previewHash = preview.split('').reduce((hash, char) => {
+      return ((hash << 5) - hash + char.charCodeAt(0)) & 0xffffffff;
+    }, 0);
+    return `${fileName}:${content.length}:${previewHash}`;
+  }).join('|');
+};
 
 // 使用 React.memo 避免不必要的重新渲染
 export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
@@ -67,25 +85,25 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
     y: number 
   }) => {
     try {
-      console.log('Element clicked:', data, 'isInspecting:', isInspecting);
+      logger.debug('Element clicked:', data, 'isInspecting:', isInspecting);
       
       if (!isInspecting) {
-        console.log('Not in inspecting mode, ignoring click');
+        logger.debug('Not in inspecting mode, ignoring click');
         return;
       }
 
       if (!data || !data.file || !data.startLine || !data.endLine || !data.startColumn || !data.endColumn) {
-        console.log('Missing file or line data');
+        logger.warn('Missing file or line data');
         return;
       }
 
       const fileContent = files[data.file];
       if (!fileContent) {
-        console.log('File content not found for:', data.file);
+        logger.warn('File content not found for:', data.file);
         return;
       }
 
-      console.log('Processing file content for:', data.file);
+      logger.debug('Processing file content for:', data.file);
       const lines = fileContent.split('\n');
       
       // 边界检查：确保行号在有效范围内
@@ -93,7 +111,7 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
       const startLine = Math.max(1, Math.min(data.startLine, maxLine));
       const endLine = Math.max(1, Math.min(data.endLine, maxLine));
       
-      console.log(`Line range: ${startLine}-${endLine}, max lines: ${maxLine}`);
+      logger.debug(`Line range: ${startLine}-${endLine}, max lines: ${maxLine}`);
       
       let textStr = '';
       if (startLine === endLine) {
@@ -128,7 +146,7 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
         }
       }
 
-      console.log("text Str is: ", textStr);
+      logger.debug("text Str is: ", textStr);
 
       const newSourceInfo: SourceInfo = {
         file: data.file,
@@ -140,14 +158,14 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
         position: { x: data.x, y: data.y }
       };
 
-      console.log('Setting source info:', newSourceInfo);
+      logger.debug('Setting source info:', newSourceInfo);
       
       // 调用外部回调函数，透传源代码位置信息
       if (onElementClickRef.current) {
         onElementClickRef.current(newSourceInfo);
       }
     } catch (error) {
-      console.error('Error in handleElementClick:', error);
+      logger.error('Error in handleElementClick:', error);
     }
   }, [files, isInspecting]);
 
@@ -170,37 +188,6 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
     });
   }, [handleElementClick]);
 
-  const processFiles = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      setErrorDetails(null);
-
-      await fileProcessor.current.initialize();
-      const fileUrls = await fileProcessor.current.processFiles(files, depsInfo);
-      console.log('processFiles=======')
-      // fileUrls: Map<fileName, blobUrl>
-      errorHandler.current.setBlobToFileMap(fileUrls);
-      renderPreview(fileUrls, entryFile);
-    } catch (err) {
-      const compileError = errorHandler.current.processCompileError(
-        err instanceof Error ? err : new Error('Unknown error')
-      );
-      setError(compileError.message);
-      setErrorDetails({
-        fileName: compileError.fileName,
-        lineNumber: compileError.lineNumber,
-        columnNumber: compileError.columnNumber,
-        codeFrame: compileError.codeFrame
-      });
-      if (onErrorRef.current) {
-        onErrorRef.current(err instanceof Error ? err : new Error('Unknown error'));
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, []); // 移除依赖项，使用 ref 来访问最新的值
-
   // 创建一个内部函数来处理文件，可以访问最新的 props
   const processFilesInternal = useCallback(async () => {
     try {
@@ -210,7 +197,7 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
 
       await fileProcessor.current.initialize();
       const fileUrls = await fileProcessor.current.processFiles(files, depsInfo);
-      console.log('processFiles=======')
+      logger.debug('processFiles=======')
       // fileUrls: Map<fileName, blobUrl>
       errorHandler.current.setBlobToFileMap(fileUrls);
       renderPreview(fileUrls, entryFile);
@@ -235,21 +222,25 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
 
   // 检查文件内容是否真正改变
   useEffect(() => {
-    const filesKey = JSON.stringify(Object.keys(files).sort());
+    const filesHash = createFilesHash(files);
     const depsInfoKey = JSON.stringify(Object.keys(depsInfo || {}).sort());
     
-    const newFilesKey = filesKey;
+    const newFilesHash = filesHash;
     const newEntryFile = entryFile;
     const newDepsInfoKey = depsInfoKey;
     
     // 只有当文件内容真正改变时才重新处理
     if (
-      currentFilesRef.current !== newFilesKey ||
+      currentFilesRef.current !== newFilesHash ||
       currentEntryFileRef.current !== newEntryFile ||
       currentDepsInfoRef.current !== newDepsInfoKey
     ) {
-      console.log('PreviewFrame: File content changed, reprocessing files');
-      currentFilesRef.current = newFilesKey;
+      logger.debug('PreviewFrame: File content changed, reprocessing files');
+      logger.debug('Files hash changed:', {
+        old: currentFilesRef.current,
+        new: newFilesHash
+      });
+      currentFilesRef.current = newFilesHash;
       currentEntryFileRef.current = newEntryFile;
       currentDepsInfoRef.current = newDepsInfoKey;
       
@@ -265,11 +256,11 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
     const handleMessage = (event: MessageEvent) => {
       try {
         if (event.source !== iframeRef.current?.contentWindow) return;
-        console.log('Received message:', event.data);
+        logger.debug('Received message:', event.data);
         
         // 处理 iframe 请求检查模式状态的消息
         if (event.data.type === 'request-inspect-state') {
-          console.log('Iframe requested inspect state, sending:', isInspecting);
+          logger.debug('Iframe requested inspect state, sending:', isInspecting);
           if (iframeRef.current?.contentWindow) {
             iframeRef.current.contentWindow.postMessage({
               type: 'toggle-inspect',
@@ -281,7 +272,7 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
         
         messageHandler.current?.handleMessage(event);
       } catch (error) {
-        console.error('Error handling message:', error);
+        logger.error('Error handling message:', error);
       }
     };
 
@@ -370,29 +361,43 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
 }, (prevProps, nextProps) => {
   // 检查 isInspecting 状态变化 - 如果检查模式状态改变，需要重新渲染
   if (prevProps.isInspecting !== nextProps.isInspecting) {
-    console.log('PreviewFrame: Re-rendering due to inspect mode change');
+    logger.debug('PreviewFrame: Re-rendering due to inspect mode change');
     return false; // false 表示需要重新渲染
   }
   
   // 自定义比较函数，只在关键 props 改变时才重新渲染
   const prevKey = JSON.stringify({
-    files: Object.keys(prevProps.files).sort(),
+    filesHash: createFilesHash(prevProps.files),
     entryFile: prevProps.entryFile,
     depsInfo: Object.keys(prevProps.depsInfo || {}).sort()
   });
   
   const nextKey = JSON.stringify({
-    files: Object.keys(nextProps.files).sort(),
+    filesHash: createFilesHash(nextProps.files),
     entryFile: nextProps.entryFile,
     depsInfo: Object.keys(nextProps.depsInfo || {}).sort()
   });
   
   // 如果关键 props 没有改变，返回 true 表示不需要重新渲染
   if (prevKey === nextKey) {
-    console.log('PreviewFrame: Skipping re-render, key props unchanged');
+    logger.debug('prevKey', prevKey)
+    logger.debug('nextKey', nextKey)
+    logger.debug('PreviewFrame: Skipping re-render, key props unchanged');
+    logger.debug('Files comparison:', {
+      prevFiles: Object.keys(prevProps.files),
+      nextFiles: Object.keys(nextProps.files),
+      prevFilesHash: createFilesHash(prevProps.files),
+      nextFilesHash: createFilesHash(nextProps.files)
+    });
     return true; // true 表示 props 相等，不需要重新渲染
   }
   
-  console.log('PreviewFrame: Re-rendering due to key props change');
+  logger.debug('PreviewFrame: Re-rendering due to key props change');
+  logger.debug('Files comparison:', {
+    prevFiles: Object.keys(prevProps.files),
+    nextFiles: Object.keys(nextProps.files),
+    prevFilesHash: createFilesHash(prevProps.files),
+    nextFilesHash: createFilesHash(nextProps.files)
+  });
   return false; // false 表示 props 不相等，需要重新渲染
 }); 

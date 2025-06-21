@@ -1,10 +1,13 @@
 // types.ts
+import type { LoggerConfig } from './utils/Logger';
+
 export interface ReactPreviewerProps {
   files: Record<string, string>;
   depsInfo: Record<string, string>;
   entryFile?: string;
   onError?: (error: Error) => void;
   onElementClick?: (sourceInfo: SourceInfo) => void;
+  loggerConfig?: Partial<LoggerConfig>;
 }
 
 export interface ErrorInfo {
