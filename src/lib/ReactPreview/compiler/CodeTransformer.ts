@@ -1,6 +1,6 @@
 import type { FileSystem, TransformOptions } from './types';
 import { DependencyGraphBuilder } from './dependency/DependencyGraphBuilder';
-import { FileProcessorManager, TypeScriptProcessor, CSSImportProcessor } from './processors';
+import { FileProcessorManager, TypeScriptProcessor } from './processors';
 
 export class CodeTransformer {
   private initialized = false;
@@ -16,8 +16,7 @@ export class CodeTransformer {
 
   private setupProcessors(): void {
     // 注册文件处理器 - 注意顺序很重要
-    this.fileProcessorManager.addProcessor(new CSSImportProcessor()); // 先处理 CSS 导入
-    this.fileProcessorManager.addProcessor(new TypeScriptProcessor()); // 再处理 TypeScript
+    this.fileProcessorManager.addProcessor(new TypeScriptProcessor()); // 处理 TypeScript/JSX，包括 CSS 导入
   }
 
   async initialize(): Promise<void> {

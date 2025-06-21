@@ -55,6 +55,12 @@ export class ImportProcessor implements ASTProcessor {
 
     if (!moduleName || !filename) return;
 
+    // 检查是否是 CSS 导入
+    if (moduleName.endsWith('.css')) {
+      this.processCSSImport(node, source, options);
+      return;
+    }
+
     if (moduleName.startsWith('.')) {
       // 处理相对路径导入
       const resolvedPath = resolveRelativePath(filename, moduleName);
@@ -76,16 +82,219 @@ export class ImportProcessor implements ASTProcessor {
       console.log('Resolved external import in ast:', moduleName, '-> ESM URL:', esmUrl, depsInfo);
     }
   }
-}
 
-// 工具函数：自动注入 import React
-function ensureReactImport(code: string): string {
-  // 检查是否已 import React
-  if (/import\s+React(\s|,|\{|$)/.test(code) || /from\s+['"]react['"]/.test(code)) {
-    return code;
+  private processCSSImport(node: any, source: string, options: TransformOptions): void {
+    const { filename, files } = options;
+    const cssPath = node.source.value;
+
+    if (!cssPath || !filename) return;
+
+    // 检查是否是远程 CSS 文件
+    if (!cssPath.startsWith('./') && !cssPath.startsWith('../') && !cssPath.startsWith('/')) {
+      // 远程 CSS 文件，转换为动态加载
+      this.transformToRemoteCSSLoader(node, cssPath);
+      return;
+    }
+
+    // 本地 CSS 文件处理
+    let resolvedPath = cssPath;
+    if (cssPath.startsWith('./') || cssPath.startsWith('../')) {
+      resolvedPath = resolveRelativePath(filename, cssPath);
+    }
+
+    // 尝试不同的扩展名
+    const possiblePaths = [
+      resolvedPath,
+      `${resolvedPath}.css`,
+      resolvedPath.replace(/\.css$/, '') + '.css'
+    ];
+
+    let cssContent = '';
+    let foundPath = '';
+
+    for (const path of possiblePaths) {
+      if (files?.[path]) {
+        cssContent = files[path];
+        foundPath = path;
+        console.log(`Found CSS file: ${cssPath} -> ${path}`);
+        break;
+      }
+    }
+
+    if (!cssContent) {
+      console.warn(`CSS file not found: ${cssPath}`);
+      // 将 CSS 导入替换为空导入，避免运行时错误
+      node.source.value = '""';
+      return;
+    }
+
+    // 将本地 CSS 导入转换为动态样式注入
+    this.transformToLocalCSSLoader(node, cssPath, cssContent);
   }
-  // 强制注入
-  return `import React from 'react';\n${code}`;
+
+  private transformToRemoteCSSLoader(node: any, cssPath: string): void {
+    // 将远程 CSS 导入转换为动态加载
+    node.type = 'ExpressionStatement';
+    node.expression = {
+      type: 'CallExpression',
+      callee: {
+        type: 'FunctionExpression',
+        params: [],
+        body: {
+          type: 'BlockStatement',
+          body: [
+            {
+              type: 'VariableDeclaration',
+              kind: 'const',
+              declarations: [
+                {
+                  type: 'VariableDeclarator',
+                  id: { type: 'Identifier', name: 'link' },
+                  init: {
+                    type: 'CallExpression',
+                    callee: {
+                      type: 'MemberExpression',
+                      object: { type: 'Identifier', name: 'document' },
+                      property: { type: 'Identifier', name: 'createElement' }
+                    },
+                    arguments: [{ type: 'StringLiteral', value: 'link' }]
+                  }
+                }
+              ]
+            },
+            {
+              type: 'ExpressionStatement',
+              expression: {
+                type: 'AssignmentExpression',
+                operator: '=',
+                left: {
+                  type: 'MemberExpression',
+                  object: { type: 'Identifier', name: 'link' },
+                  property: { type: 'Identifier', name: 'rel' }
+                },
+                right: { type: 'StringLiteral', value: 'stylesheet' }
+              }
+            },
+            {
+              type: 'ExpressionStatement',
+              expression: {
+                type: 'AssignmentExpression',
+                operator: '=',
+                left: {
+                  type: 'MemberExpression',
+                  object: { type: 'Identifier', name: 'link' },
+                  property: { type: 'Identifier', name: 'href' }
+                },
+                right: { type: 'StringLiteral', value: cssPath }
+              }
+            },
+            {
+              type: 'ExpressionStatement',
+              expression: {
+                type: 'CallExpression',
+                callee: {
+                  type: 'MemberExpression',
+                  object: {
+                    type: 'MemberExpression',
+                    object: { type: 'Identifier', name: 'document' },
+                    property: { type: 'Identifier', name: 'head' }
+                  },
+                  property: { type: 'Identifier', name: 'appendChild' }
+                },
+                arguments: [{ type: 'Identifier', name: 'link' }]
+              }
+            }
+          ]
+        }
+      },
+      arguments: []
+    };
+
+    console.log('Transformed remote CSS import:', cssPath, '-> dynamic link loading');
+  }
+
+  private transformToLocalCSSLoader(node: any, cssPath: string, cssContent: string): void {
+    // 将本地 CSS 导入转换为动态样式注入
+    node.type = 'ExpressionStatement';
+    node.expression = {
+      type: 'CallExpression',
+      callee: {
+        type: 'FunctionExpression',
+        params: [],
+        body: {
+          type: 'BlockStatement',
+          body: [
+            {
+              type: 'VariableDeclaration',
+              kind: 'const',
+              declarations: [
+                {
+                  type: 'VariableDeclarator',
+                  id: { type: 'Identifier', name: 'style' },
+                  init: {
+                    type: 'CallExpression',
+                    callee: {
+                      type: 'MemberExpression',
+                      object: { type: 'Identifier', name: 'document' },
+                      property: { type: 'Identifier', name: 'createElement' }
+                    },
+                    arguments: [{ type: 'StringLiteral', value: 'style' }]
+                  }
+                }
+              ]
+            },
+            {
+              type: 'ExpressionStatement',
+              expression: {
+                type: 'CallExpression',
+                callee: {
+                  type: 'MemberExpression',
+                  object: { type: 'Identifier', name: 'style' },
+                  property: { type: 'Identifier', name: 'setAttribute' }
+                },
+                arguments: [
+                  { type: 'StringLiteral', value: 'data-path' },
+                  { type: 'StringLiteral', value: cssPath }
+                ]
+              }
+            },
+            {
+              type: 'ExpressionStatement',
+              expression: {
+                type: 'AssignmentExpression',
+                operator: '=',
+                left: {
+                  type: 'MemberExpression',
+                  object: { type: 'Identifier', name: 'style' },
+                  property: { type: 'Identifier', name: 'innerHTML' }
+                },
+                right: { type: 'StringLiteral', value: cssContent }
+              }
+            },
+            {
+              type: 'ExpressionStatement',
+              expression: {
+                type: 'CallExpression',
+                callee: {
+                  type: 'MemberExpression',
+                  object: {
+                    type: 'MemberExpression',
+                    object: { type: 'Identifier', name: 'document' },
+                    property: { type: 'Identifier', name: 'head' }
+                  },
+                  property: { type: 'Identifier', name: 'appendChild' }
+                },
+                arguments: [{ type: 'Identifier', name: 'style' }]
+              }
+            }
+          ]
+        }
+      },
+      arguments: []
+    };
+
+    console.log('Transformed local CSS import:', cssPath, '-> dynamic style injection');
+  }
 }
 
 export class ASTProcessorManager {
@@ -146,4 +355,14 @@ export class ASTProcessorManager {
 
     return result.code ?? '';
   }
+}
+
+// 工具函数：自动注入 import React
+function ensureReactImport(code: string): string {
+  // 检查是否已 import React
+  if (/import\s+React(\s|,|\{|$)/.test(code) || /from\s+['"]react['"]/.test(code)) {
+    return code;
+  }
+  // 强制注入
+  return `import React from 'react';\n${code}`;
 }

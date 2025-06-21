@@ -1,10 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ReactPreviewer } from './preview/ReactPreviewer';
+import { SourceTooltip } from './preview/components/SourceTooltip';
 import { demoList } from './test/demo';
+import type { SourceInfo } from './preview/types';
 
 const ExampleUsage: React.FC = () => {
   const [selectedDemo, setSelectedDemo] = useState(demoList[0]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [lastClickedElement, setLastClickedElement] = useState<SourceInfo | null>(null);
+  const [sourceInfo, setSourceInfo] = useState<SourceInfo | null>(null);
+  const [editingMode, setEditingMode] = useState(false);
+  const [editedFiles, setEditedFiles] = useState<Record<string, string>>({});
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // 初始化编辑文件
+  useEffect(() => {
+    const files = getFiles();
+    setEditedFiles(files);
+  }, [selectedDemo]);
 
   const getFiles = () => {
     const files = { ...selectedDemo.files };
@@ -27,6 +40,48 @@ const ExampleUsage: React.FC = () => {
       console.error('Parse deps.json error:', error);
       return {};
     }
+  };
+
+  const handleElementClick = (sourceInfo: SourceInfo) => {
+    console.log('Element clicked in example:', sourceInfo);
+    setLastClickedElement(sourceInfo);
+    setSourceInfo(sourceInfo);
+  };
+
+  const handleCloseSourceTooltip = () => {
+    console.log('Closing source tooltip from example');
+    setSourceInfo(null);
+  };
+
+  const handleFileEdit = useCallback((fileName: string, content: string) => {
+    setEditedFiles(prev => ({
+      ...prev,
+      [fileName]: content
+    }));
+  }, []);
+
+  const handleResetFiles = useCallback(() => {
+    setEditedFiles(getFiles());
+  }, [selectedDemo]);
+
+  // 点击外部区域关闭浮窗
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (sourceInfo && !event.defaultPrevented) {
+        console.log('Closing source info due to outside click');
+        setSourceInfo(null);
+      }
+    };
+
+    if (sourceInfo) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [sourceInfo]);
+
+  // 获取当前要显示的文件（编辑模式使用编辑后的文件，否则使用原始文件）
+  const getCurrentFiles = () => {
+    return editingMode ? editedFiles : getFiles();
   };
 
   return (
@@ -69,7 +124,7 @@ const ExampleUsage: React.FC = () => {
                   className={`
                     w-full p-3 rounded-lg transition-all duration-200 flex items-center justify-center
                     ${selectedDemo.key === demo.key
-                      ? 'bg-blue-600 text-white shadow-md'
+                      ? 'bg-blue-600 text-blue-500 shadow-md'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }
                   `}
@@ -103,17 +158,92 @@ const ExampleUsage: React.FC = () => {
         </div>
       </div>
 
-      {/* 右侧预览区域 */}
+      {/* 右侧主区域 */}
       <div className="flex-1 flex flex-col">
-        {/* 预览内容区域 */}
-        <div className="flex-1 p-6">
-          <div className="w-full h-full bg-white rounded-lg shadow-lg overflow-hidden">
-            <ReactPreviewer
-              files={getFiles()}
-              depsInfo={getDeps()}
-              entryFile={selectedDemo.entryFile}
-              onError={(error) => console.error('Preview error:', error)}
-            />
+        {/* 顶部工具栏 */}
+        <div className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">{selectedDemo.name}</h1>
+              <p className="text-sm text-gray-600 mt-1">{selectedDemo.description}</p>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="text-sm text-gray-500">
+                入口文件: {selectedDemo.entryFile}
+              </div>
+              <button
+                onClick={() => setEditingMode(!editingMode)}
+                className={`
+                  px-4 py-2 rounded-lg text-sm font-medium transition-colors
+                  ${editingMode 
+                    ? 'bg-green-600 text-white hover:bg-green-700' 
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                  }
+                `}
+              >
+                {editingMode ? '退出编辑' : '实时编辑'}
+              </button>
+              {editingMode && (
+                <button
+                  onClick={handleResetFiles}
+                  className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-600 text-white hover:bg-gray-700 transition-colors"
+                >
+                  重置
+                </button>
+              )}
+            </div>
+          </div>
+        
+        </div>
+
+        {/* 主要内容区域 */}
+        <div className="flex-1 flex">
+          {/* 编辑区域 */}
+          {editingMode && (
+            <div className="w-1/2 border-r border-gray-200 flex flex-col">
+              <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
+                <h3 className="text-sm font-medium text-gray-700">代码编辑器</h3>
+              </div>
+              <div className="flex-1 overflow-auto">
+                {Object.keys(editedFiles).map((fileName) => (
+                  <div key={fileName} className="border-b border-gray-200">
+                    <div className="bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700">
+                      {fileName}
+                    </div>
+                    <textarea
+                      value={editedFiles[fileName]}
+                      onChange={(e) => handleFileEdit(fileName, e.target.value)}
+                      className="w-full h-64 p-4 text-sm font-mono bg-white border-none outline-none resize-none"
+                      placeholder="在这里编辑代码..."
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 预览区域 */}
+          <div className={`${editingMode ? 'w-1/2' : 'w-full'} flex flex-col`}>
+            <div className="flex-1 p-6 relative">
+              <div ref={containerRef} className="w-full h-full bg-white rounded-lg shadow-lg overflow-hidden">
+                <ReactPreviewer
+                  files={getCurrentFiles()}
+                  depsInfo={getDeps()}
+                  entryFile={selectedDemo.entryFile}
+                  onError={(error) => console.error('Preview error:', error)}
+                  onElementClick={handleElementClick}
+                />
+              </div>
+              
+              {/* 外层控制的 SourceTooltip */}
+              {sourceInfo && (
+                <SourceTooltip
+                  sourceInfo={sourceInfo}
+                  containerElement={containerRef.current || document.body}
+                  onClose={handleCloseSourceTooltip}
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>

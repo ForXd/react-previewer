@@ -322,30 +322,37 @@ export default App;
 }
 
 export const demo5 = {
-  "App.tsx": `
+  'App.tsx': `
 import React from 'react';
 
 const App: React.FC = () => {
-  return (
-    <div className="min-h-screen bg-blue-100 flex items-center justify-center">
-      <div className="bg-white p-8 rounded-lg shadow-lg">
-        <h1 className="text-3xl font-bold text-blue-600 mb-4">
-          Tailwind CSS 测试
-        </h1>
-        <p className="text-gray-600 mb-4">
-          如果你看到这个卡片有样式，说明 Tailwind CSS 工作正常！
-        </p>
-        <button className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
-          测试按钮
+return (
+  <div className="p-8 bg-gradient-to-r from-blue-500 to-purple-600 min-h-screen">
+    <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-6">
+      <h1 className="text-2xl font-bold text-gray-800 mb-4">
+        检查模式测试
+      </h1>
+      <p className="text-gray-600 mb-4">
+        点击检查按钮，然后刷新 iframe，检查模式应该会自动恢复。
+      </p>
+      <div className="space-y-3">
+        <button className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors">
+          按钮 1
+        </button>
+        <button className="w-full bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors">
+          按钮 2
+        </button>
+        <button className="w-full bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors">
+          按钮 3
         </button>
       </div>
     </div>
-  );
+  </div>
+);
 };
 
 export default App;
   `,
-  "deps.json": "{}"
 }
 
 // 统一的 demo 配置 map
@@ -375,8 +382,8 @@ export const demoMap = {
     entryFile: 'App.tsx'
   },
   demo5: {
-    name: '纯 Tailwind CSS 测试',
-    description: '纯 Tailwind CSS 样式测试',
+    name: '检查模式测试',
+    description: '测试 iframe 刷新后检查模式状态恢复',
     files: demo5,
     entryFile: 'App.tsx'
   }

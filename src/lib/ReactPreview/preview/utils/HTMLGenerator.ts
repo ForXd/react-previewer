@@ -257,6 +257,11 @@ export class HTMLGenerator {
         setTimeout(() => {
           addInspectStyles();
           console.log('Initial inspect styles added');
+          
+          // iframe 加载完成后，主动请求当前的检查模式状态
+          window.parent.postMessage({
+            type: 'request-inspect-state'
+          }, '*');
         }, 100);
       } catch (error) {
         sendMessage('runtime-error', {

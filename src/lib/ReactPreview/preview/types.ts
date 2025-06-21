@@ -4,6 +4,7 @@ export interface ReactPreviewerProps {
   depsInfo: Record<string, string>;
   entryFile?: string;
   onError?: (error: Error) => void;
+  onElementClick?: (sourceInfo: SourceInfo) => void;
 }
 
 export interface ErrorInfo {
