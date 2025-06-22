@@ -1,6 +1,3 @@
-// 导入样式文件
-import './styles.css';
-
 // 主组件导出
 export { ReactPreviewer } from './preview/ReactPreviewer';
 

@@ -1,0 +1,116 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 组件库自定义样式 */
+@layer components {
+  /* 预览框架样式 */
+  .preview-frame {
+    @reference border border-gray-200 rounded-lg overflow-hidden bg-white;
+  }
+
+  .preview-frame iframe {
+    @reference w-full h-full border-none;
+  }
+
+  /* 工具栏样式 */
+  .previewer-toolbar {
+    @reference flex items-center gap-2 p-3 bg-gray-50 border-b border-gray-200;
+  }
+
+  .previewer-toolbar button {
+    @reference px-3 py-1.5 border border-gray-300 rounded-md bg-white text-gray-700 text-sm cursor-pointer transition-all duration-200 hover:bg-gray-50 hover:border-gray-400 active:bg-gray-200;
+  }
+
+  .previewer-toolbar button.primary {
+    @reference bg-blue-500 text-white border-blue-500 hover:bg-blue-600 hover:border-blue-600;
+  }
+
+  /* 加载遮罩样式 */
+  .loading-overlay {
+    @reference absolute inset-0 bg-white/90 flex items-center justify-center z-10;
+  }
+
+  .loading-spinner {
+    @reference w-8 h-8 border-3 border-gray-200 border-t-blue-500 rounded-full animate-spin;
+  }
+
+  /* 错误显示样式 */
+  .error-display {
+    @reference p-4 bg-red-50 border border-red-200 rounded-md text-red-600 m-2;
+  }
+
+  .error-display h3 {
+    @reference m-0 mb-2 text-base font-semibold;
+  }
+
+  .error-display pre {
+    @reference mt-2 p-2 bg-white rounded text-xs overflow-x-auto;
+  }
+
+  /* 调试面板样式 */
+  .debug-panel {
+    @reference bg-gray-800 text-gray-100 p-3 font-mono text-xs rounded m-2 max-h-48 overflow-y-auto;
+  }
+
+  .debug-panel .log-entry {
+    @reference my-0.5 py-0.5;
+  }
+
+  .debug-panel .log-entry.log { @reference text-gray-300; }
+  .debug-panel .log-entry.warn { @reference text-yellow-400; }
+  .debug-panel .log-entry.error { @reference text-red-400; }
+
+  /* 源码提示样式 */
+  .source-tooltip {
+    @reference fixed bg-gray-800 text-gray-100 p-2 rounded text-xs font-mono z-[1000] pointer-events-none shadow-lg max-w-xs break-words;
+  }
+
+  .source-tooltip .file-info {
+    @reference font-semibold mb-1;
+  }
+
+  .source-tooltip .code-preview {
+    @reference bg-gray-700 p-1.5 rounded mt-1 whitespace-pre-wrap;
+  }
+
+  /* 检查模式样式 */
+  .inspect-highlight {
+    @reference outline-2 outline-dashed outline-blue-500 outline-offset-2 bg-blue-500/10;
+  }
+
+  .inspect-mode {
+    @reference cursor-crosshair;
+  }
+
+  .inspect-mode * {
+    @reference cursor-crosshair;
+  }
+
+  .inspect-clickable {
+    @reference relative;
+  }
+
+  .inspect-clickable::after {
+    @reference content-[''] absolute -inset-0.5 border-2 border-transparent pointer-events-none transition-colors duration-200;
+  }
+
+  .inspect-clickable:hover::after {
+    @reference border-blue-500 bg-blue-500/5;
+  }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .previewer-toolbar {
+    @reference flex-wrap gap-1.5;
+  }
+  
+  .previewer-toolbar button {
+    @reference text-xs px-2 py-1;
+  }
+  
+  .source-tooltip {
+    @reference max-w-60 text-[11px];
+  }
+} 

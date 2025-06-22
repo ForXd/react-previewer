@@ -13,10 +13,7 @@
       "import": "./dist/index.js",
       "require": "./dist/index.js"
     },
-    "./styles": {
-      "import": "./dist/styles.css",
-      "require": "./dist/styles.css"
-    }
+    "./styles.css": "./dist/styles.css"
   },
   "files": [
     "dist",
@@ -25,7 +22,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "build:lib": "tsup src/lib/ReactPreview/index.ts --format esm,cjs --dts --external react --external react-dom --tsconfig tsconfig.lib.json && cp src/lib/ReactPreview/styles.css dist/styles.css",
+    "build:lib": "tsup src/lib/ReactPreview/index.ts --format esm,cjs --dts --external react --external react-dom --tsconfig tsconfig.lib.json && npx @tailwindcss/cli -i src/lib/ReactPreview/index.css -o dist/styles.css --config tailwind.config.js",
     "lint": "eslint .",
     "preview": "vite preview",
     "prepublishOnly": "npm run build:lib"

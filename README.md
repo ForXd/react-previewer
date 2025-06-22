@@ -14,14 +14,19 @@
 ## 安装
 
 ```bash
-npm install react-previewer
+npm install @zllling/react-previewer
 ```
 
-## 基本使用
+## 使用方法
+
+### 基本使用
 
 ```tsx
 import React from 'react';
-import { ReactPreviewer } from 'react-previewer';
+import { ReactPreviewer } from '@zllling/react-previewer';
+
+// 引入样式（必需）
+import '@zllling/react-previewer/styles';
 
 const App = () => {
   const files = {
@@ -56,6 +61,58 @@ export default App;
     />
   );
 };
+```
+
+### 样式引入方式
+
+有两种方式引入样式：
+
+#### 方式一：在入口文件引入（推荐）
+
+```tsx
+// 在你的应用入口文件（如 main.tsx 或 App.tsx）中
+import '@zllling/react-previewer/styles';
+```
+
+#### 方式二：在组件文件中引入
+
+```tsx
+import { ReactPreviewer } from '@zllling/react-previewer';
+import '@zllling/react-previewer/styles';
+
+// 你的组件代码...
+```
+
+### 高级配置
+
+```tsx
+import React from 'react';
+import { ReactPreviewer } from '@zllling/react-previewer';
+
+function App() {
+  const files = {
+    'App.tsx': `/* 你的 React 代码 */`,
+    'styles.css': `/* 你的 CSS 样式 */`
+  };
+
+  return (
+    <ReactPreviewer
+      files={files}
+      entryFile="App.tsx"
+      depsInfo={{
+        react: '18.2.0',
+        'react-dom': '18.2.0',
+        '@arco-design/web-react': '2.66.1'
+      }}
+      onError={(error) => {
+        console.error('预览错误:', error);
+      }}
+      onElementClick={(sourceInfo) => {
+        console.log('点击的元素源码信息:', sourceInfo);
+      }}
+    />
+  );
+}
 ```
 
 ## API 参考
@@ -97,7 +154,7 @@ interface LoggerConfig {
 ### 配置日志系统
 
 ```tsx
-import { ReactPreviewer, LogLevel } from 'react-previewer';
+import { ReactPreviewer, LogLevel } from '@zllling/react-previewer';
 
 <ReactPreviewer
   files={files}
@@ -119,7 +176,7 @@ import {
   ErrorBoundary, 
   ErrorDisplay,
   PreviewerToolbar 
-} from 'react-previewer';
+} from '@zllling/react-previewer';
 
 // 使用预览帧
 <PreviewFrame
@@ -146,7 +203,7 @@ import {
   CodeTransformer, 
   TypeScriptDependencyAnalyzer,
   DependencyGraph 
-} from 'react-previewer';
+} from '@zllling/react-previewer';
 
 // 代码转换
 const transformer = new CodeTransformer();
@@ -186,6 +243,12 @@ npm run build:lib
 ```bash
 npm publish
 ```
+
+## 注意事项
+
+1. **样式引入**：必须引入样式文件，否则组件可能显示异常
+2. **依赖管理**：确保在 `depsInfo` 中正确配置所需的依赖包
+3. **文件格式**：支持 `.tsx`、`.ts`、`.jsx`、`.js`、`.css` 等文件格式
 
 ## 许可证
 
