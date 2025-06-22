@@ -1,18 +1,22 @@
 {
   "name": "@zllling/react-previewer",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A React component for live code preview with compilation and error handling",
   "type": "module",
   "main": "dist/index.js",
-  "module": "dist/index.esm.js",
+  "module": "dist/index.js",
   "types": "dist/index.d.ts",
+  "style": "dist/styles.css",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.esm.js",
+      "import": "./dist/index.js",
       "require": "./dist/index.js"
     },
-    "./package.json": "./package.json"
+    "./styles": {
+      "import": "./dist/styles.css",
+      "require": "./dist/styles.css"
+    }
   },
   "files": [
     "dist",
@@ -21,7 +25,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "build:lib": "tsup src/lib/ReactPreview/index.ts --format esm,cjs --dts --external react --external react-dom --tsconfig tsconfig.lib.json",
+    "build:lib": "tsup src/lib/ReactPreview/index.ts --format esm,cjs --dts --external react --external react-dom --tsconfig tsconfig.lib.json && cp src/lib/ReactPreview/styles.css dist/styles.css",
     "lint": "eslint .",
     "preview": "vite preview",
     "prepublishOnly": "npm run build:lib"
