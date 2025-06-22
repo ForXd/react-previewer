@@ -1,6 +1,6 @@
 {
   "name": "@zllling/react-previewer",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "A React component for live code preview with compilation and error handling",
   "type": "module",
   "main": "dist/index.js",
@@ -21,7 +21,7 @@
   ],
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build:page": "tsc -b && vite build",
     "build:lib": "tsup src/lib/ReactPreview/index.ts --format esm,cjs --dts --external react --external react-dom --tsconfig tsconfig.lib.json && npx @tailwindcss/cli -i src/lib/ReactPreview/index.css -o dist/styles.css --config tailwind.config.js",
     "lint": "eslint .",
     "preview": "vite preview",
