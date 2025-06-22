@@ -48,7 +48,8 @@
   "homepage": "https://github.com/ForXd/react-previewer#readme",
   "dependencies": {
     "@babel/parser": "^7.27.5",
-    "@babel/standalone": "^7.27.6"
+    "@babel/standalone": "^7.27.6",
+    "@babel/types": "^7.27.5"
   },
   "peerDependencies": {
     "react": "^18.2.0",
