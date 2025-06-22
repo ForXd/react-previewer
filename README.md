@@ -26,7 +26,7 @@ import React from 'react';
 import { ReactPreviewer } from '@zllling/react-previewer';
 
 // 引入样式（必需）
-import '@zllling/react-previewer/styles';
+import '@zllling/react-previewer/styles.css';
 
 const App = () => {
   const files = {
@@ -71,14 +71,14 @@ export default App;
 
 ```tsx
 // 在你的应用入口文件（如 main.tsx 或 App.tsx）中
-import '@zllling/react-previewer/styles';
+import '@zllling/react-previewer/styles.css';
 ```
 
 #### 方式二：在组件文件中引入
 
 ```tsx
 import { ReactPreviewer } from '@zllling/react-previewer';
-import '@zllling/react-previewer/styles';
+import '@zllling/react-previewer/styles.css';
 
 // 你的组件代码...
 ```
