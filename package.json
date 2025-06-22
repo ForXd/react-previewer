@@ -1,18 +1,53 @@
 {
-  "name": "vite-test",
-  "private": true,
-  "version": "0.0.0",
+  "name": "@zyx999/react-previewer",
+  "version": "1.0.0",
+  "description": "A React component for live code preview with compilation and error handling",
   "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.esm.js",
+      "require": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:lib": "tsup src/lib/ReactPreview/index.ts --format esm,cjs --dts --external react --external react-dom --tsconfig tsconfig.lib.json",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "prepublishOnly": "npm run build:lib"
   },
+  "keywords": [
+    "react",
+    "preview",
+    "compiler",
+    "live-editor",
+    "code-preview",
+    "typescript",
+    "jsx"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/react-previewer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/react-previewer/issues"
+  },
+  "homepage": "https://github.com/yourusername/react-previewer#readme",
   "dependencies": {
     "@babel/parser": "^7.27.5",
-    "@babel/standalone": "^7.27.6",
-    "@tailwindcss/vite": "^4.1.10"
+    "@babel/standalone": "^7.27.6"
   },
   "peerDependencies": {
     "react": "^18.2.0",
@@ -21,6 +56,7 @@
   "devDependencies": {
     "@eslint/js": "^9.25.0",
     "@tailwindcss/postcss": "^4.1.10",
+    "@tailwindcss/vite": "^4.1.10",
     "@types/babel__standalone": "^7.1.9",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
@@ -32,6 +68,7 @@
     "globals": "^16.0.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.10",
+    "tsup": "^8.5.0",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.30.1",
     "vite": "^6.3.5"
