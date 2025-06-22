@@ -1,6 +1,6 @@
 {
-  "name": "@zyx999/react-previewer",
-  "version": "1.0.0",
+  "name": "@zllling/react-previewer",
+  "version": "0.0.1",
   "description": "A React component for live code preview with compilation and error handling",
   "type": "module",
   "main": "dist/index.js",
@@ -39,12 +39,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/react-previewer.git"
+    "url": "https://github.com/ForXd/react-previewer.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/react-previewer/issues"
+    "url": "https://github.com/ForXd/react-previewer/issues"
   },
-  "homepage": "https://github.com/yourusername/react-previewer#readme",
+  "homepage": "https://github.com/ForXd/react-previewer#readme",
   "dependencies": {
     "@babel/parser": "^7.27.5",
     "@babel/standalone": "^7.27.6"
