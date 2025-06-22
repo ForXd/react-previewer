@@ -1,8 +1,11 @@
-
 /**
  * 创建 JSX 属性
  */
-export function createJSXAttribute(name: string, value: string): any {
+export function createJSXAttribute(name: string, value: string): {
+  type: string;
+  name: { type: string; name: string };
+  value: { type: string; value: string };
+} {
   return {
     type: 'JSXAttribute',
     name: {
@@ -19,7 +22,11 @@ export function createJSXAttribute(name: string, value: string): any {
 /**
  * 检查是否已存在指定属性
  */
-export function hasAttribute(attributes: any[], attrName: string): boolean {
+export function hasAttribute(attributes: Array<{
+  type: string;
+  name?: { type: string; name: string };
+  value?: { type: string; value: string };
+}>, attrName: string): boolean {
   return attributes.some(
     (attr) =>
       attr.type === 'JSXAttribute' && 

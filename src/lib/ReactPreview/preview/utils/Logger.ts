@@ -1,12 +1,14 @@
 // utils/Logger.ts
 
-export enum LogLevel {
-  ERROR = 0,
-  WARN = 1,
-  INFO = 2,
-  DEBUG = 3,
-  TRACE = 4
-}
+const LogLevel = {
+  ERROR: 0,
+  WARN: 1,
+  INFO: 2,
+  DEBUG: 3,
+  TRACE: 4
+} as const;
+
+type LogLevel = typeof LogLevel[keyof typeof LogLevel];
 
 export interface LoggerConfig {
   enabled: boolean;
@@ -42,7 +44,7 @@ class Logger {
     return this.config.enabled && level <= this.config.level;
   }
 
-  private formatMessage(level: string, message: string, ...args: any[]): string {
+  private formatMessage(level: string, message: string): string {
     const parts: string[] = [];
     
     if (this.config.showTimestamp) {
@@ -59,54 +61,54 @@ class Logger {
     return parts.join(' ');
   }
 
-  error(message: string, ...args: any[]): void {
+  error(message: string, ...args: unknown[]): void {
     if (this.shouldLog(LogLevel.ERROR)) {
       console.error(this.formatMessage('ERROR', message), ...args);
     }
   }
 
-  warn(message: string, ...args: any[]): void {
+  warn(message: string, ...args: unknown[]): void {
     if (this.shouldLog(LogLevel.WARN)) {
       console.warn(this.formatMessage('WARN', message), ...args);
     }
   }
 
-  info(message: string, ...args: any[]): void {
+  info(message: string, ...args: unknown[]): void {
     if (this.shouldLog(LogLevel.INFO)) {
       console.info(this.formatMessage('INFO', message), ...args);
     }
   }
 
-  debug(message: string, ...args: any[]): void {
+  debug(message: string, ...args: unknown[]): void {
     if (this.shouldLog(LogLevel.DEBUG)) {
       console.debug(this.formatMessage('DEBUG', message), ...args);
     }
   }
 
-  trace(message: string, ...args: any[]): void {
+  trace(message: string, ...args: unknown[]): void {
     if (this.shouldLog(LogLevel.TRACE)) {
       console.trace(this.formatMessage('TRACE', message), ...args);
     }
   }
 
-  log(message: string, ...args: any[]): void {
+  log(message: string, ...args: unknown[]): void {
     this.info(message, ...args);
   }
 
   // 便捷方法，用于特定模块的日志
   module(moduleName: string) {
     return {
-      error: (message: string, ...args: any[]) => 
+      error: (message: string, ...args: unknown[]) => 
         this.error(`[${moduleName}] ${message}`, ...args),
-      warn: (message: string, ...args: any[]) => 
+      warn: (message: string, ...args: unknown[]) => 
         this.warn(`[${moduleName}] ${message}`, ...args),
-      info: (message: string, ...args: any[]) => 
+      info: (message: string, ...args: unknown[]) => 
         this.info(`[${moduleName}] ${message}`, ...args),
-      debug: (message: string, ...args: any[]) => 
+      debug: (message: string, ...args: unknown[]) => 
         this.debug(`[${moduleName}] ${message}`, ...args),
-      trace: (message: string, ...args: any[]) => 
+      trace: (message: string, ...args: unknown[]) => 
         this.trace(`[${moduleName}] ${message}`, ...args),
-      log: (message: string, ...args: any[]) => 
+      log: (message: string, ...args: unknown[]) => 
         this.log(`[${moduleName}] ${message}`, ...args)
     };
   }

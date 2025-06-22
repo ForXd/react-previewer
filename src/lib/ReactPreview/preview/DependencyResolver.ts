@@ -74,7 +74,6 @@ function transformDepsToEsmLinks(
   options: EsmOptions = {}
 ): TransformResult {
   const {
-    dev = false,
     target = 'es2022',
     bundle = false,
     external = [],

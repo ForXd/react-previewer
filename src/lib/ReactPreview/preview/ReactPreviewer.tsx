@@ -1,6 +1,6 @@
 // ReactPreviewer.tsx (重构后的版本)
 import React, { useState, useCallback, useEffect } from 'react';
-import type { ReactPreviewerProps, SourceInfo } from './types';
+import type { ReactPreviewerProps } from './types';
 import { PreviewFrame } from './components/PreviewFrame';
 import { PreviewerToolbar } from './components/PreviewerToolbar';
 import { ErrorBoundary } from './components/ErrorBoundary';

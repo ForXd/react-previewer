@@ -1,20 +1,34 @@
 // utils/MessageHandler.ts (修复版本)
-import type { MessageData, ErrorInfo, SourceInfo } from '../types';
+import type { MessageData, ErrorInfo } from '../types';
 import { ErrorHandler } from './ErrorHandler';
 import { createModuleLogger } from './Logger';
 
 const logger = createModuleLogger('MessageHandler');
 
+interface ElementClickData {
+  file: string;
+  startLine: number;
+  endLine: number;
+  startColumn: number;
+  endColumn: number;
+  x: number;
+  y: number;
+}
+
+interface ConsoleLogData {
+  args: unknown[];
+}
+
 export class MessageHandler {
   private errorHandler: ErrorHandler;
   private onError?: (error: ErrorInfo) => void;
-  private onElementClick?: (data: any) => void;
+  private onElementClick?: (data: ElementClickData) => void;
 
   constructor(
     errorHandler: ErrorHandler,
     callbacks: {
       onError?: (error: ErrorInfo) => void;
-      onElementClick?: (data: any) => void;
+      onElementClick?: (data: ElementClickData) => void;
     }
   ) {
     this.errorHandler = errorHandler;
@@ -36,16 +50,16 @@ export class MessageHandler {
       
       switch (type) {
         case 'runtime-error':
-          this.handleRuntimeError(data);
+          this.handleRuntimeError(data as Record<string, unknown>);
           break;
         case 'element-click':
-          this.handleElementClick(data);
+          this.handleElementClick(data as unknown as ElementClickData);
           break;
         case 'console-log':
-          this.handleConsoleLog(data);
+          this.handleConsoleLog(data as unknown as ConsoleLogData);
           break;
         case 'toggle-inspect':
-          this.handleToggleInspect(data);
+          this.handleToggleInspect(data as Record<string, unknown>);
           break;
         default:
           logger.warn('Unknown message type:', type);
@@ -55,16 +69,22 @@ export class MessageHandler {
     }
   }
 
-  private handleRuntimeError(errorData: any): void {
+  private handleRuntimeError(errorData: Record<string, unknown>): void {
     try {
-      const errorInfo = this.errorHandler.processRuntimeError(errorData);
+      const errorInfo = this.errorHandler.processRuntimeError(errorData as {
+        filename?: string;
+        stack?: string;
+        message?: string;
+        lineno?: number;
+        colno?: number;
+      });
       this.onError?.(errorInfo);
     } catch (error) {
       logger.error('Error processing runtime error:', error);
     }
   }
 
-  private handleElementClick(data: any): void {
+  private handleElementClick(data: ElementClickData): void {
     try {
       // 验证数据格式
       if (!data || typeof data !== 'object') {
@@ -88,7 +108,7 @@ export class MessageHandler {
     }
   }
 
-  private handleConsoleLog(data: any): void {
+  private handleConsoleLog(data: ConsoleLogData): void {
     try {
       if (data && Array.isArray(data.args)) {
         logger.debug('[Preview]', ...data.args);
@@ -98,7 +118,7 @@ export class MessageHandler {
     }
   }
 
-  private handleToggleInspect(data: any): void {
+  private handleToggleInspect(data: Record<string, unknown>): void {
     try {
       // 处理检查模式切换
       logger.debug('Toggle inspect mode:', data);

@@ -2,17 +2,36 @@ import type { ASTProcessor, TransformOptions } from '../types';
 import { transform } from '@babel/standalone';
 import { createJSXAttribute, hasAttribute, resolveRelativePath, getResolvedFilename } from '../utils';
 import { createModuleLogger } from '../../preview/utils/Logger';
+import type { Node } from '@babel/types';
 
 const logger = createModuleLogger('ASTProcessors');
 
+// 定义扩展的节点类型
+type ExtendedNode = Node & {
+  attributes?: Array<{
+    type: string;
+    name?: { type: string; name: string };
+    value?: { type: string; value: string };
+  }>;
+  source?: { value: string };
+  openingElement?: ExtendedNode;
+  closingElement?: ExtendedNode;
+  expression?: ExtendedNode;
+  type?: string;
+  loc?: {
+    start: { line: number; column: number };
+    end: { line: number; column: number };
+  };
+};
+
 export class JSXDebugProcessor implements ASTProcessor {
-  process(node: any, source: string, options: TransformOptions): void {
+  process(node: Node, source: string, options: TransformOptions): void {
     if (node.type === 'JSXOpeningElement') {
-      this.processJSXOpeningElement(node, source, options);
+      this.processJSXOpeningElement(node as ExtendedNode, source, options);
     }
   }
 
-  private processJSXOpeningElement(node: any, source: string, options: TransformOptions): void {
+  private processJSXOpeningElement(node: ExtendedNode, _: string, options: TransformOptions): void {
     const { filename, files } = options;
 
     if (!node.loc) return;
@@ -46,15 +65,15 @@ export class JSXDebugProcessor implements ASTProcessor {
 }
 
 export class ImportProcessor implements ASTProcessor {
-  process(node: any, source: string, options: TransformOptions): void {
+  process(node: Node, source: string, options: TransformOptions): void {
     if (node.type === 'ImportDeclaration') {
-      this.processImportDeclaration(node, source, options);
+      this.processImportDeclaration(node as ExtendedNode, source, options);
     }
   }
 
-  private processImportDeclaration(node: any, source: string, options: TransformOptions): void {
+  private processImportDeclaration(node: ExtendedNode, source: string, options: TransformOptions): void {
     const { filename, files, fileUrls, depsInfo } = options;
-    const moduleName = node.source.value;
+    const moduleName = node.source?.value;
 
     if (!moduleName || !filename) return;
 
@@ -72,7 +91,7 @@ export class ImportProcessor implements ASTProcessor {
       logger.debug("moduleName: =======", moduleName, resolvedPath, finalPath);
 
       const url = fileUrls?.get(finalPath);
-      if (url) {
+      if (url && node.source) {
         node.source.value = url;
         logger.debug('Resolved local import:', finalPath, '-> URL:', url);
       } else {
@@ -81,14 +100,16 @@ export class ImportProcessor implements ASTProcessor {
     } else {
       // 处理三方依赖导入
       const esmUrl = depsInfo?.[moduleName] || moduleName;
-      node.source.value = esmUrl;
+      if (node.source) {
+        node.source.value = esmUrl;
+      }
       logger.debug('Resolved external import in ast:', moduleName, '-> ESM URL:', esmUrl, depsInfo);
     }
   }
 
-  private processCSSImport(node: any, source: string, options: TransformOptions): void {
+  private processCSSImport(node: ExtendedNode, _: string, options: TransformOptions): void {
     const { filename, files } = options;
-    const cssPath = node.source.value;
+    const cssPath = node.source?.value;
 
     if (!cssPath || !filename) return;
 
@@ -113,12 +134,10 @@ export class ImportProcessor implements ASTProcessor {
     ];
 
     let cssContent = '';
-    let foundPath = '';
 
     for (const path of possiblePaths) {
       if (files?.[path]) {
         cssContent = files[path];
-        foundPath = path;
         logger.debug(`Found CSS file: ${cssPath} -> ${path}`);
         break;
       }
@@ -127,7 +146,9 @@ export class ImportProcessor implements ASTProcessor {
     if (!cssContent) {
       logger.warn(`CSS file not found: ${cssPath}`);
       // 将 CSS 导入替换为空导入，避免运行时错误
-      node.source.value = '""';
+      if (node.source) {
+        node.source.value = '""';
+      }
       return;
     }
 
@@ -135,7 +156,7 @@ export class ImportProcessor implements ASTProcessor {
     this.transformToLocalCSSLoader(node, cssPath, cssContent);
   }
 
-  private transformToRemoteCSSLoader(node: any, cssPath: string): void {
+  private transformToRemoteCSSLoader(node: ExtendedNode, cssPath: string): void {
     // 将远程 CSS 导入转换为动态加载
     node.type = 'ExpressionStatement';
     node.expression = {
@@ -211,12 +232,12 @@ export class ImportProcessor implements ASTProcessor {
         }
       },
       arguments: []
-    };
+    } as unknown as ExtendedNode;
 
     logger.debug('Transformed remote CSS import:', cssPath, '-> dynamic link loading');
   }
 
-  private transformToLocalCSSLoader(node: any, cssPath: string, cssContent: string): void {
+  private transformToLocalCSSLoader(node: ExtendedNode, cssPath: string, cssContent: string): void {
     // 将本地 CSS 导入转换为动态样式注入
     node.type = 'ExpressionStatement';
     node.expression = {
@@ -294,7 +315,7 @@ export class ImportProcessor implements ASTProcessor {
         }
       },
       arguments: []
-    };
+    } as unknown as ExtendedNode;
 
     logger.debug('Transformed local CSS import:', cssPath, '-> dynamic style injection');
   }
@@ -307,7 +328,7 @@ export class ASTProcessorManager {
     this.processors.push(processor);
   }
 
-  processNode(node: any, source: string, options: TransformOptions): void {
+  processNode(node: Node, source: string, options: TransformOptions): void {
     this.processors.forEach(processor => {
       processor.process(node, source, options);
     });
@@ -325,28 +346,34 @@ export class ASTProcessorManager {
         // 自定义插件，用于处理AST
         () => ({
           visitor: {
-            JSXOpeningElement: (path: any) => {
+            JSXOpeningElement: (path: { node: Node }) => {
               const node = path.node;
               this.processNode(node, source, options);
             },
-            ImportDeclaration: (path: any) => {
+            ImportDeclaration: (path: { node: Node }) => {
               const node = path.node;
               this.processNode(node, source, options);
             },
-            JSXElement: (path: any) => {
-              const node = path.node;
+            JSXElement: (path: { node: Node }) => {
+              const node = path.node as ExtendedNode;
               const openingElement = node.openingElement;
               const closingElement = node.closingElement;
               
               if (openingElement && closingElement && openingElement.loc && closingElement.loc) {
                 // 添加结束行号和列号
-                if (!hasAttribute(openingElement.attributes, 'data-pipo-end-line')) {
+                if (!hasAttribute(openingElement.attributes || [], 'data-pipo-end-line')) {
                   const endLineAttr = createJSXAttribute('data-pipo-end-line', closingElement.loc.end.line.toString());
+                  if (!openingElement.attributes) {
+                    openingElement.attributes = [];
+                  }
                   openingElement.attributes.push(endLineAttr);
                 }
 
-                if (!hasAttribute(openingElement.attributes, 'data-pipo-end-column')) {
+                if (!hasAttribute(openingElement.attributes || [], 'data-pipo-end-column')) {
                   const endColumnAttr = createJSXAttribute('data-pipo-end-column', closingElement.loc.end.column.toString());
+                  if (!openingElement.attributes) {
+                    openingElement.attributes = [];
+                  }
                   openingElement.attributes.push(endColumnAttr);
                 }
               }

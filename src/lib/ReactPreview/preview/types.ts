@@ -32,7 +32,7 @@ export interface SourceInfo {
 
 export interface MessageData {
   type: 'runtime-error' | 'element-click' | 'console-log' | 'toggle-inspect';
-  data: any;
+  data: Record<string, unknown>;
 }
 
 export interface TransformedFile {

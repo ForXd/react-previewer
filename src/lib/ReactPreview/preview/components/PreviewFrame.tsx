@@ -1,5 +1,5 @@
 // components/PreviewFrame.tsx
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { SourceInfo } from '../types';
 import { FileProcessor } from '../utils/FileProcessor';
 import { ErrorHandler } from '../utils/ErrorHandler';
@@ -13,7 +13,7 @@ const logger = createModuleLogger('PreviewFrame');
 export interface PreviewFrameProps {
   files: Record<string, string>;
   entryFile: string;
-  depsInfo?: Record<string, any>;
+  depsInfo?: Record<string, string>;
   onError?: (error: Error) => void;
   onElementClick?: (sourceInfo: SourceInfo) => void;
   isInspecting?: boolean;
@@ -307,8 +307,9 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
 
   // 清理资源
   useEffect(() => {
+    const processor = fileProcessor.current;
     return () => {
-      fileProcessor.current.cleanup();
+      processor.cleanup();
     };
   }, []);
 

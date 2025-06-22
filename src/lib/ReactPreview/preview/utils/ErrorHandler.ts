@@ -15,7 +15,13 @@ export class ErrorHandler {
     });
   }
 
-  processRuntimeError(errorData: any): ErrorInfo {
+  processRuntimeError(errorData: {
+    filename?: string;
+    stack?: string;
+    message?: string;
+    lineno?: number;
+    colno?: number;
+  }): ErrorInfo {
     let fileName = errorData.filename;
     // 优先从 stack trace 的每一行用正则提取 blob: 链接并映射为用户文件名
     if (errorData.stack && this.blobToFileMap.size > 0) {
@@ -69,7 +75,14 @@ export class ErrorHandler {
     };
   }
 
-  processCompileError(error: any): ErrorInfo {
+  processCompileError(error: {
+    filename?: string;
+    fileName?: string;
+    loc?: { line?: number; column?: number };
+    codeFrame?: string;
+    message?: string;
+    stack?: string;
+  }): ErrorInfo {
 
     logger.debug("processCompileError: =======", error);
     // 尝试解析 Babel 错误对象的详细信息
@@ -89,7 +102,7 @@ export class ErrorHandler {
     }
     return {
       type: 'compile',
-      message,
+      message: message || 'Compile error occurred',
       stack: error.stack,
       fileName,
       lineNumber,

@@ -56,7 +56,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ error, files }) => {
         {error.type === 'compile' && error.codeFrame ? (
           <div>
             <div className="text-xs text-gray-500 mb-1">{error.fileName}{typeof error.lineNumber === 'number' ? ` (第${error.lineNumber}行)` : ''}</div>
-            <pre className="bg-[#23272e] text-xs text-gray-100 rounded-md p-3 overflow-auto border border-gray-700 font-mono leading-6 whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: error.codeFrame.replace(/\u001b\[[0-9;]*m/g, '') }} />
+            <pre className="bg-[#23272e] text-xs text-gray-100 rounded-md p-3 overflow-auto border border-gray-700 font-mono leading-6 whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: error.codeFrame }} />
           </div>
         ) : error.type === 'compile' && error.fileName && typeof error.lineNumber === 'number' && codeLines.length > 0 && (
           <div>

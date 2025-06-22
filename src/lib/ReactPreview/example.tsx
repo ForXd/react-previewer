@@ -3,14 +3,13 @@ import { ReactPreviewer } from './preview/ReactPreviewer';
 import { SourceTooltip } from './preview/components/SourceTooltip';
 import { demoList } from './test/demo';
 import type { SourceInfo } from './preview/types';
-import { createModuleLogger } from './preview/utils/Logger';
+import { createModuleLogger, type LoggerConfig } from './preview/utils/Logger';
 
 const logger = createModuleLogger('Example');
 
 const ExampleUsage: React.FC = () => {
   const [selectedDemo, setSelectedDemo] = useState(demoList[0]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [lastClickedElement, setLastClickedElement] = useState<SourceInfo | null>(null);
   const [sourceInfo, setSourceInfo] = useState<SourceInfo | null>(null);
   const [editingMode, setEditingMode] = useState(false);
   const [editedFiles, setEditedFiles] = useState<Record<string, string>>({});
@@ -21,20 +20,20 @@ const ExampleUsage: React.FC = () => {
   });
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // 初始化编辑文件
-  useEffect(() => {
-    const files = getFiles();
-    setEditedFiles(files);
-  }, [selectedDemo]);
-
-  const getFiles = () => {
+  const getFiles = useCallback(() => {
     const files = { ...selectedDemo.files };
     const filesWithDeps = files as Record<string, string>;
     if ('deps.json' in filesWithDeps) {
       delete filesWithDeps['deps.json'];
     }
     return filesWithDeps;
-  };
+  }, [selectedDemo]);
+
+  // 初始化编辑文件
+  useEffect(() => {
+    const files = getFiles();
+    setEditedFiles(files);
+  }, [getFiles]);
 
   const getDeps = () => {
     try {
@@ -52,7 +51,6 @@ const ExampleUsage: React.FC = () => {
 
   const handleElementClick = (sourceInfo: SourceInfo) => {
     logger.debug('Element clicked in example:', sourceInfo);
-    setLastClickedElement(sourceInfo);
     setSourceInfo(sourceInfo);
   };
 
@@ -70,7 +68,7 @@ const ExampleUsage: React.FC = () => {
 
   const handleResetFiles = useCallback(() => {
     setEditedFiles(getFiles());
-  }, [selectedDemo]);
+  }, [getFiles]);
 
   // 点击外部区域关闭浮窗
   useEffect(() => {
@@ -291,7 +289,7 @@ const ExampleUsage: React.FC = () => {
                     depsInfo={currentDeps}
                     entryFile={selectedDemo.entryFile}
                     onElementClick={handleElementClick}
-                    loggerConfig={loggerConfig}
+                    loggerConfig={loggerConfig as Partial<LoggerConfig>}
                   />
                 );
               })()}

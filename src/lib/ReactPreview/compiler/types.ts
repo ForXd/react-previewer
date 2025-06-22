@@ -1,3 +1,5 @@
+import type { Node } from '@babel/types';
+
 export interface TransformOptions {
   filename?: string;
   files?: Record<string, string>;
@@ -20,7 +22,7 @@ export interface FileProcessor {
 }
 
 export interface ASTProcessor {
-  process(node: any, source: string, options: TransformOptions): void;
+  process(node: Node, source: string, options: TransformOptions): void;
 }
 
 export interface DependencyAnalyzer {

@@ -1,5 +1,6 @@
 import type { DependencyAnalyzer } from '../types';
 import { resolveRelativePath, getResolvedFilename } from '../utils';
+import type { Node, File } from '@babel/types';
 // import {parser} from '@babel/standalone';
 
 export class TypeScriptDependencyAnalyzer implements DependencyAnalyzer {
@@ -8,11 +9,11 @@ export class TypeScriptDependencyAnalyzer implements DependencyAnalyzer {
       const ast = (await import('@babel/parser')).parse(content, {
         sourceType: 'module',
         plugins: ['jsx', 'typescript'],
-      });
+      }) as File;
 
       const dependencies: string[] = [];
 
-      this.traverseAST(ast, (node: any) => {
+      this.traverseAST(ast, (node: Node) => {
         if (node.type === 'ImportDeclaration') {
           const moduleName = node.source?.value;
           if (moduleName && moduleName.startsWith('.')) {
@@ -32,18 +33,18 @@ export class TypeScriptDependencyAnalyzer implements DependencyAnalyzer {
     }
   }
 
-  private traverseAST(node: any, callback: (node: any) => void): void {
+  private traverseAST(node: Node, callback: (node: Node) => void): void {
     if (!node || typeof node !== 'object') return;
 
     callback(node);
 
     for (const key in node) {
-      if (node.hasOwnProperty(key)) {
-        const value = node[key];
+      if (Object.prototype.hasOwnProperty.call(node, key)) {
+        const value = (node as unknown as Record<string, unknown>)[key];
         if (Array.isArray(value)) {
-          value.forEach(item => this.traverseAST(item, callback));
+          value.forEach(item => this.traverseAST(item as Node, callback));
         } else if (typeof value === 'object' && value !== null) {
-          this.traverseAST(value, callback);
+          this.traverseAST(value as Node, callback);
         }
       }
     }
