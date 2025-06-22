@@ -1,12 +1,13 @@
 import type { DependencyAnalyzer } from '../types';
 import { resolveRelativePath, getResolvedFilename } from '../utils';
 import type { Node, File } from '@babel/types';
-// import {parser} from '@babel/standalone';
+import { parse } from '@babel/parser';
+
 
 export class TypeScriptDependencyAnalyzer implements DependencyAnalyzer {
   async analyze(content: string, fileName: string, files: Record<string, string>): Promise<string[]> {
     try {
-      const ast = (await import('@babel/parser')).parse(content, {
+      const ast = parse(content, {
         sourceType: 'module',
         plugins: ['jsx', 'typescript'],
       }) as File;

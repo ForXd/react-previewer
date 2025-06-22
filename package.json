@@ -1,6 +1,6 @@
 {
   "name": "@zllling/react-previewer",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "A React component for live code preview with compilation and error handling",
   "type": "module",
   "main": "dist/index.js",
@@ -48,7 +48,8 @@
   "homepage": "https://github.com/ForXd/react-previewer#readme",
   "dependencies": {
     "@babel/parser": "^7.27.5",
-    "@babel/standalone": "^7.27.6"
+    "@babel/standalone": "^7.27.6",
+    "@babel/types": "^7.27.5"
   },
   "peerDependencies": {
     "react": "^18.2.0",
