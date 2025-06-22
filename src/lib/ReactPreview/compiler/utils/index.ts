@@ -28,23 +28,6 @@ export function hasAttribute(attributes: any[], attrName: string): boolean {
   );
 }
 
-/**
- * 从源码和字节偏移计算行号
- */
-export function calculateLineNumber(source: string, byteOffset: number): number {
-  const lines = source.substring(0, byteOffset).split('\n');
-  return lines.length;
-}
-
-/**
- * 根据源代码和位置计算列号
- */
-export function calculateColumnNumber(source: string, position: number): number {
-  const beforePosition = source.substring(0, position);
-  const lastNewlineIndex = beforePosition.lastIndexOf('\n');
-  return lastNewlineIndex === -1 ? position + 1 : position - lastNewlineIndex;
-}
-
 
 /**
  * 解析相对路径

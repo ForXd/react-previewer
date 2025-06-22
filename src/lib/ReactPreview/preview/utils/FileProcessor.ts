@@ -46,37 +46,6 @@ export class FileProcessor {
     }
   }
 
-  // private createBlobUrls(files: Map<string, string>): Map<string, string> {
-  //   const urls = new Map<string, string>();
-
-  //   files.forEach((content, fileName) => {
-  //     const mimeType = this.getMimeType(fileName);
-  //     const blob = new Blob([content], { type: mimeType });
-  //     const url = URL.createObjectURL(blob);
-  //     urls.set(fileName, url);
-  //     this.blobUrls.set(fileName, url);
-  //   });
-
-  //   return urls;
-  // }
-
-  // private getMimeType(fileName: string): string {
-  //   const ext = fileName.split('.').pop()?.toLowerCase();
-  //   switch (ext) {
-  //     case 'js':
-  //     case 'jsx':
-  //     case 'ts':
-  //     case 'tsx':
-  //       return 'application/javascript';
-  //     case 'css':
-  //       return 'text/css';
-  //     case 'json':
-  //       return 'application/json';
-  //     default:
-  //       return 'text/plain';
-  //   }
-  // }
-
   async cleanup(): Promise<void> {
     // 清理 CodeTransformer 的资源
     if (this.blobUrls.size > 0) {

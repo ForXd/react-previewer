@@ -79,9 +79,9 @@ export class ErrorHandler {
       const mapped = this.blobToFileMap.get(fileName);
       if (mapped) fileName = mapped;
     }
-    let lineNumber = error.loc?.line;
-    let columnNumber = error.loc?.column;
-    let codeFrame = error.codeFrame;
+    const lineNumber = error.loc?.line;
+    const columnNumber = error.loc?.column;
+    const codeFrame = error.codeFrame;
     let message = error.message;
     // 有些 message 里会重复 codeFrame，去掉
     if (codeFrame && message && message.includes(codeFrame)) {
