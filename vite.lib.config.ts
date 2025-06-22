@@ -7,6 +7,10 @@ export default defineConfig({
     react(),
     dts({
       insertTypesEntry: true,
+      include: ['src/lib/ReactPreview/**/*'],
+      exclude: ['src/lib/ReactPreview/test/**/*'],
+      outDir: 'dist',
+      tsconfigPath: './tsconfig.lib.json',
     }),
   ],
   build: {

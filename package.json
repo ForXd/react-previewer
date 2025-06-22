@@ -1,6 +1,6 @@
 {
   "name": "@zllling/react-previewer",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "A React component for live code preview with compilation and error handling",
   "type": "module",
   "main": "dist/index.cjs",
