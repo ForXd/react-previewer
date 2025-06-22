@@ -31,7 +31,7 @@ export interface SourceInfo {
 }
 
 export interface MessageData {
-  type: 'runtime-error' | 'element-click' | 'console-log' | 'toggle-inspect';
+  type: 'runtime-error' | 'element-click' | 'console-log' | 'toggle-inspect' | 'dependency-error';
   data: Record<string, unknown>;
 }
 
