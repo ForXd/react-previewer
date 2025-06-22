@@ -247,6 +247,7 @@ export default UserList;
         margin-bottom: 20px;
       }
     `,
+  "deps.json": "{\"@arco-design/web-react\": \"2.66.1\"}"
 }
 
 
@@ -586,6 +587,257 @@ export default App;
   `,
 }
 
+export const dependencyLoadingDemo = {
+  "App.tsx": `import React from 'react';
+
+const DependencyLoadingTest: React.FC = () => {
+  const [count, setCount] = React.useState(0);
+
+  return (
+    <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
+      <h2>依赖加载测试</h2>
+      
+      <p>
+        这个组件用于测试依赖加载功能。如果页面正常显示，说明以下依赖已成功加载：
+      </p>
+      
+      <ul style={{ marginBottom: '20px' }}>
+        <li>React 18.2.0</li>
+        <li>React DOM 18.2.0</li>
+        <li>Arco Design Web React 2.66.1</li>
+      </ul>
+      
+      <div style={{ marginBottom: '20px' }}>
+        <button 
+          style={{ 
+            padding: '8px 16px', 
+            marginRight: '8px',
+            backgroundColor: '#1890ff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+          onClick={() => setCount(c => c + 1)}
+        >
+          点击次数: {count}
+        </button>
+        
+        <button 
+          style={{ 
+            padding: '8px 16px',
+            backgroundColor: '#f5f5f5',
+            border: '1px solid #d9d9d9',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+          onClick={() => setCount(0)}
+        >
+          重置
+        </button>
+      </div>
+      
+      <div style={{ padding: '16px', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
+        <p style={{ margin: 0 }}>
+          <strong>测试说明：</strong>
+          <br />
+          1. 页面加载时应该显示依赖加载进度
+          <br />
+          2. 加载完成后进度条应该消失
+          <br />
+          3. 按钮应该能正常响应点击事件
+          <br />
+          4. React 状态管理应该正常工作
+        </p>
+      </div>
+    </div>
+  );
+};
+
+export default DependencyLoadingTest;`,
+  "deps.json": "{\"@arco-design/web-react\": \"2.66.1\"}"
+};
+
+export const arcoDesignDemo = {
+  "App.tsx": `import React from 'react';
+
+const ArcoDesignTest: React.FC = () => {
+  const [count, setCount] = React.useState(0);
+  const [arcoComponents, setArcoComponents] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    // 动态导入 Arco Design 组件
+    const loadArcoComponents = async () => {
+      try {
+        const arco = await import('@arco-design/web-react');
+        setArcoComponents(arco);
+        setLoading(false);
+      } catch (error) {
+        console.error('Failed to load Arco Design components:', error);
+        setLoading(false);
+      }
+    };
+
+    loadArcoComponents();
+  }, []);
+
+  if (loading) {
+    return (
+      <div style={{ padding: '20px', textAlign: 'center' }}>
+        <div style={{ 
+          width: '40px', 
+          height: '40px', 
+          border: '4px solid #f3f3f3',
+          borderTop: '4px solid #1890ff',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite',
+          margin: '0 auto 16px'
+        }}></div>
+        <p>正在加载 Arco Design 组件...</p>
+        <style>{\`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        \`}</style>
+      </div>
+    );
+  }
+
+  if (!arcoComponents) {
+    return (
+      <div style={{ padding: '20px', textAlign: 'center', color: '#ff4d4f' }}>
+        <h3>Arco Design 组件加载失败</h3>
+        <p>请检查网络连接或依赖配置</p>
+      </div>
+    );
+  }
+
+  const { Button, Space, Typography } = arcoComponents;
+  const { Title, Paragraph } = Typography;
+
+  return (
+    <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
+      <Title level={2}>Arco Design 组件测试</Title>
+      
+      <Paragraph>
+        这个组件用于测试 Arco Design 组件的动态加载功能。
+        如果页面正常显示，说明 Arco Design 依赖已成功加载。
+      </Paragraph>
+      
+      <Space>
+        <Button 
+          type="primary" 
+          onClick={() => setCount(c => c + 1)}
+        >
+          点击次数: {count}
+        </Button>
+        
+        <Button 
+          onClick={() => setCount(0)}
+        >
+          重置
+        </Button>
+      </Space>
+      
+      <div style={{ marginTop: '20px', padding: '16px', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
+        <Paragraph style={{ margin: 0 }}>
+          <strong>测试说明：</strong>
+          <br />
+          1. 页面加载时应该显示依赖加载进度
+          <br />
+          2. Arco Design 组件应该正常渲染
+          <br />
+          3. 按钮应该能正常响应点击事件
+          <br />
+          4. 组件样式应该正确显示
+        </Paragraph>
+      </div>
+    </div>
+  );
+};
+
+export default ArcoDesignTest;`,
+  "deps.json": "{\"@arco-design/web-react\": \"2.66.1\"}"
+};
+
+export const simpleReactDemo = {
+  "App.tsx": `import React from 'react';
+
+const SimpleReactDemo: React.FC = () => {
+  const [count, setCount] = React.useState(0);
+  const [inputValue, setInputValue] = React.useState('');
+
+  return (
+    <div style={{ padding: '20px', maxWidth: '500px', margin: '0 auto' }}>
+      <h1>简单 React 组件测试</h1>
+      
+      <div style={{ marginBottom: '20px' }}>
+        <h3>计数器: {count}</h3>
+        <button 
+          onClick={() => setCount(c => c + 1)}
+          style={{
+            padding: '8px 16px',
+            marginRight: '8px',
+            backgroundColor: '#1890ff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+        >
+          增加
+        </button>
+        <button 
+          onClick={() => setCount(c => c - 1)}
+          style={{
+            padding: '8px 16px',
+            backgroundColor: '#ff4d4f',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+        >
+          减少
+        </button>
+      </div>
+      
+      <div style={{ marginBottom: '20px' }}>
+        <h3>输入框测试</h3>
+        <input
+          type="text"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          placeholder="请输入内容"
+          style={{
+            padding: '8px 12px',
+            border: '1px solid #d9d9d9',
+            borderRadius: '4px',
+            width: '200px'
+          }}
+        />
+        <p>输入的内容: {inputValue}</p>
+      </div>
+      
+      <div style={{ padding: '16px', backgroundColor: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: '4px' }}>
+        <h4>测试说明:</h4>
+        <ul>
+          <li>✅ React 状态管理正常工作</li>
+          <li>✅ 事件处理正常工作</li>
+          <li>✅ 组件渲染正常</li>
+          <li>✅ 依赖加载进度显示正常</li>
+        </ul>
+      </div>
+    </div>
+  );
+};
+
+export default SimpleReactDemo;`,
+  "deps.json": "{}"
+};
+
 // 统一的 demo 配置 map
 export const demoMap = {
   demo1: {
@@ -622,6 +874,24 @@ export const demoMap = {
     name: '运行时错误测试',
     description: '测试各种运行时错误的捕获和显示功能',
     files: demo6,
+    entryFile: 'App.tsx'
+  },
+  dependencyLoadingDemo: {
+    name: '依赖加载测试',
+    description: '测试依赖加载功能',
+    files: dependencyLoadingDemo,
+    entryFile: 'App.tsx'
+  },
+  arcoDesignDemo: {
+    name: 'Arco Design 组件测试',
+    description: '测试 Arco Design 组件的动态加载功能',
+    files: arcoDesignDemo,
+    entryFile: 'App.tsx'
+  },
+  simpleReactDemo: {
+    name: '简单 React 组件测试',
+    description: '测试简单 React 组件的功能',
+    files: simpleReactDemo,
     entryFile: 'App.tsx'
   }
 };

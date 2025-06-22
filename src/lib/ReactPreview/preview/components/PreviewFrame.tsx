@@ -185,6 +185,11 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
         }
       },
       onElementClick: handleElementClick,
+      onDependencyError: (dependencyError) => {
+        logger.warn('依赖加载失败:', dependencyError);
+        // 可以选择显示依赖错误信息，或者继续尝试加载
+        // 这里我们记录错误但不阻止预览继续
+      },
     });
   }, [handleElementClick]);
 
@@ -288,7 +293,7 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
       throw new Error(`Entry file ${entry} not found`);
     }
 
-    const html = htmlGenerator.current.generatePreviewHTML(entryUrl);
+    const html = htmlGenerator.current.generatePreviewHTML(entryUrl, depsInfo);
     const htmlBlob = new Blob([html], { type: 'text/html' });
     const htmlUrl = URL.createObjectURL(htmlBlob);
 

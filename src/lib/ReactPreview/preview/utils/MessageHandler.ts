@@ -19,21 +19,30 @@ interface ConsoleLogData {
   args: unknown[];
 }
 
+interface DependencyErrorData {
+  name: string;
+  url: string;
+  error: string;
+}
+
 export class MessageHandler {
   private errorHandler: ErrorHandler;
   private onError?: (error: ErrorInfo) => void;
   private onElementClick?: (data: ElementClickData) => void;
+  private onDependencyError?: (data: DependencyErrorData) => void;
 
   constructor(
     errorHandler: ErrorHandler,
     callbacks: {
       onError?: (error: ErrorInfo) => void;
       onElementClick?: (data: ElementClickData) => void;
+      onDependencyError?: (data: DependencyErrorData) => void;
     }
   ) {
     this.errorHandler = errorHandler;
     this.onError = callbacks.onError;
     this.onElementClick = callbacks.onElementClick;
+    this.onDependencyError = callbacks.onDependencyError;
   }
 
   handleMessage(event: MessageEvent): void {
@@ -60,6 +69,9 @@ export class MessageHandler {
           break;
         case 'toggle-inspect':
           this.handleToggleInspect(data as Record<string, unknown>);
+          break;
+        case 'dependency-error':
+          this.handleDependencyError(data as unknown as DependencyErrorData);
           break;
         default:
           logger.warn('Unknown message type:', type);
@@ -124,6 +136,28 @@ export class MessageHandler {
       logger.debug('Toggle inspect mode:', data);
     } catch (error) {
       logger.error('Error handling toggle inspect:', error);
+    }
+  }
+
+  private handleDependencyError(data: DependencyErrorData): void {
+    try {
+      // 验证数据格式
+      if (!data || typeof data !== 'object') {
+        logger.warn('Invalid dependency error data:', data);
+        return;
+      }
+
+      const { name, url, error } = data;
+      
+      if (typeof name !== 'string' || typeof url !== 'string' || typeof error !== 'string') {
+        logger.warn('Invalid dependency error data format:', data);
+        return;
+      }
+
+      logger.warn(`依赖加载失败: ${name} (${url}) - ${error}`);
+      this.onDependencyError?.(data);
+    } catch (error) {
+      logger.error('Error handling dependency error:', error);
     }
   }
 }

@@ -220,6 +220,7 @@ const ExampleUsage: React.FC = () => {
             <div>
               <h1 className="text-xl font-bold text-gray-900">{selectedDemo.name}</h1>
               <p className="text-sm text-gray-600 mt-1">{selectedDemo.description}</p>
+              
             </div>
             <div className="flex items-center space-x-3">
               <div className="text-sm text-gray-500">
@@ -296,6 +297,23 @@ const ExampleUsage: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* 依赖加载功能说明区域 */}
+        {(selectedDemo.key === 'simpleReactDemo' || selectedDemo.key === 'dependencyLoadingDemo' || selectedDemo.key === 'arcoDesignDemo') && (
+          <div className="bg-white border-t border-gray-200 p-4">
+            <h3 className="text-sm font-semibold text-gray-900 mb-2">依赖加载功能说明</h3>
+            <div className="text-xs text-gray-600 space-y-1">
+              <p><strong>观察要点:</strong></p>
+              <ul className="list-disc list-inside space-y-1 ml-2">
+                <li>页面加载时应该显示依赖加载进度条</li>
+                <li>进度条显示每个依赖的加载状态（等待中、加载中、已加载、加载失败）</li>
+                <li>加载完成后进度条自动消失</li>
+                <li>如果依赖加载失败，会显示错误状态</li>
+              </ul>
+              <p className="mt-2"><strong>当前依赖:</strong> {Object.keys(getDeps()).length > 0 ? Object.keys(getDeps()).join(', ') : '无外部依赖'}</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 源代码提示浮窗 */}
