@@ -9,5 +9,5 @@ export default defineConfig({
   build: {
     outDir: 'page',
   },
-  base: '/react-previewer/'
+  base: 'https://fastly.jsdelivr.net/gh/ForXd/react-previewer@main/page'
 })
