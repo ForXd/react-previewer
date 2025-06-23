@@ -1,5 +1,6 @@
 // utils/FileProcessor.ts
 import { CodeTransformer } from '../../compiler/CodeTransformer';
+import type { CompilerType } from '../../compiler/types';
 import { transformDepsToEsmLinks } from '../DependencyResolver';
 import { DEFAULT_DEPENDENCIES, TRANSFORM_OPTIONS } from '../constant';
 import { createModuleLogger } from './Logger';
@@ -14,13 +15,14 @@ export class FileProcessor {
     this.codeTransformer = new CodeTransformer();
   }
 
-  async initialize(): Promise<void> {
-    await this.codeTransformer.initialize();
+  async initialize(compilerType?: CompilerType): Promise<void> {
+    await this.codeTransformer.initialize(compilerType);
   }
 
   async processFiles(
     files: Record<string, string>,
-    depsInfo: Record<string, string>
+    depsInfo: Record<string, string>,
+    compilerType?: CompilerType
   ): Promise<Map<string, string>> {
     try {
       // 清理之前的 blob URLs
@@ -33,7 +35,8 @@ export class FileProcessor {
 
       const transformed = await this.codeTransformer.transformFiles(
         files,
-        advancedResult.dependencies
+        advancedResult.dependencies,
+        compilerType
       );
 
       logger.debug('transformed', transformed);

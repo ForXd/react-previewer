@@ -7,7 +7,8 @@ export type {
   ErrorInfo,
   SourceInfo,
   MessageData,
-  TransformedFile
+  TransformedFile,
+  CompilerConfig
 } from './preview/types';
 
 // 编译器相关导出
@@ -17,7 +18,12 @@ export type {
   DependencyNode,
   FileProcessor,
   ASTProcessor,
-  DependencyAnalyzer
+  DependencyAnalyzer,
+  CompilerType,
+  CompilerOptions,
+  CompilerStrategy,
+  CompilePerformance,
+  CompileResult
 } from './compiler/types';
 
 // 工具函数导出
@@ -60,4 +66,12 @@ export {
 export * from './preview/utils/ErrorHandler';
 export * from './preview/utils/FileProcessor';
 export * from './preview/utils/HTMLGenerator';
-export * from './preview/utils/MessageHandler'; 
+export * from './preview/utils/MessageHandler';
+
+// 编译器策略
+export { BabelStrategy, SwcStrategy } from './compiler/strategies';
+export { CompilerManager } from './compiler/CompilerManager';
+export type { CompilerComparison } from './compiler/CompilerManager';
+
+// 导出示例
+export { default as example } from './example'; 

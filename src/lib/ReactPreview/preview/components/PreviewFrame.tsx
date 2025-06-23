@@ -1,6 +1,7 @@
 // components/PreviewFrame.tsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { SourceInfo } from '../types';
+import type { CompilerType } from '../../compiler/types';
 import { FileProcessor } from '../utils/FileProcessor';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import { HTMLGenerator } from '../utils/HTMLGenerator';
@@ -18,7 +19,10 @@ export interface PreviewFrameProps {
   onElementClick?: (sourceInfo: SourceInfo) => void;
   isInspecting?: boolean;
   onInspectToggle?: (enabled: boolean) => void;
+  compilerType?: CompilerType;
   key?: string | number;
+  onCompilationStart?: () => void;
+  onCompilationComplete?: (duration: number) => void;
 }
 
 // 创建文件内容的哈希值用于比较
@@ -44,7 +48,10 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
   onError,
   onElementClick,
   isInspecting = false,
-  onInspectToggle
+  onInspectToggle,
+  compilerType = 'babel',
+  onCompilationStart,
+  onCompilationComplete
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +72,7 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
   const currentFilesRef = useRef<string>('');
   const currentEntryFileRef = useRef<string>('');
   const currentDepsInfoRef = useRef<string>('');
+  const currentCompilerTypeRef = useRef<string>('');
   
   // 使用 useRef 稳定回调函数的引用
   const onElementClickRef = useRef(onElementClick);
@@ -195,13 +203,20 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
 
   // 创建一个内部函数来处理文件，可以访问最新的 props
   const processFilesInternal = useCallback(async () => {
+    const startTime = performance.now();
+    
     try {
       setIsLoading(true);
       setError(null);
       setErrorDetails(null);
 
-      await fileProcessor.current.initialize();
-      const fileUrls = await fileProcessor.current.processFiles(files, depsInfo);
+      // 通知编译开始
+      if (onCompilationStart) {
+        onCompilationStart();
+      }
+
+      await fileProcessor.current.initialize(compilerType);
+      const fileUrls = await fileProcessor.current.processFiles(files, depsInfo, compilerType);
       logger.debug('processFiles=======')
       // fileUrls: Map<fileName, blobUrl>
       errorHandler.current.setBlobToFileMap(fileUrls);
@@ -222,8 +237,16 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
       }
     } finally {
       setIsLoading(false);
+      
+      // 计算编译时间并通知完成
+      const endTime = performance.now();
+      const duration = (endTime - startTime) / 1000; // 转换为秒
+      
+      if (onCompilationComplete) {
+        onCompilationComplete(duration);
+      }
     }
-  }, [files, depsInfo, entryFile]);
+  }, [files, depsInfo, entryFile, compilerType, onCompilationStart, onCompilationComplete]);
 
   // 检查文件内容是否真正改变
   useEffect(() => {
@@ -233,28 +256,35 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
     const newFilesHash = filesHash;
     const newEntryFile = entryFile;
     const newDepsInfoKey = depsInfoKey;
+    const newCompilerType = compilerType;
     
     // 只有当文件内容真正改变时才重新处理
     if (
       currentFilesRef.current !== newFilesHash ||
       currentEntryFileRef.current !== newEntryFile ||
-      currentDepsInfoRef.current !== newDepsInfoKey
+      currentDepsInfoRef.current !== newDepsInfoKey ||
+      currentCompilerTypeRef.current !== newCompilerType
     ) {
-      logger.debug('PreviewFrame: File content changed, reprocessing files');
+      logger.debug('PreviewFrame: File content or compiler changed, reprocessing files');
       logger.debug('Files hash changed:', {
         old: currentFilesRef.current,
         new: newFilesHash
       });
+      logger.debug('Compiler type changed:', {
+        old: currentCompilerTypeRef.current,
+        new: newCompilerType
+      });
       currentFilesRef.current = newFilesHash;
       currentEntryFileRef.current = newEntryFile;
       currentDepsInfoRef.current = newDepsInfoKey;
+      currentCompilerTypeRef.current = newCompilerType;
       
       // 使用 setTimeout 确保在下一个事件循环中执行，避免在渲染过程中处理文件
       setTimeout(() => {
         processFilesInternal();
       }, 0);
     }
-  }, [files, entryFile, depsInfo, processFilesInternal]);
+  }, [files, entryFile, depsInfo, compilerType, processFilesInternal]);
 
   // 监听iframe内的消息
   useEffect(() => {
@@ -375,13 +405,15 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
   const prevKey = JSON.stringify({
     filesHash: createFilesHash(prevProps.files),
     entryFile: prevProps.entryFile,
-    depsInfo: Object.keys(prevProps.depsInfo || {}).sort()
+    depsInfo: Object.keys(prevProps.depsInfo || {}).sort(),
+    compilerType: prevProps.compilerType
   });
   
   const nextKey = JSON.stringify({
     filesHash: createFilesHash(nextProps.files),
     entryFile: nextProps.entryFile,
-    depsInfo: Object.keys(nextProps.depsInfo || {}).sort()
+    depsInfo: Object.keys(nextProps.depsInfo || {}).sort(),
+    compilerType: nextProps.compilerType
   });
   
   // 如果关键 props 没有改变，返回 true 表示不需要重新渲染

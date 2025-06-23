@@ -1,9 +1,10 @@
 # ReactPreview 依赖加载系统
 
-ReactPreview 提供了一个智能的依赖加载系统，支持 ESM 动态依赖加载，并提供实时的加载状态反馈。
+ReactPreview 提供了一个智能的依赖加载系统，支持 ESM 动态依赖加载，并提供实时的加载状态反馈。同时支持多种编译策略，包括 Babel 和 SWC 编译器。
 
-## 依赖加载功能特性
+## 核心功能特性
 
+### 依赖加载功能
 - **实时加载进度**: 显示依赖加载的实时进度条
 - **详细状态反馈**: 显示每个依赖的加载状态（等待中、加载中、已加载、加载失败）
 - **错误处理**: 自动处理依赖加载失败的情况
@@ -11,18 +12,22 @@ ReactPreview 提供了一个智能的依赖加载系统，支持 ESM 动态依�
 - **支持多种依赖**: 支持 React、React DOM、第三方 UI 库等
 - **动态加载**: 使用 ESM 动态导入，支持按需加载
 
-## 依赖加载界面
+### 编译策略功能
+- **多编译器支持**: 支持 Babel 和 SWC 两种编译器
+- **灵活配置**: 可配置 JSX 运行时、目标环境、TypeScript 支持等
+- **自动回退**: 支持编译失败时自动回退到其他编译器
+- **性能优化**: SWC 提供更快的编译速度，Babel 提供更全面的功能
+- **实时切换**: 可在运行时切换编译器，无需重启
 
-当页面加载时，用户会看到：
+## 编译策略界面
 
-1. **加载覆盖层**: 半透明的覆盖层，防止用户操作
-2. **进度条**: 显示整体加载进度（0-100%）
-3. **依赖列表**: 显示每个依赖的详细加载状态
-4. **状态指示器**: 不同颜色表示不同状态
-   - 🔵 蓝色：等待中
-   - 🟡 黄色：加载中  
-   - 🟢 绿色：已加载
-   - 🔴 红色：加载失败
+用户可以通过界面配置编译策略：
+
+1. **编译器选择**: 在 Babel 和 SWC 之间切换
+2. **JSX 运行时**: 选择 React JSX 自动模式或经典模式
+3. **目标环境**: 设置编译目标（ES2015-ES2022）
+4. **功能开关**: 启用/禁用 TypeScript、代码压缩、源码映射等
+5. **自动回退**: 启用编译失败时的自动回退机制
 
 ## 使用方法
 
@@ -48,7 +53,63 @@ const depsInfo = {
 />
 ```
 
-### 2. 依赖配置
+### 2. 编译策略配置
+
+```typescript
+import { ReactPreviewer } from './preview/ReactPreviewer';
+import type { CompilerConfig } from './preview/types';
+
+const compilerConfig: CompilerConfig = {
+  type: 'swc', // 'babel' | 'swc'
+  options: {
+    target: 'es2020',
+    jsx: 'react-jsx', // 'react-jsx' | 'react' | 'preserve'
+    typescript: true,
+    minify: false,
+    sourceMaps: false
+  },
+  autoFallback: true
+};
+
+<ReactPreviewer
+  files={files}
+  depsInfo={depsInfo}
+  entryFile="App.tsx"
+  compilerConfig={compilerConfig}
+/>
+```
+
+### 3. 高级编译配置
+
+```typescript
+// Babel 配置示例
+const babelConfig: CompilerConfig = {
+  type: 'babel',
+  options: {
+    target: 'es2018',
+    jsx: 'react',
+    typescript: true,
+    minify: true,
+    sourceMaps: true
+  },
+  autoFallback: true
+};
+
+// SWC 配置示例
+const swcConfig: CompilerConfig = {
+  type: 'swc',
+  options: {
+    target: 'es2022',
+    jsx: 'react-jsx',
+    typescript: true,
+    minify: false,
+    sourceMaps: false
+  },
+  autoFallback: false
+};
+```
+
+### 4. 依赖配置
 
 ```typescript
 // 支持的依赖格式
@@ -70,18 +131,31 @@ const depsInfo = {
 };
 ```
 
-### 3. 错误处理
+### 5. 错误处理
 
 ```typescript
 <ReactPreviewer
   files={files}
   depsInfo={depsInfo}
+  compilerConfig={compilerConfig}
   onError={(error) => {
     console.error('预览错误:', error);
-    // 处理依赖加载错误
+    // 处理编译或依赖加载错误
   }}
 />
 ```
+
+## 编译器对比
+
+| 特性 | Babel | SWC |
+|------|-------|-----|
+| 编译速度 | 较慢 | 很快 |
+| 功能完整性 | 全面 | 基础 |
+| 插件生态 | 丰富 | 有限 |
+| 内存占用 | 较高 | 较低 |
+| TypeScript 支持 | 完整 | 基础 |
+| 源码映射 | 完整 | 基础 |
+| 自定义插件 | 支持 | 不支持 |
 
 ## 测试 Demo
 
@@ -95,6 +169,7 @@ import { simpleReactDemo } from './test/demo';
   files={simpleReactDemo.files}
   depsInfo={JSON.parse(simpleReactDemo['deps.json'])}
   entryFile="App.tsx"
+  compilerConfig={{ type: 'babel' }}
 />
 ```
 
@@ -108,6 +183,7 @@ import { dependencyLoadingDemo } from './test/demo';
   files={dependencyLoadingDemo.files}
   depsInfo={JSON.parse(dependencyLoadingDemo['deps.json'])}
   entryFile="App.tsx"
+  compilerConfig={{ type: 'swc' }}
 />
 ```
 
@@ -121,12 +197,33 @@ import { arcoDesignDemo } from './test/demo';
   files={arcoDesignDemo.files}
   depsInfo={JSON.parse(arcoDesignDemo['deps.json'])}
   entryFile="App.tsx"
+  compilerConfig={{ type: 'babel', options: { minify: true } }}
 />
 ```
 
 ## 技术实现
 
-### 1. 依赖解析
+### 1. 编译策略架构
+
+使用策略模式实现多编译器支持：
+
+```typescript
+import { CompilerManager, BabelStrategy, SwcStrategy } from './compiler';
+
+const compilerManager = new CompilerManager();
+
+// 注册编译策略
+compilerManager.registerStrategy('babel', new BabelStrategy());
+compilerManager.registerStrategy('swc', new SwcStrategy());
+
+// 使用指定策略编译
+const result = await compilerManager.transform(code, {
+  compiler: 'swc',
+  filename: 'App.tsx'
+});
+```
+
+### 2. 依赖解析
 
 使用 `DependencyResolver` 将依赖信息转换为 ESM.sh 链接：
 
@@ -140,7 +237,7 @@ const result = transformDepsToEsmLinks(depsInfo, {
 });
 ```
 
-### 2. 动态加载器
+### 3. 动态加载器
 
 在 iframe 中注入动态依赖加载器：
 
@@ -172,7 +269,7 @@ const dynamicDependencyLoader = {
 };
 ```
 
-### 3. 进度显示
+### 4. 进度显示
 
 实时更新加载进度和状态：
 
@@ -189,30 +286,79 @@ updateUI() {
 
 ## 最佳实践
 
-### 1. 依赖管理
+### 1. 编译器选择
+
+- **开发环境**: 推荐使用 Babel，功能更全面，错误信息更详细
+- **生产环境**: 推荐使用 SWC，编译速度更快，性能更好
+- **TypeScript 项目**: 优先使用 Babel，TypeScript 支持更完整
+- **简单项目**: 可以使用 SWC，配置简单，速度快
+
+### 2. 编译配置
+
+- **目标环境**: 根据目标浏览器设置合适的 ES 版本
+- **JSX 运行时**: 新项目推荐使用 `react-jsx`，无需手动导入 React
+- **代码压缩**: 生产环境建议启用，减少文件大小
+- **源码映射**: 开发环境建议启用，便于调试
+
+### 3. 依赖管理
 
 - **版本固定**: 使用固定版本号，避免兼容性问题
 - **最小化依赖**: 只包含必要的依赖
 - **CDN 选择**: 使用可靠的 CDN 服务
 
-### 2. 用户体验
+### 4. 用户体验
 
 - **加载提示**: 提供清晰的加载状态信息
-- **错误处理**: 优雅处理加载失败的情况
-- **性能优化**: 避免加载过大的依赖包
+- **错误处理**: 优雅处理编译和加载错误
+- **自动回退**: 启用自动回退机制，提高成功率
 
-### 3. 开发调试
+## API 参考
 
-- **日志记录**: 使用日志系统记录加载过程
-- **错误监控**: 监控依赖加载失败的情况
-- **性能监控**: 监控加载时间和成功率
+### ReactPreviewer Props
 
-## 注意事项
+```typescript
+interface ReactPreviewerProps {
+  files: Record<string, string>;
+  depsInfo: Record<string, string>;
+  entryFile?: string;
+  onError?: (error: Error) => void;
+  onElementClick?: (sourceInfo: SourceInfo) => void;
+  loggerConfig?: Partial<LoggerConfig>;
+  compilerConfig?: CompilerConfig;
+}
+```
 
-1. **网络依赖**: 依赖加载需要网络连接
-2. **CDN 可用性**: 依赖 CDN 服务的可用性
-3. **版本兼容性**: 确保依赖版本之间的兼容性
-4. **加载时间**: 大型依赖可能需要较长的加载时间
+### CompilerConfig
+
+```typescript
+interface CompilerConfig {
+  type?: CompilerType; // 'babel' | 'swc'
+  options?: CompilerOptions;
+  autoFallback?: boolean;
+}
+```
+
+### CompilerOptions
+
+```typescript
+interface CompilerOptions {
+  target?: string; // ES 版本
+  jsx?: 'react' | 'react-jsx' | 'preserve';
+  typescript?: boolean;
+  minify?: boolean;
+  sourceMaps?: boolean;
+}
+```
+
+## 示例项目
+
+查看 `example.tsx` 文件了解完整的使用示例，包括：
+
+- 编译策略配置界面
+- 实时编译器切换
+- 编译选项调整
+- 错误处理和回退机制
+- 性能对比演示
 
 ---
 

@@ -1,6 +1,7 @@
-import type { FileSystem, TransformOptions } from './types';
+import type { FileSystem, TransformOptions, CompilerType, CompilerOptions } from './types';
 import { DependencyGraphBuilder } from './dependency/DependencyGraphBuilder';
 import { FileProcessorManager, TypeScriptProcessor } from './processors';
+import { CompilerManager } from './CompilerManager';
 import { createModuleLogger } from '../preview/utils/Logger';
 
 const logger = createModuleLogger('CodeTransformer');
@@ -9,9 +10,11 @@ export class CodeTransformer {
   private initialized = false;
   private fileProcessorManager: FileProcessorManager;
   private dependencyGraphBuilder: DependencyGraphBuilder;
+  private compilerManager: CompilerManager;
 
-  constructor() {
-    this.fileProcessorManager = new FileProcessorManager();
+  constructor(compilerOptions?: CompilerOptions) {
+    this.compilerManager = new CompilerManager();
+    this.fileProcessorManager = new FileProcessorManager(this.compilerManager);
     this.dependencyGraphBuilder = new DependencyGraphBuilder();
     
     this.setupProcessors();
@@ -19,16 +22,23 @@ export class CodeTransformer {
 
   private setupProcessors(): void {
     // 注册文件处理器 - 注意顺序很重要
-    this.fileProcessorManager.addProcessor(new TypeScriptProcessor()); // 处理 TypeScript/JSX，包括 CSS 导入
+    this.fileProcessorManager.addProcessor(new TypeScriptProcessor(this.compilerManager));
   }
 
-  async initialize(): Promise<void> {
+  async initialize(compilerType?: CompilerType): Promise<void> {
     if (this.initialized) return;
-    // 直接标记为已初始化，不再加载 swc/wasm
-    this.initialized = true;
+    
+    try {
+      await this.compilerManager.initialize(compilerType);
+      this.initialized = true;
+      logger.info('CodeTransformer initialized');
+    } catch (error) {
+      logger.error('Failed to initialize CodeTransformer:', error);
+      throw error;
+    }
   }
 
-  async transformFiles(files: FileSystem, depsInfo: Record<string, string>): Promise<Map<string, string>> {
+  async transformFiles(files: FileSystem, depsInfo: Record<string, string>, compilerType?: CompilerType): Promise<Map<string, string>> {
     if (!this.initialized) {
       throw new Error('CodeTransformer not initialized');
     }
@@ -40,13 +50,14 @@ export class CodeTransformer {
     logger.debug('Processing order:', processingOrder);
 
     // 按依赖顺序处理文件，返回 Map<fileName, blobUrl>
-    return await this.processFilesInOrder(files, processingOrder, depsInfo);
+    return await this.processFilesInOrder(files, processingOrder, depsInfo, compilerType);
   }
 
   private async processFilesInOrder(
     files: FileSystem,
     processingOrder: string[],
-    depsInfo: Record<string, string>
+    depsInfo: Record<string, string>,
+    compilerType?: CompilerType
   ): Promise<Map<string, string>> {
     const fileUrls = new Map<string, string>();
 
@@ -62,7 +73,8 @@ export class CodeTransformer {
         filename: fileName,
         files: files,
         fileUrls,
-        depsInfo
+        depsInfo,
+        compiler: compilerType
       };
 
       let processedContent: string;
@@ -100,5 +112,26 @@ export class CodeTransformer {
       URL.revokeObjectURL(url);
     }
     logger.info('Cleanup completed');
+  }
+
+  /**
+   * 设置默认编译策略
+   */
+  setDefaultCompiler(compilerType: CompilerType): void {
+    this.compilerManager.setDefaultStrategy(compilerType);
+  }
+
+  /**
+   * 配置编译策略选项
+   */
+  configureCompiler(compilerType: CompilerType, options: CompilerOptions): void {
+    this.compilerManager.configureStrategy(compilerType, options);
+  }
+
+  /**
+   * 获取可用的编译策略
+   */
+  getAvailableCompilers(): CompilerType[] {
+    return this.compilerManager.getAvailableStrategies();
   }
 }

@@ -1,6 +1,7 @@
 // ReactPreviewer.tsx (重构后的版本)
 import React, { useState, useCallback, useEffect } from 'react';
 import type { ReactPreviewerProps } from './types';
+import type { CompilerType } from '../compiler/types';
 import { PreviewFrame } from './components/PreviewFrame';
 import { PreviewerToolbar } from './components/PreviewerToolbar';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -12,10 +13,16 @@ export const ReactPreviewer: React.FC<ReactPreviewerProps> = ({
   onError, 
   depsInfo,
   onElementClick,
-  loggerConfig
+  loggerConfig,
+  compilerConfig,
+  onCompilationStart,
+  onCompilationComplete
 }) => {
   const [isInspecting, setIsInspecting] = useState(false);
   const [recompileKey, setRecompileKey] = useState(0);
+  const [compilerType, setCompilerType] = useState<CompilerType>(
+    compilerConfig?.type || 'babel'
+  );
 
   // 配置日志系统
   useEffect(() => {
@@ -24,6 +31,14 @@ export const ReactPreviewer: React.FC<ReactPreviewerProps> = ({
       logger.info('Logger configured with:', loggerConfig);
     }
   }, [loggerConfig]);
+
+  // 配置编译器
+  useEffect(() => {
+    if (compilerConfig?.type && compilerConfig.type !== compilerType) {
+      setCompilerType(compilerConfig.type);
+      logger.info('Compiler type changed to:', compilerConfig.type);
+    }
+  }, [compilerConfig?.type, compilerType]);
 
   const handleToggleInspect = useCallback(() => {
     setIsInspecting(prev => !prev);
@@ -36,6 +51,13 @@ export const ReactPreviewer: React.FC<ReactPreviewerProps> = ({
     logger.info('Forcing recompile with new key:', recompileKey + 1);
   }, [recompileKey]);
 
+  const handleCompilerChange = useCallback((newCompilerType: CompilerType) => {
+    setCompilerType(newCompilerType);
+    logger.info('Compiler changed to:', newCompilerType);
+    // 切换编译器时自动重新编译
+    handleRecompile();
+  }, [handleRecompile]);
+
   return (
     <ErrorBoundary>
       <div className="flex flex-col h-full w-full">
@@ -44,6 +66,9 @@ export const ReactPreviewer: React.FC<ReactPreviewerProps> = ({
           isInspecting={isInspecting}
           onRecompile={handleRecompile}
           onToggleInspect={handleToggleInspect}
+          compilerType={compilerType}
+          onCompilerChange={handleCompilerChange}
+          availableCompilers={['babel', 'swc']}
         />
 
         <div className="flex-1 relative w-full">
@@ -55,6 +80,9 @@ export const ReactPreviewer: React.FC<ReactPreviewerProps> = ({
             onError={onError}
             onElementClick={onElementClick}
             isInspecting={isInspecting}
+            compilerType={compilerType}
+            onCompilationStart={onCompilationStart}
+            onCompilationComplete={onCompilationComplete}
           />
         </div>
       </div>

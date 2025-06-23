@@ -1,11 +1,14 @@
 import type { FileProcessor, TransformOptions } from '../types';
 import { ASTProcessorManager, JSXDebugProcessor, ImportProcessor } from '../ast/processors';
+import { CompilerManager } from '../CompilerManager';
 
 export class TypeScriptProcessor implements FileProcessor {
   private astProcessorManager: ASTProcessorManager;
+  private compilerManager: CompilerManager;
 
-  constructor() {
+  constructor(compilerManager: CompilerManager) {
     this.astProcessorManager = new ASTProcessorManager();
+    this.compilerManager = compilerManager;
     this.setupASTProcessors();
   }
 
@@ -21,13 +24,20 @@ export class TypeScriptProcessor implements FileProcessor {
 
   async process(content: string, fileName: string, options?: TransformOptions): Promise<string> {
     try {
-      // 统一走 traverseAndProcess，保证自动注入 import React
-      const transformedCode = this.astProcessorManager.traverseAndProcess(
+      // 首先进行 AST 处理（添加调试信息、处理导入等）
+      let processedContent = this.astProcessorManager.traverseAndProcess(
         content,
         content,
         { ...options, filename: fileName }
       );
-      return transformedCode;
+
+      // 然后使用编译管理器进行代码转换
+      processedContent = await this.compilerManager.transform(processedContent, {
+        ...options,
+        filename: fileName
+      });
+
+      return processedContent;
     } catch (error) {
       throw new Error(`Failed to transform ${fileName}: ${error}`);
     }
@@ -36,6 +46,11 @@ export class TypeScriptProcessor implements FileProcessor {
 
 export class FileProcessorManager {
   private processors: FileProcessor[] = [];
+  private compilerManager: CompilerManager;
+
+  constructor(compilerManager: CompilerManager) {
+    this.compilerManager = compilerManager;
+  }
 
   addProcessor(processor: FileProcessor): void {
     this.processors.push(processor);
@@ -47,15 +62,11 @@ export class FileProcessorManager {
     
     for (const processor of this.processors) {
       if (processor.canProcess(fileName)) {
-        // try {
-          if (processor instanceof TypeScriptProcessor) {
-            processedContent = await processor.process(processedContent, fileName, options);
-          } else {
-            processedContent = await processor.process(processedContent, fileName);
-          }
-        // } catch (error) {
-        //   console.warn(`Processor ${processor.constructor.name} failed for ${fileName}:`, error);
-        // }
+        if (processor instanceof TypeScriptProcessor) {
+          processedContent = await processor.process(processedContent, fileName, options);
+        } else {
+          processedContent = await processor.process(processedContent, fileName);
+        }
       }
     }
     

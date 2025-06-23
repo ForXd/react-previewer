@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ReactPreviewer } from './preview/ReactPreviewer';
 import { SourceTooltip } from './preview/components/SourceTooltip';
 import { demoList } from './test/demo';
-import type { SourceInfo } from './preview/types';
+import type { SourceInfo, CompilerConfig } from './preview/types';
+import type { CompilerType, CompilerOptions } from './compiler/types';
 import { createModuleLogger, type LoggerConfig } from './preview/utils/Logger';
 
 const logger = createModuleLogger('Example');
@@ -18,6 +19,24 @@ const ExampleUsage: React.FC = () => {
     level: 2, // INFO level
     showTimestamp: false
   });
+  
+  // 编译策略配置
+  const [compilerConfig, setCompilerConfig] = useState<CompilerConfig>({
+    type: 'babel',
+    options: {
+      target: 'es2020',
+      jsx: 'react-jsx',
+      typescript: true,
+      minify: false,
+      sourceMaps: false
+    },
+    autoFallback: true
+  });
+
+  // 编译时间相关状态
+  const [compilationTime, setCompilationTime] = useState<number | null>(null);
+  const [isCompiling, setIsCompiling] = useState(false);
+  
   const containerRef = useRef<HTMLDivElement>(null);
 
   const getFiles = useCallback(() => {
@@ -70,6 +89,66 @@ const ExampleUsage: React.FC = () => {
     setEditedFiles(getFiles());
   }, [getFiles]);
 
+  // 编译策略相关处理函数
+  const handleCompilerTypeChange = useCallback((type: CompilerType) => {
+    setCompilerConfig(prev => ({
+      ...prev,
+      type
+    }));
+    logger.info('Compiler type changed to:', type);
+  }, []);
+
+  const handleCompilerOptionChange = useCallback((key: keyof CompilerOptions, value: any) => {
+    setCompilerConfig(prev => ({
+      ...prev,
+      options: {
+        ...prev.options,
+        [key]: value
+      }
+    }));
+    logger.info('Compiler option changed:', key, value);
+  }, []);
+
+  const handleAutoFallbackChange = useCallback((enabled: boolean) => {
+    setCompilerConfig(prev => ({
+      ...prev,
+      autoFallback: enabled
+    }));
+    logger.info('Auto fallback changed to:', enabled);
+  }, []);
+
+  // 获取当前要显示的文件（编辑模式使用编辑后的文件，否则使用原始文件）
+  const getCurrentFiles = useCallback(() => {
+    const files = editingMode ? editedFiles : getFiles();
+    logger.debug('getCurrentFiles called:', {
+      editingMode,
+      selectedDemo: selectedDemo.key,
+      filesKeys: Object.keys(files),
+      filesHash: JSON.stringify(Object.keys(files).sort())
+    });
+    return files;
+  }, [editingMode, editedFiles, selectedDemo.key, getFiles]);
+
+  // 编译时间格式化
+  const formatDuration = (duration: number): string => {
+    if (duration < 1) {
+      return `${(duration * 1000).toFixed(1)}ms`;
+    }
+    return `${duration.toFixed(3)}s`;
+  };
+
+  // 监听编译开始
+  const handleCompilationStart = useCallback(() => {
+    setIsCompiling(true);
+    setCompilationTime(null);
+  }, []);
+
+  // 监听编译完成
+  const handleCompilationComplete = useCallback((duration: number) => {
+    setCompilationTime(duration);
+    setIsCompiling(false);
+  }, []);
+
   // 点击外部区域关闭浮窗
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -84,18 +163,6 @@ const ExampleUsage: React.FC = () => {
       return () => document.removeEventListener('click', handleClickOutside);
     }
   }, [sourceInfo]);
-
-  // 获取当前要显示的文件（编辑模式使用编辑后的文件，否则使用原始文件）
-  const getCurrentFiles = () => {
-    const files = editingMode ? editedFiles : getFiles();
-    logger.debug('getCurrentFiles called:', {
-      editingMode,
-      selectedDemo: selectedDemo.key,
-      filesKeys: Object.keys(files),
-      filesHash: JSON.stringify(Object.keys(files).sort())
-    });
-    return files;
-  };
 
   return (
     <div className="w-full h-screen bg-gray-50 flex">
@@ -125,7 +192,7 @@ const ExampleUsage: React.FC = () => {
           </button>
         </div>
 
-        {/* Demo 列表 */}
+        {/* Demo 选择区域 */}
         <div className="flex-1 overflow-y-auto p-4">
           {sidebarCollapsed ? (
             // 收起状态：只显示图标
@@ -148,27 +215,134 @@ const ExampleUsage: React.FC = () => {
               ))}
             </div>
           ) : (
-            // 展开状态：显示完整信息
+            // 展开状态：显示下拉选择器
             <div className="space-y-3">
-              {demoList.map((demo) => (
-                <button
-                  key={demo.key}
-                  onClick={() => setSelectedDemo(demo)}
-                  className={`
-                    w-full p-4 rounded-lg text-left transition-all duration-200
-                    ${selectedDemo.key === demo.key
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:shadow-sm'
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-2">选择示例</label>
+                <select
+                  value={selectedDemo.key}
+                  onChange={(e) => {
+                    const demo = demoList.find(d => d.key === e.target.value);
+                    if (demo) {
+                      setSelectedDemo(demo);
                     }
-                  `}
+                  }}
+                  className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
-                  <div className="font-semibold text-sm mb-1">{demo.name}</div>
-                  <div className="text-xs opacity-75 leading-relaxed">{demo.description}</div>
-                </button>
-              ))}
+                  {demoList.map((demo) => (
+                    <option key={demo.key} value={demo.key}>
+                      {demo.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 当前示例信息 */}
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <h4 className="text-sm font-medium text-gray-900 mb-1">{selectedDemo.name}</h4>
+                <p className="text-xs text-gray-600 leading-relaxed">{selectedDemo.description}</p>
+                <div className="mt-2 text-xs text-gray-500">
+                  <div>入口文件: {selectedDemo.entryFile}</div>
+                  <div>文件数量: {Object.keys(getFiles()).length}</div>
+                </div>
+              </div>
             </div>
           )}
         </div>
+
+        {/* 编译策略配置区域 */}
+        {!sidebarCollapsed && (
+          <div className="p-4 border-t border-gray-200">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">编译策略配置</h3>
+            <div className="space-y-3">
+              {/* 编译器类型选择 */}
+              <div>
+                <label className="text-xs text-gray-700 block mb-1">编译器类型</label>
+                <select
+                  value={compilerConfig.type}
+                  onChange={(e) => handleCompilerTypeChange(e.target.value as CompilerType)}
+                  className="w-full text-xs border border-gray-300 rounded px-2 py-1"
+                >
+                  <option value="babel">Babel</option>
+                  <option value="swc">SWC</option>
+                </select>
+              </div>
+
+              {/* JSX 运行时选择 */}
+              <div>
+                <label className="text-xs text-gray-700 block mb-1">JSX 运行时</label>
+                <select
+                  value={compilerConfig.options?.jsx || 'react-jsx'}
+                  onChange={(e) => handleCompilerOptionChange('jsx', e.target.value)}
+                  className="w-full text-xs border border-gray-300 rounded px-2 py-1"
+                >
+                  <option value="react-jsx">React JSX (自动)</option>
+                  <option value="react">React JSX (经典)</option>
+                  <option value="preserve">保持原样</option>
+                </select>
+              </div>
+
+              {/* 目标环境 */}
+              <div>
+                <label className="text-xs text-gray-700 block mb-1">目标环境</label>
+                <select
+                  value={compilerConfig.options?.target || 'es2020'}
+                  onChange={(e) => handleCompilerOptionChange('target', e.target.value)}
+                  className="w-full text-xs border border-gray-300 rounded px-2 py-1"
+                >
+                  <option value="es2015">ES2015</option>
+                  <option value="es2016">ES2016</option>
+                  <option value="es2017">ES2017</option>
+                  <option value="es2018">ES2018</option>
+                  <option value="es2019">ES2019</option>
+                  <option value="es2020">ES2020</option>
+                  <option value="es2021">ES2021</option>
+                  <option value="es2022">ES2022</option>
+                </select>
+              </div>
+
+              {/* 其他选项 */}
+              <div className="space-y-2">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={compilerConfig.options?.typescript ?? true}
+                    onChange={(e) => handleCompilerOptionChange('typescript', e.target.checked)}
+                    className="mr-2"
+                  />
+                  <span className="text-xs text-gray-700">TypeScript 支持</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={compilerConfig.options?.minify ?? false}
+                    onChange={(e) => handleCompilerOptionChange('minify', e.target.checked)}
+                    className="mr-2"
+                  />
+                  <span className="text-xs text-gray-700">代码压缩</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={compilerConfig.options?.sourceMaps ?? false}
+                    onChange={(e) => handleCompilerOptionChange('sourceMaps', e.target.checked)}
+                    className="mr-2"
+                  />
+                  <span className="text-xs text-gray-700">源码映射</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={compilerConfig.autoFallback ?? true}
+                    onChange={(e) => handleAutoFallbackChange(e.target.checked)}
+                    className="mr-2"
+                  />
+                  <span className="text-xs text-gray-700">自动回退</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 日志配置区域 */}
         {!sidebarCollapsed && (
@@ -220,12 +394,32 @@ const ExampleUsage: React.FC = () => {
             <div>
               <h1 className="text-xl font-bold text-gray-900">{selectedDemo.name}</h1>
               <p className="text-sm text-gray-600 mt-1">{selectedDemo.description}</p>
-              
+              <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
+                <span>入口文件: {selectedDemo.entryFile}</span>
+                <span>编译器: {compilerConfig.type === 'babel' ? 'Babel' : 'SWC'}</span>
+                <span>JSX: {compilerConfig.options?.jsx}</span>
+                <span>目标: {compilerConfig.options?.target}</span>
+              </div>
             </div>
             <div className="flex items-center space-x-3">
-              <div className="text-sm text-gray-500">
-                入口文件: {selectedDemo.entryFile}
+              {/* 编译时间显示 - 右上角 */}
+              <div className="flex items-center space-x-2">
+                {isCompiling && (
+                  <div className="flex items-center space-x-2 text-sm text-blue-600">
+                    <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    <span>编译中...</span>
+                  </div>
+                )}
+                {compilationTime !== null && !isCompiling && (
+                  <div className="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-lg">
+                    <span className="font-medium">编译时间:</span>
+                    <span className="ml-1 font-mono text-green-600">
+                      {formatDuration(compilationTime)}
+                    </span>
+                  </div>
+                )}
               </div>
+
               <button
                 onClick={() => setEditingMode(!editingMode)}
                 className={`
@@ -282,7 +476,8 @@ const ExampleUsage: React.FC = () => {
                   selectedDemo: selectedDemo.key,
                   files: Object.keys(currentFiles),
                   deps: Object.keys(currentDeps),
-                  entryFile: selectedDemo.entryFile
+                  entryFile: selectedDemo.entryFile,
+                  compilerConfig
                 });
                 return (
                   <ReactPreviewer
@@ -291,6 +486,9 @@ const ExampleUsage: React.FC = () => {
                     entryFile={selectedDemo.entryFile}
                     onElementClick={handleElementClick}
                     loggerConfig={loggerConfig as Partial<LoggerConfig>}
+                    compilerConfig={compilerConfig}
+                    onCompilationStart={handleCompilationStart}
+                    onCompilationComplete={handleCompilationComplete}
                   />
                 );
               })()}

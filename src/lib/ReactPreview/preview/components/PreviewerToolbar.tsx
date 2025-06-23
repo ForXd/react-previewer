@@ -1,11 +1,15 @@
 // components/PreviewerToolbar.tsx
 import React from 'react';
+import type { CompilerType } from '../../compiler/types';
 
 interface PreviewerToolbarProps {
   isLoading: boolean;
   isInspecting: boolean;
   onRecompile: () => void;
   onToggleInspect: () => void;
+  compilerType?: CompilerType;
+  onCompilerChange?: (compiler: CompilerType) => void;
+  availableCompilers?: CompilerType[];
 }
 
 export const PreviewerToolbar: React.FC<PreviewerToolbarProps> = ({
@@ -13,6 +17,9 @@ export const PreviewerToolbar: React.FC<PreviewerToolbarProps> = ({
   isInspecting,
   onRecompile,
   onToggleInspect,
+  compilerType = 'babel',
+  onCompilerChange,
+  availableCompilers = ['babel', 'swc'],
 }) => {
   return (
     <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200 shadow-sm">
@@ -46,6 +53,32 @@ export const PreviewerToolbar: React.FC<PreviewerToolbarProps> = ({
             </>
           )}
         </button>
+        
+        {/* 编译策略选择器 */}
+        {availableCompilers.length > 1 && onCompilerChange && (
+          <div className="flex items-center space-x-2">
+            <label className="text-sm font-medium text-gray-700">编译器:</label>
+            <select
+              value={compilerType}
+              onChange={(e) => onCompilerChange(e.target.value as CompilerType)}
+              disabled={isLoading}
+              className={`
+                px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                transition-all duration-200 ease-in-out
+                ${isLoading 
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                  : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                }
+              `}
+            >
+              {availableCompilers.map(compiler => (
+                <option key={compiler} value={compiler}>
+                  {compiler === 'babel' ? 'Babel' : 'SWC'}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         
         {/* 检查元素按钮 */}
         <button
@@ -95,6 +128,14 @@ export const PreviewerToolbar: React.FC<PreviewerToolbarProps> = ({
             <span>正在编译预览...</span>
           </div>
         )}
+
+        {/* 显示当前编译器信息 */}
+        <div className="flex items-center text-sm text-gray-600 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
+          <svg className="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+          </svg>
+          <span>{compilerType === 'babel' ? 'Babel' : 'SWC'} 编译器</span>
+        </div>
       </div>
     </div>
   );
