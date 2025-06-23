@@ -335,13 +335,11 @@ export class ASTProcessorManager {
   }
 
   traverseAndProcess(code: string, source: string, options: TransformOptions): string {
-    // 自动注入 import React
-    const codeWithReact = ensureReactImport(code);
-    // 使用Babel解析代码并遍历AST
-    const result = transform(codeWithReact, {
+    // 先使用Babel解析代码并遍历AST，进行位置信息注入
+    const result = transform(code, {
       ast: true,
       presets: ['react', 'typescript'],
-      filename: options.filename, // 添加filename参数
+      filename: options.filename,
       plugins: [
         // 自定义插件，用于处理AST
         () => ({
@@ -383,7 +381,9 @@ export class ASTProcessorManager {
       ]
     });
 
-    return result.code ?? '';
+    // 在位置信息注入后，再注入 React 导入
+    const processedCode = result.code ?? '';
+    return ensureReactImport(processedCode);
   }
 }
 
