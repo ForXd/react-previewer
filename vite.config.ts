@@ -9,6 +9,6 @@ export default defineConfig({
   build: {
     outDir: 'page',
   },
-  // @ts-ignore
+  // @ts-expect-error Vite config runs in Node, but this app tsconfig does not include node types.
   base: process.env.IS_DEV ? '/' : 'https://fastly.jsdelivr.net/gh/ForXd/react-previewer@main/page'
 })

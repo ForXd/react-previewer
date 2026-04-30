@@ -4,6 +4,8 @@ export { ReactPreviewer } from './preview/ReactPreviewer';
 // 类型导出
 export type {
   ReactPreviewerProps,
+  PreviewStatus,
+  PreviewViewport,
   ErrorInfo,
   SourceInfo,
   MessageData,

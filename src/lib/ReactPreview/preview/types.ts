@@ -3,11 +3,30 @@ import type { LoggerConfig } from './utils/Logger';
 
 export interface ReactPreviewerProps {
   files: Record<string, string>;
-  depsInfo: Record<string, string>;
+  depsInfo?: Record<string, string>;
   entryFile?: string;
   onError?: (error: Error) => void;
   onElementClick?: (sourceInfo: SourceInfo) => void;
   loggerConfig?: Partial<LoggerConfig>;
+  compileDelay?: number;
+  showToolbar?: boolean;
+  className?: string;
+  defaultViewport?: PreviewViewport;
+  defaultZoom?: number;
+  onStatusChange?: (status: PreviewStatus) => void;
+}
+
+export interface PreviewViewport {
+  label: string;
+  width: number | '100%';
+  height: number | '100%';
+}
+
+export interface PreviewStatus {
+  isLoading: boolean;
+  error: ErrorInfo | null;
+  compileDuration: number | null;
+  transformedFiles: number;
 }
 
 export interface ErrorInfo {
