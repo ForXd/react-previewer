@@ -55,6 +55,16 @@ export class JSXDebugProcessor implements ASTProcessor {
       node.attributes.push(columnAttr);
     }
 
+    if (!hasAttribute(node.attributes, 'data-pipo-end-line')) {
+      const endLineAttr = createJSXAttribute('data-pipo-end-line', node.loc.end.line.toString());
+      node.attributes.push(endLineAttr);
+    }
+
+    if (!hasAttribute(node.attributes, 'data-pipo-end-column')) {
+      const endColumnAttr = createJSXAttribute('data-pipo-end-column', node.loc.end.column.toString());
+      node.attributes.push(endColumnAttr);
+    }
+
     // 添加文件位置
     if (!hasAttribute(node.attributes, 'data-pipo-file') && filename) {
       const resolvedFilename = getResolvedFilename(filename, files);
@@ -358,22 +368,19 @@ export class ASTProcessorManager {
               const closingElement = node.closingElement;
               
               if (openingElement && closingElement && openingElement.loc && closingElement.loc) {
-                // 添加结束行号和列号
-                if (!hasAttribute(openingElement.attributes || [], 'data-pipo-end-line')) {
-                  const endLineAttr = createJSXAttribute('data-pipo-end-line', closingElement.loc.end.line.toString());
-                  if (!openingElement.attributes) {
-                    openingElement.attributes = [];
-                  }
-                  openingElement.attributes.push(endLineAttr);
+                if (!openingElement.attributes) {
+                  openingElement.attributes = [];
                 }
 
-                if (!hasAttribute(openingElement.attributes || [], 'data-pipo-end-column')) {
-                  const endColumnAttr = createJSXAttribute('data-pipo-end-column', closingElement.loc.end.column.toString());
-                  if (!openingElement.attributes) {
-                    openingElement.attributes = [];
-                  }
-                  openingElement.attributes.push(endColumnAttr);
-                }
+                openingElement.attributes = openingElement.attributes.filter((attr) => {
+                  const attrName = attr.name?.type === 'JSXIdentifier' ? attr.name.name : '';
+                  return attrName !== 'data-pipo-end-line' && attrName !== 'data-pipo-end-column';
+                });
+
+                openingElement.attributes.push(
+                  createJSXAttribute('data-pipo-end-line', closingElement.loc.end.line.toString()),
+                  createJSXAttribute('data-pipo-end-column', closingElement.loc.end.column.toString())
+                );
               }
             }
           }

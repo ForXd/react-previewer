@@ -37,6 +37,7 @@ export class FileProcessor {
       );
 
       logger.debug('transformed', transformed);
+      this.blobUrls = transformed;
 
       // 直接返回 transform 阶段的 Map<fileName, blobUrl>
       return transformed;
