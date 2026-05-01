@@ -6,7 +6,16 @@ import { generateDynamicDependencyLoader, transformDepsToEsmLinks, generateImpor
 // const logger = createModuleLogger('HTMLGenerator');
 
 export class HTMLGenerator {
-  generatePreviewHTML(entryUrl: string, depsInfo: Record<string, string> = {}): string {
+  private cache = new Map<string, {
+    dynamicLoaderScript: string;
+    importMapScript: string;
+  }>();
+
+  generatePreviewHTML(
+    entryUrl: string,
+    depsInfo: Record<string, string> = {},
+    dependencyStyles: Record<string, string | string[]> = {}
+  ): string {
     // 合并默认依赖和传入的依赖
     const allDeps = {
       'react': '18.2.0',
@@ -14,13 +23,17 @@ export class HTMLGenerator {
       'react-dom/client': '18.2.0',
       ...depsInfo
     };
-    
-    // 生成动态依赖加载脚本
-    const dynamicLoaderScript = generateDynamicDependencyLoader(allDeps, TRANSFORM_OPTIONS);
-    
-    // 生成 importmap
-    const result = transformDepsToEsmLinks(allDeps, TRANSFORM_OPTIONS);
-    const importMapScript = generateImportMapScript(result.importMap.imports);
+    const styleResources = this.resolveStyleResources(allDeps, dependencyStyles);
+    const cacheKey = JSON.stringify({ allDeps, styleResources });
+    let cached = this.cache.get(cacheKey);
+
+    if (!cached) {
+      const dynamicLoaderScript = generateDynamicDependencyLoader(allDeps, TRANSFORM_OPTIONS, styleResources);
+      const result = transformDepsToEsmLinks(allDeps, TRANSFORM_OPTIONS);
+      const importMapScript = generateImportMapScript(result.importMap.imports);
+      cached = { dynamicLoaderScript, importMapScript };
+      this.cache.set(cacheKey, cached);
+    }
     
     return `
       <!DOCTYPE html>
@@ -32,17 +45,14 @@ export class HTMLGenerator {
         <style>
           ${this.getBaseStyles()}
         </style>
-        ${this.getComponentLibraryStyles()}
-        <!-- Tailwind CSS -->
-        <script src="https://cdn.tailwindcss.com"></script>
-        ${importMapScript}
+        ${cached.importMapScript}
       </head>
       <body>
         <div id="root"></div>
         <div id="loading-overlay" class="loading-overlay" style="display: none;">
           <div class="loading-content">
             <div class="loading-spinner"></div>
-            <div class="loading-text">正在加载依赖...</div>
+            <div class="loading-text" id="loading-text">正在加载资源...</div>
             <div class="loading-progress">
               <div class="progress-bar">
                 <div class="progress-fill" id="progress-fill"></div>
@@ -59,7 +69,7 @@ export class HTMLGenerator {
           </div>
         </div>
         <script type="module">
-          ${dynamicLoaderScript}
+          ${cached.dynamicLoaderScript}
           ${this.getPreviewScript(entryUrl)}
         </script>
       </body>
@@ -433,10 +443,24 @@ export class HTMLGenerator {
     `;
   }
 
-  private getComponentLibraryStyles(): string {
-    return Object.keys(COMPONENT_LIBRARY_STYLE)
-      .map((pkgName) => `<link rel="stylesheet" href="${COMPONENT_LIBRARY_STYLE[pkgName]}">`)
-      .join('\n');
+  private resolveStyleResources(
+    depsInfo: Record<string, string>,
+    dependencyStyles: Record<string, string | string[]>
+  ): Array<{ name: string; url: string }> {
+    const mergedStyles = {
+      ...COMPONENT_LIBRARY_STYLE,
+      ...dependencyStyles
+    };
+
+    return Object.entries(mergedStyles)
+      .filter(([pkgName]) => pkgName in depsInfo)
+      .flatMap(([pkgName, value]) => {
+        const urls = Array.isArray(value) ? value : [value];
+        return urls.map((url, index) => ({
+          name: urls.length > 1 ? `${pkgName}:${index + 1}` : pkgName,
+          url
+        }));
+      });
   }
 
   private getPreviewScript(entryUrl: string): string {
@@ -444,6 +468,18 @@ export class HTMLGenerator {
       // 等待依赖加载完成后再渲染应用
       async function renderApp() {
         try {
+          window.parent.postMessage({
+            type: 'resource-status',
+            data: {
+              phase: 'rendering',
+              resourceTotal: dynamicDependencyLoader?.totalCount || 0,
+              resourceLoaded: dynamicDependencyLoader?.loadedCount || 0,
+              resourceProgress: dynamicDependencyLoader?.totalCount
+                ? Math.round((dynamicDependencyLoader.loadedCount / dynamicDependencyLoader.totalCount) * 100)
+                : 100
+            }
+          }, '*');
+
           // 现在导入依赖并渲染应用
           let React, createRoot, App;
           
@@ -453,8 +489,8 @@ export class HTMLGenerator {
             const reactDomDep = dynamicDependencyLoader.dependencies.get('react-dom/client');
             
             if (reactDep && reactDomDep) {
-              React = await import(reactDep.url);
-              const reactDom = await import(reactDomDep.url);
+              React = await dynamicDependencyLoader.loadModule('react', reactDep.url);
+              const reactDom = await dynamicDependencyLoader.loadModule('react-dom/client', reactDomDep.url);
               createRoot = reactDom.createRoot;
             } else {
               // 回退到默认导入
@@ -477,11 +513,19 @@ export class HTMLGenerator {
           
           setTimeout(() => {
             addInspectStyles();
-            console.log('Initial inspect styles added');
             
             // iframe 加载完成后，主动请求当前的检查模式状态
             window.parent.postMessage({
               type: 'request-inspect-state'
+            }, '*');
+            window.parent.postMessage({
+              type: 'preview-ready',
+              data: {
+                phase: 'ready',
+                resourceTotal: dynamicDependencyLoader?.totalCount || 0,
+                resourceLoaded: dynamicDependencyLoader?.loadedCount || 0,
+                resourceProgress: 100
+              }
             }, '*');
           }, 100);
         } catch (error) {

@@ -14,6 +14,7 @@ export interface PreviewFrameProps {
   files: Record<string, string>;
   entryFile: string;
   depsInfo?: Record<string, string>;
+  dependencyStyles?: Record<string, string | string[]>;
   onError?: (error: Error) => void;
   onElementClick?: (sourceInfo: SourceInfo) => void;
   isInspecting?: boolean;
@@ -49,13 +50,34 @@ const createDepsHash = (depsInfo: Record<string, string> = {}) =>
     .map((key) => `${key}@${depsInfo[key]}`)
     .join('|');
 
+const createStylesHash = (dependencyStyles: Record<string, string | string[]> = {}) =>
+  Object.keys(dependencyStyles)
+    .sort()
+    .map((key) => {
+      const value = dependencyStyles[key];
+      return `${key}:${Array.isArray(value) ? value.join(',') : value}`;
+    })
+    .join('|');
+
 const createErrorInfo = (error: ErrorInfo | null): PreviewStatus['error'] => error;
+
+const createInitialStatus = (): PreviewStatus => ({
+  isLoading: true,
+  phase: 'compiling',
+  error: null,
+  compileDuration: null,
+  transformedFiles: 0,
+  resourceTotal: 0,
+  resourceLoaded: 0,
+  resourceProgress: 0
+});
 
 // 使用 React.memo 避免不必要的重新渲染
 export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
   files,
   entryFile,
   depsInfo = {},
+  dependencyStyles = {},
   onError,
   onElementClick,
   isInspecting = false,
@@ -71,6 +93,7 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
     columnNumber?: number;
     codeFrame?: string;
   } | null>(null);
+  const [frameStatus, setFrameStatus] = useState<PreviewStatus>(() => createInitialStatus());
   
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const fileProcessor = useRef(new FileProcessor());
@@ -82,6 +105,7 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
   const currentFilesRef = useRef<string>('');
   const currentEntryFileRef = useRef<string>('');
   const currentDepsInfoRef = useRef<string>('');
+  const currentDependencyStylesRef = useRef<string>('');
   
   // 使用 useRef 稳定回调函数的引用
   const onElementClickRef = useRef(onElementClick);
@@ -99,13 +123,20 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
   onStatusChangeRef.current = onStatusChange;
 
   const publishStatus = useCallback((next: Partial<PreviewStatus> = {}) => {
-    onStatusChangeRef.current?.({
+    const nextStatus: PreviewStatus = {
       isLoading,
+      phase: isLoading ? 'compiling' : 'idle',
       error: createErrorInfo(error ? { type: 'compile', message: error, ...errorDetails } : null),
       compileDuration: compileDurationRef.current,
       transformedFiles: transformedCountRef.current,
+      resourceTotal: 0,
+      resourceLoaded: 0,
+      resourceProgress: 0,
       ...next
-    });
+    };
+
+    setFrameStatus(nextStatus);
+    onStatusChangeRef.current?.(nextStatus);
   }, [error, errorDetails, isLoading]);
 
   const handleElementClick = useCallback((data: { 
@@ -238,7 +269,7 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
       throw new Error(`Entry file ${entry} not found`);
     }
 
-    const html = htmlGenerator.current.generatePreviewHTML(entryUrl, depsInfo);
+    const html = htmlGenerator.current.generatePreviewHTML(entryUrl, depsInfo, dependencyStyles);
     const htmlBlob = new Blob([html], { type: 'text/html' });
     const htmlUrl = URL.createObjectURL(htmlBlob);
 
@@ -247,7 +278,7 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
     }
     htmlUrlRef.current = htmlUrl;
     iframeRef.current.src = htmlUrl;
-  }, [depsInfo]);
+  }, [depsInfo, dependencyStyles]);
 
   // 创建一个内部函数来处理文件，可以访问最新的 props
   const processFilesInternal = useCallback(async (runId?: number) => {
@@ -261,6 +292,7 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
       setErrorDetails(null);
       publishStatus({
         isLoading: true,
+        phase: 'compiling',
         error: null
       });
 
@@ -274,7 +306,8 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
       renderPreview(fileUrls, entryFile);
       compileDurationRef.current = Math.round(performance.now() - startedAt);
       publishStatus({
-        isLoading: false,
+        isLoading: true,
+        phase: 'loading-js',
         error: null,
         compileDuration: compileDurationRef.current,
         transformedFiles: transformedCountRef.current
@@ -294,14 +327,12 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
       if (onErrorRef.current) {
         onErrorRef.current(err instanceof Error ? err : new Error('Unknown error'));
       }
+      setIsLoading(false);
       publishStatus({
         isLoading: false,
+        phase: 'error',
         error: compileError
       });
-    } finally {
-      if (compileId === compileRunRef.current) {
-        setIsLoading(false);
-      }
     }
   }, [files, depsInfo, entryFile, publishStatus, renderPreview]);
 
@@ -309,16 +340,19 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
   useEffect(() => {
     const filesHash = createFilesHash(files);
     const depsInfoKey = createDepsHash(depsInfo);
+    const dependencyStylesKey = createStylesHash(dependencyStyles);
     
     const newFilesHash = filesHash;
     const newEntryFile = entryFile;
     const newDepsInfoKey = depsInfoKey;
+    const newDependencyStylesKey = dependencyStylesKey;
     
     // 只有当文件内容真正改变时才重新处理
     if (
       currentFilesRef.current !== newFilesHash ||
       currentEntryFileRef.current !== newEntryFile ||
-      currentDepsInfoRef.current !== newDepsInfoKey
+      currentDepsInfoRef.current !== newDepsInfoKey ||
+      currentDependencyStylesRef.current !== newDependencyStylesKey
     ) {
       logger.debug('PreviewFrame: File content changed, reprocessing files');
       logger.debug('Files hash changed:', {
@@ -332,12 +366,13 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
         currentFilesRef.current = newFilesHash;
         currentEntryFileRef.current = newEntryFile;
         currentDepsInfoRef.current = newDepsInfoKey;
+        currentDependencyStylesRef.current = newDependencyStylesKey;
         processFilesInternal(scheduledRun);
       }, Math.max(0, compileDelay));
 
       return () => window.clearTimeout(timer);
     }
-  }, [files, entryFile, depsInfo, processFilesInternal, compileDelay]);
+  }, [files, entryFile, depsInfo, dependencyStyles, processFilesInternal, compileDelay]);
 
   // 监听iframe内的消息
   useEffect(() => {
@@ -357,6 +392,37 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
           }
           return;
         }
+
+        if (event.data.type === 'resource-status') {
+          const data = event.data.data || {};
+          publishStatus({
+            isLoading: true,
+            phase: data.phase || 'loading-js',
+            resourceTotal: Number(data.resourceTotal) || 0,
+            resourceLoaded: Number(data.resourceLoaded) || 0,
+            resourceProgress: Number(data.resourceProgress) || 0
+          });
+          return;
+        }
+
+        if (event.data.type === 'preview-ready') {
+          const data = event.data.data || {};
+          setIsLoading(false);
+          publishStatus({
+            isLoading: false,
+            phase: 'ready',
+            error: null,
+            resourceTotal: Number(data.resourceTotal) || 0,
+            resourceLoaded: Number(data.resourceLoaded) || 0,
+            resourceProgress: 100
+          });
+          return;
+        }
+
+        if (event.data.type === 'resource-error') {
+          logger.warn('资源加载失败:', event.data.data);
+          return;
+        }
         
         messageHandler.current?.handleMessage(event);
       } catch (error) {
@@ -366,7 +432,7 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [isInspecting]);
+  }, [isInspecting, publishStatus]);
 
   // 监听检查模式变化，同步到 iframe
   useEffect(() => {
@@ -393,7 +459,7 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
 
   return (
     <div className="relative w-full h-full">
-      {isLoading && <LoadingOverlay />}
+      {isLoading && <LoadingOverlay status={frameStatus} />}
       
       {error && (
         <div className="absolute inset-0 bg-red-50 border border-red-200 rounded-lg p-4 overflow-auto">
@@ -459,6 +525,7 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
     filesHash: createFilesHash(prevProps.files),
     entryFile: prevProps.entryFile,
     depsInfo: createDepsHash(prevProps.depsInfo || {}),
+    dependencyStyles: createStylesHash(prevProps.dependencyStyles || {}),
     compileDelay: prevProps.compileDelay
   });
   
@@ -466,6 +533,7 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
     filesHash: createFilesHash(nextProps.files),
     entryFile: nextProps.entryFile,
     depsInfo: createDepsHash(nextProps.depsInfo || {}),
+    dependencyStyles: createStylesHash(nextProps.dependencyStyles || {}),
     compileDelay: nextProps.compileDelay
   });
   

@@ -4,6 +4,7 @@ import type { LoggerConfig } from './utils/Logger';
 export interface ReactPreviewerProps {
   files: Record<string, string>;
   depsInfo?: Record<string, string>;
+  dependencyStyles?: Record<string, string | string[]>;
   entryFile?: string;
   onError?: (error: Error) => void;
   onElementClick?: (sourceInfo: SourceInfo) => void;
@@ -24,10 +25,23 @@ export interface PreviewViewport {
 
 export interface PreviewStatus {
   isLoading: boolean;
+  phase: PreviewPhase;
   error: ErrorInfo | null;
   compileDuration: number | null;
   transformedFiles: number;
+  resourceTotal: number;
+  resourceLoaded: number;
+  resourceProgress: number;
 }
+
+export type PreviewPhase =
+  | 'idle'
+  | 'compiling'
+  | 'loading-js'
+  | 'loading-css'
+  | 'rendering'
+  | 'ready'
+  | 'error';
 
 export interface ErrorInfo {
   type: 'compile' | 'runtime';
@@ -50,7 +64,15 @@ export interface SourceInfo {
 }
 
 export interface MessageData {
-  type: 'runtime-error' | 'element-click' | 'console-log' | 'toggle-inspect' | 'dependency-error';
+  type:
+    | 'runtime-error'
+    | 'element-click'
+    | 'console-log'
+    | 'toggle-inspect'
+    | 'dependency-error'
+    | 'resource-error'
+    | 'resource-status'
+    | 'preview-ready';
   data: Record<string, unknown>;
 }
 

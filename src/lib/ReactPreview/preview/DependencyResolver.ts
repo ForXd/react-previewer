@@ -201,7 +201,8 @@ ${JSON.stringify({ imports: importMap }, null, 2)}
  */
 function generateDynamicDependencyLoader(
   depsInfo: DepsInfo,
-  options: EsmOptions = {}
+  options: EsmOptions = {},
+  styleResources: Array<{ name: string; url: string }> = []
 ): string {
   const result = transformDepsToEsmLinks(depsInfo, options);
   const dependencies = result.dependencies;
@@ -227,6 +228,9 @@ function generateDynamicDependencyLoader(
         this.loadingDetails = document.getElementById('loading-details');
         this.cacheInfo = document.getElementById('cache-info');
         this.cacheRate = document.getElementById('cache-rate');
+        this.loadingText = document.getElementById('loading-text');
+        this.moduleCache = new Map();
+        this.styleCache = new Map();
       },
       
       addDependencies(deps) {
@@ -240,10 +244,20 @@ function generateDynamicDependencyLoader(
       setDependencyStatus(name, status, error = null) {
         const dep = this.dependencies.get(name);
         if (dep) {
+          const wasDone = dep.status === 'loaded' || dep.status === 'cached' || dep.status === 'error';
           dep.status = status;
-          if (status === 'loaded' || status === 'cached') {
+          if ((status === 'loaded' || status === 'cached' || status === 'error') && !wasDone) {
             this.loadedCount++;
           }
+          if (error) dep.error = error;
+          this.updateUI();
+        }
+      },
+
+      ensureResource(name, url) {
+        if (!this.dependencies.has(name)) {
+          this.dependencies.set(name, { url, status: 'pending' });
+          this.totalCount++;
           this.updateUI();
         }
       },
@@ -254,6 +268,12 @@ function generateDynamicDependencyLoader(
         const progress = this.totalCount > 0 ? (this.loadedCount / this.totalCount) * 100 : 0;
         this.progressFill.style.width = progress + '%';
         this.progressText.textContent = Math.round(progress) + '%';
+        const active = Array.from(this.dependencies.entries()).find(([, dep]) => dep.status === 'loading');
+        if (this.loadingText) {
+          const hasCss = active?.[0].startsWith('style:') || active?.[0].startsWith('css:') || active?.[0].startsWith('inline:') || active?.[0] === 'tailwindcss';
+          this.loadingText.textContent = hasCss ? '正在加载样式资源...' : '正在加载依赖资源...';
+        }
+        this.postStatus(active?.[0]);
         
         // 计算缓存命中率
         const cachedCount = Array.from(this.dependencies.values()).filter(dep => dep.status === 'cached').length;
@@ -306,6 +326,22 @@ function generateDynamicDependencyLoader(
             this.hideLoadingOverlay();
           }, 800);
         }
+      },
+
+      postStatus(activeName = '') {
+        const progress = this.totalCount > 0 ? Math.round((this.loadedCount / this.totalCount) * 100) : 100;
+        const phase = activeName.startsWith('style:') || activeName.startsWith('css:') || activeName.startsWith('inline:') || activeName === 'tailwindcss'
+          ? 'loading-css'
+          : 'loading-js';
+        window.parent.postMessage({
+          type: 'resource-status',
+          data: {
+            phase,
+            resourceTotal: this.totalCount,
+            resourceLoaded: this.loadedCount,
+            resourceProgress: progress
+          }
+        }, '*');
       },
       
       getStatusText(status) {
@@ -386,7 +422,17 @@ function generateDynamicDependencyLoader(
     
     // 添加依赖列表
     const dependencyList = ${JSON.stringify(dependencyList)};
-    dynamicDependencyLoader.addDependencies(dependencyList);
+    const styleResourceList = ${JSON.stringify(styleResources)};
+    const tailwindResource = { name: 'tailwindcss', url: 'https://cdn.tailwindcss.com' };
+    const resourceList = [
+      ...dependencyList,
+      ...styleResourceList.map((resource) => ({
+        name: \`style:\${resource.name}\`,
+        url: resource.url
+      })),
+      tailwindResource
+    ];
+    dynamicDependencyLoader.addDependencies(resourceList);
     
     // 记录开始时间
     dynamicDependencyLoader.loadingStartTime = Date.now();
@@ -398,8 +444,7 @@ function generateDynamicDependencyLoader(
         
         const startTime = Date.now();
         
-        // 使用动态导入预加载
-        const module = await import(url);
+        await dynamicDependencyLoader.loadModule(name, url);
         
         const loadTime = Date.now() - startTime;
         
@@ -443,10 +488,124 @@ function generateDynamicDependencyLoader(
         }, '*');
       }
     }
+
+    dynamicDependencyLoader.loadModule = async function(name, url) {
+      if (this.moduleCache.has(url)) return this.moduleCache.get(url);
+      const promise = import(url);
+      this.moduleCache.set(url, promise);
+      return promise;
+    };
+
+    dynamicDependencyLoader.loadStyle = async function(name, url) {
+      this.ensureResource(name, url);
+      if (this.styleCache.has(url)) return this.styleCache.get(url);
+      this.setDependencyStatus(name, 'loading');
+      const promise = new Promise((resolve) => {
+        const existing = Array.from(document.querySelectorAll('link[data-react-preview-style]'))
+          .find((node) => node.getAttribute('data-react-preview-style') === url);
+        if (existing) {
+          resolve(existing);
+          return;
+        }
+
+        const link = document.createElement('link');
+        const timeout = window.setTimeout(() => {
+          window.parent.postMessage({
+            type: 'resource-error',
+            data: { name, url, error: 'CSS load timeout' }
+          }, '*');
+          resolve(link);
+        }, 8000);
+
+        link.rel = 'stylesheet';
+        link.href = url;
+        link.setAttribute('data-react-preview-style', url);
+        link.onload = () => {
+          window.clearTimeout(timeout);
+          resolve(link);
+        };
+        link.onerror = () => {
+          window.clearTimeout(timeout);
+          window.parent.postMessage({
+            type: 'resource-error',
+            data: { name, url, error: 'CSS load failed' }
+          }, '*');
+          resolve(link);
+        };
+        document.head.appendChild(link);
+      });
+      this.styleCache.set(url, promise);
+      promise.then(() => this.setDependencyStatus(name, 'loaded'));
+      return promise;
+    };
+
+    dynamicDependencyLoader.injectStyle = async function(name, cssText) {
+      const key = \`inline:\${name}\`;
+      this.ensureResource(key, key);
+      if (this.styleCache.has(key)) return this.styleCache.get(key);
+      this.setDependencyStatus(key, 'loading');
+      const style = document.createElement('style');
+      style.setAttribute('data-react-preview-style', key);
+      style.textContent = cssText;
+      document.head.appendChild(style);
+      const promise = Promise.resolve(style);
+      this.styleCache.set(key, promise);
+      promise.then(() => this.setDependencyStatus(key, 'loaded'));
+      return promise;
+    };
+
+    window.__reactPreviewResourceLoader = dynamicDependencyLoader;
+    window.__reactPreviewLoadStyle = (url, name = url) => dynamicDependencyLoader.loadStyle(name, url);
+    window.__reactPreviewInjectStyle = (name, cssText) => dynamicDependencyLoader.injectStyle(name, cssText);
+
+    async function preloadStyle(name, url) {
+      try {
+        dynamicDependencyLoader.setDependencyStatus(name, 'loading');
+        await dynamicDependencyLoader.loadStyle(name, url);
+        dynamicDependencyLoader.setDependencyStatus(name, 'loaded');
+      } catch (error) {
+        dynamicDependencyLoader.setDependencyStatus(name, 'error', error.message);
+      }
+    }
+
+    async function preloadTailwind() {
+      try {
+        dynamicDependencyLoader.setDependencyStatus(tailwindResource.name, 'loading');
+        await new Promise((resolve) => {
+          if (window.tailwind) {
+            resolve(window.tailwind);
+            return;
+          }
+          const script = document.createElement('script');
+          const timeout = window.setTimeout(resolve, 8000);
+          script.src = tailwindResource.url;
+          script.onload = () => {
+            window.clearTimeout(timeout);
+            resolve(script);
+          };
+          script.onerror = () => {
+            window.clearTimeout(timeout);
+            window.parent.postMessage({
+              type: 'resource-error',
+              data: { name: tailwindResource.name, url: tailwindResource.url, error: 'Tailwind CDN load failed' }
+            }, '*');
+            resolve(script);
+          };
+          document.head.appendChild(script);
+        });
+        dynamicDependencyLoader.setDependencyStatus(tailwindResource.name, 'loaded');
+      } catch (error) {
+        dynamicDependencyLoader.setDependencyStatus(tailwindResource.name, 'error', error.message);
+      }
+    }
     
     // 开始预加载所有依赖
     Promise.all(
-      dependencyList.map(dep => preloadDependency(dep.name, dep.url))
+      [
+        ...dependencyList.map(dep => preloadDependency(dep.name, dep.url)),
+        ...styleResourceList.map(resource => preloadStyle(\`style:\${resource.name}\`, resource.url)),
+        preloadTailwind()
+      ]
     ).then(() => {
       console.log('所有依赖加载完成');
       window.dispatchEvent(new CustomEvent('dependencies-ready'));

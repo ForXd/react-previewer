@@ -167,167 +167,47 @@ export class ImportProcessor implements ASTProcessor {
   }
 
   private transformToRemoteCSSLoader(node: ExtendedNode, cssPath: string): void {
-    // 将远程 CSS 导入转换为动态加载
+    // 将远程 CSS 导入转换为统一资源加载器调用
     node.type = 'ExpressionStatement';
     node.expression = {
-      type: 'CallExpression',
-      callee: {
-        type: 'FunctionExpression',
-        params: [],
-        body: {
-          type: 'BlockStatement',
-          body: [
-            {
-              type: 'VariableDeclaration',
-              kind: 'const',
-              declarations: [
-                {
-                  type: 'VariableDeclarator',
-                  id: { type: 'Identifier', name: 'link' },
-                  init: {
-                    type: 'CallExpression',
-                    callee: {
-                      type: 'MemberExpression',
-                      object: { type: 'Identifier', name: 'document' },
-                      property: { type: 'Identifier', name: 'createElement' }
-                    },
-                    arguments: [{ type: 'StringLiteral', value: 'link' }]
-                  }
-                }
-              ]
-            },
-            {
-              type: 'ExpressionStatement',
-              expression: {
-                type: 'AssignmentExpression',
-                operator: '=',
-                left: {
-                  type: 'MemberExpression',
-                  object: { type: 'Identifier', name: 'link' },
-                  property: { type: 'Identifier', name: 'rel' }
-                },
-                right: { type: 'StringLiteral', value: 'stylesheet' }
-              }
-            },
-            {
-              type: 'ExpressionStatement',
-              expression: {
-                type: 'AssignmentExpression',
-                operator: '=',
-                left: {
-                  type: 'MemberExpression',
-                  object: { type: 'Identifier', name: 'link' },
-                  property: { type: 'Identifier', name: 'href' }
-                },
-                right: { type: 'StringLiteral', value: cssPath }
-              }
-            },
-            {
-              type: 'ExpressionStatement',
-              expression: {
-                type: 'CallExpression',
-                callee: {
-                  type: 'MemberExpression',
-                  object: {
-                    type: 'MemberExpression',
-                    object: { type: 'Identifier', name: 'document' },
-                    property: { type: 'Identifier', name: 'head' }
-                  },
-                  property: { type: 'Identifier', name: 'appendChild' }
-                },
-                arguments: [{ type: 'Identifier', name: 'link' }]
-              }
-            }
-          ]
-        }
+      type: 'AwaitExpression',
+      argument: {
+        type: 'CallExpression',
+        callee: {
+          type: 'MemberExpression',
+          object: { type: 'Identifier', name: 'window' },
+          property: { type: 'Identifier', name: '__reactPreviewLoadStyle' }
+        },
+        arguments: [
+          { type: 'StringLiteral', value: cssPath },
+          { type: 'StringLiteral', value: cssPath }
+        ]
       },
-      arguments: []
     } as unknown as ExtendedNode;
 
-    logger.debug('Transformed remote CSS import:', cssPath, '-> dynamic link loading');
+    logger.debug('Transformed remote CSS import:', cssPath, '-> resource loader');
   }
 
   private transformToLocalCSSLoader(node: ExtendedNode, cssPath: string, cssContent: string): void {
-    // 将本地 CSS 导入转换为动态样式注入
+    // 将本地 CSS 导入转换为统一资源加载器调用
     node.type = 'ExpressionStatement';
     node.expression = {
-      type: 'CallExpression',
-      callee: {
-        type: 'FunctionExpression',
-        params: [],
-        body: {
-          type: 'BlockStatement',
-          body: [
-            {
-              type: 'VariableDeclaration',
-              kind: 'const',
-              declarations: [
-                {
-                  type: 'VariableDeclarator',
-                  id: { type: 'Identifier', name: 'style' },
-                  init: {
-                    type: 'CallExpression',
-                    callee: {
-                      type: 'MemberExpression',
-                      object: { type: 'Identifier', name: 'document' },
-                      property: { type: 'Identifier', name: 'createElement' }
-                    },
-                    arguments: [{ type: 'StringLiteral', value: 'style' }]
-                  }
-                }
-              ]
-            },
-            {
-              type: 'ExpressionStatement',
-              expression: {
-                type: 'CallExpression',
-                callee: {
-                  type: 'MemberExpression',
-                  object: { type: 'Identifier', name: 'style' },
-                  property: { type: 'Identifier', name: 'setAttribute' }
-                },
-                arguments: [
-                  { type: 'StringLiteral', value: 'data-path' },
-                  { type: 'StringLiteral', value: cssPath }
-                ]
-              }
-            },
-            {
-              type: 'ExpressionStatement',
-              expression: {
-                type: 'AssignmentExpression',
-                operator: '=',
-                left: {
-                  type: 'MemberExpression',
-                  object: { type: 'Identifier', name: 'style' },
-                  property: { type: 'Identifier', name: 'innerHTML' }
-                },
-                right: { type: 'StringLiteral', value: cssContent }
-              }
-            },
-            {
-              type: 'ExpressionStatement',
-              expression: {
-                type: 'CallExpression',
-                callee: {
-                  type: 'MemberExpression',
-                  object: {
-                    type: 'MemberExpression',
-                    object: { type: 'Identifier', name: 'document' },
-                    property: { type: 'Identifier', name: 'head' }
-                  },
-                  property: { type: 'Identifier', name: 'appendChild' }
-                },
-                arguments: [{ type: 'Identifier', name: 'style' }]
-              }
-            }
-          ]
-        }
+      type: 'AwaitExpression',
+      argument: {
+        type: 'CallExpression',
+        callee: {
+          type: 'MemberExpression',
+          object: { type: 'Identifier', name: 'window' },
+          property: { type: 'Identifier', name: '__reactPreviewInjectStyle' }
+        },
+        arguments: [
+          { type: 'StringLiteral', value: cssPath },
+          { type: 'StringLiteral', value: cssContent }
+        ]
       },
-      arguments: []
     } as unknown as ExtendedNode;
 
-    logger.debug('Transformed local CSS import:', cssPath, '-> dynamic style injection');
+    logger.debug('Transformed local CSS import:', cssPath, '-> resource loader');
   }
 }
 

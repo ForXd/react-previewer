@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { ReactPreviewer } from './preview/ReactPreviewer';
 import { SourceTooltip } from './preview/components/SourceTooltip';
 import { demoList } from './test/demo';
@@ -20,7 +20,7 @@ const ExampleUsage: React.FC = () => {
   });
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const getFiles = useCallback(() => {
+  const baseFiles = useMemo(() => {
     const files = { ...selectedDemo.files };
     const filesWithDeps = files as Record<string, string>;
     if ('deps.json' in filesWithDeps) {
@@ -29,25 +29,24 @@ const ExampleUsage: React.FC = () => {
     return filesWithDeps;
   }, [selectedDemo]);
 
+  const getFiles = useCallback(() => baseFiles, [baseFiles]);
+
+  const deps = useMemo(() => {
+    try {
+      const filesWithDeps = selectedDemo.files as Record<string, string>;
+      const depsFile = filesWithDeps['deps.json'];
+      return depsFile ? JSON.parse(depsFile) : {};
+    } catch (error) {
+      logger.error('Parse deps.json error:', error);
+      return {};
+    }
+  }, [selectedDemo]);
+
   // 初始化编辑文件
   useEffect(() => {
     const files = getFiles();
     setEditedFiles(files);
   }, [getFiles]);
-
-  const getDeps = () => {
-    try {
-      const filesWithDeps = selectedDemo.files as Record<string, string>;
-      const depsFile = filesWithDeps['deps.json'];
-      if (depsFile) {
-        return JSON.parse(depsFile);
-      }
-      return {};
-    } catch (error) {
-      logger.error('Parse deps.json error:', error);
-      return {};
-    }
-  };
 
   const handleElementClick = (sourceInfo: SourceInfo) => {
     logger.debug('Element clicked in example:', sourceInfo);
@@ -86,7 +85,7 @@ const ExampleUsage: React.FC = () => {
   }, [sourceInfo]);
 
   // 获取当前要显示的文件（编辑模式使用编辑后的文件，否则使用原始文件）
-  const getCurrentFiles = () => {
+  const currentFiles = useMemo(() => {
     const files = editingMode ? editedFiles : getFiles();
     logger.debug('getCurrentFiles called:', {
       editingMode,
@@ -95,27 +94,27 @@ const ExampleUsage: React.FC = () => {
       filesHash: JSON.stringify(Object.keys(files).sort())
     });
     return files;
-  };
+  }, [editingMode, editedFiles, getFiles, selectedDemo.key]);
 
   return (
-    <div className="w-full h-screen bg-gray-50 flex">
+    <div className="flex h-screen w-full bg-slate-100 text-slate-950">
       {/* 左侧边栏 - Demo 选择器 */}
       <div className={`
-        bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ease-in-out
+        flex flex-col border-r border-slate-200 bg-white transition-all duration-300 ease-in-out
         ${sidebarCollapsed ? 'w-16' : 'w-80'}
       `}>
         {/* 侧边栏头部 */}
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+        <div className="flex items-center justify-between border-b border-slate-200 p-4">
           {!sidebarCollapsed && (
-            <h2 className="text-lg font-semibold text-gray-900">示例列表</h2>
+            <h2 className="text-base font-semibold text-slate-950">示例列表</h2>
           )}
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            className="rounded-md p-2 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-950"
             title={sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
           >
             <svg
-              className={`w-5 h-5 text-gray-600 transition-transform ${sidebarCollapsed ? 'rotate-180' : ''}`}
+              className={`h-5 w-5 transition-transform ${sidebarCollapsed ? 'rotate-180' : ''}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -135,10 +134,10 @@ const ExampleUsage: React.FC = () => {
                   key={demo.key}
                   onClick={() => setSelectedDemo(demo)}
                   className={`
-                    w-full p-3 rounded-lg transition-all duration-200 flex items-center justify-center
+                    flex w-full items-center justify-center rounded-md p-3 transition-colors duration-150
                     ${selectedDemo.key === demo.key
-                      ? 'bg-blue-600 text-blue-500 shadow-md'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-slate-900 text-white'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                     }
                   `}
                   title={demo.name}
@@ -155,10 +154,10 @@ const ExampleUsage: React.FC = () => {
                   key={demo.key}
                   onClick={() => setSelectedDemo(demo)}
                   className={`
-                    w-full p-4 rounded-lg text-left transition-all duration-200
+                    w-full rounded-md border p-4 text-left transition-colors duration-150
                     ${selectedDemo.key === demo.key
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:shadow-sm'
+                      ? 'border-slate-900 bg-slate-900 text-white'
+                      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                     }
                   `}
                 >
@@ -172,8 +171,8 @@ const ExampleUsage: React.FC = () => {
 
         {/* 日志配置区域 */}
         {!sidebarCollapsed && (
-          <div className="p-4 border-t border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">日志配置</h3>
+          <div className="border-t border-slate-200 p-4">
+            <h3 className="mb-3 text-sm font-semibold text-slate-950">日志配置</h3>
             <div className="space-y-2">
               <label className="flex items-center">
                 <input
@@ -182,14 +181,14 @@ const ExampleUsage: React.FC = () => {
                   onChange={(e) => setLoggerConfig(prev => ({ ...prev, enabled: e.target.checked }))}
                   className="mr-2"
                 />
-                <span className="text-xs text-gray-700">启用日志</span>
+                <span className="text-xs text-slate-700">启用日志</span>
               </label>
               <div>
-                <label className="text-xs text-gray-700 block mb-1">日志级别</label>
+                <label className="mb-1 block text-xs text-slate-700">日志级别</label>
                 <select
                   value={loggerConfig.level}
                   onChange={(e) => setLoggerConfig(prev => ({ ...prev, level: parseInt(e.target.value) }))}
-                  className="w-full text-xs border border-gray-300 rounded px-2 py-1"
+                  className="w-full rounded-md border border-slate-200 px-2 py-1 text-xs"
                 >
                   <option value={0}>ERROR</option>
                   <option value={1}>WARN</option>
@@ -205,7 +204,7 @@ const ExampleUsage: React.FC = () => {
                   onChange={(e) => setLoggerConfig(prev => ({ ...prev, showTimestamp: e.target.checked }))}
                   className="mr-2"
                 />
-                <span className="text-xs text-gray-700">显示时间戳</span>
+                <span className="text-xs text-slate-700">显示时间戳</span>
               </label>
             </div>
           </div>
@@ -215,24 +214,24 @@ const ExampleUsage: React.FC = () => {
       {/* 右侧主区域 */}
       <div className="flex-1 flex flex-col">
         {/* 顶部工具栏 */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="border-b border-slate-200 bg-white px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-bold text-gray-900">{selectedDemo.name}</h1>
-              <p className="text-sm text-gray-600 mt-1">{selectedDemo.description}</p>
+              <h1 className="text-xl font-semibold text-slate-950">{selectedDemo.name}</h1>
+              <p className="mt-1 text-sm text-slate-600">{selectedDemo.description}</p>
               
             </div>
             <div className="flex items-center space-x-3">
-              <div className="text-sm text-gray-500">
+              <div className="text-sm text-slate-500">
                 入口文件: {selectedDemo.entryFile}
               </div>
               <button
                 onClick={() => setEditingMode(!editingMode)}
                 className={`
-                  px-4 py-2 rounded-lg text-sm font-medium transition-colors
+                  rounded-md px-4 py-2 text-sm font-medium transition-colors
                   ${editingMode 
-                    ? 'bg-green-600 text-white hover:bg-green-700' 
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                    ? 'bg-emerald-600 text-white hover:bg-emerald-700' 
+                    : 'bg-slate-900 text-white hover:bg-slate-700'
                   }
                 `}
               >
@@ -241,7 +240,7 @@ const ExampleUsage: React.FC = () => {
               {editingMode && (
                 <button
                   onClick={handleResetFiles}
-                  className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-600 text-white hover:bg-gray-700 transition-colors"
+                  className="rounded-md bg-slate-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700"
                 >
                   重置
                 </button>
@@ -254,16 +253,16 @@ const ExampleUsage: React.FC = () => {
         <div className="flex-1 flex">
           {/* 编辑区域 */}
           {editingMode && (
-            <div className="w-1/2 bg-white border-r border-gray-200 p-4 overflow-y-auto">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">文件编辑</h3>
+            <div className="w-1/2 overflow-y-auto border-r border-slate-200 bg-white p-4">
+              <h3 className="mb-4 text-base font-semibold text-slate-950">文件编辑</h3>
               <div className="space-y-4">
-                {Object.entries(getCurrentFiles()).map(([fileName, content]) => (
+                {Object.entries(currentFiles).map(([fileName, content]) => (
                   <div key={fileName}>
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">{fileName}</h4>
+                    <h4 className="mb-2 text-sm font-medium text-slate-700">{fileName}</h4>
                     <textarea
                       value={content}
                       onChange={(e) => handleFileEdit(fileName, e.target.value)}
-                      className="w-full h-32 p-2 border border-gray-300 rounded text-xs font-mono resize-none"
+                      className="h-32 w-full resize-none rounded-md border border-slate-200 p-2 font-mono text-xs outline-none focus:border-slate-400"
                       placeholder="输入代码..."
                     />
                   </div>
@@ -276,18 +275,16 @@ const ExampleUsage: React.FC = () => {
           <div className={`${editingMode ? 'w-1/2' : 'w-full'} relative`}>
             <div className="absolute inset-0">
               {(() => {
-                const currentFiles = getCurrentFiles();
-                const currentDeps = getDeps();
                 logger.debug('Rendering ReactPreviewer:', {
                   selectedDemo: selectedDemo.key,
                   files: Object.keys(currentFiles),
-                  deps: Object.keys(currentDeps),
+                  deps: Object.keys(deps),
                   entryFile: selectedDemo.entryFile
                 });
                 return (
                   <ReactPreviewer
                     files={currentFiles}
-                    depsInfo={currentDeps}
+                    depsInfo={deps}
                     entryFile={selectedDemo.entryFile}
                     onElementClick={handleElementClick}
                     loggerConfig={loggerConfig as Partial<LoggerConfig>}
@@ -300,9 +297,9 @@ const ExampleUsage: React.FC = () => {
 
         {/* 依赖加载功能说明区域 */}
         {(selectedDemo.key === 'simpleReactDemo' || selectedDemo.key === 'dependencyLoadingDemo' || selectedDemo.key === 'arcoDesignDemo') && (
-          <div className="bg-white border-t border-gray-200 p-4">
-            <h3 className="text-sm font-semibold text-gray-900 mb-2">依赖加载功能说明</h3>
-            <div className="text-xs text-gray-600 space-y-1">
+          <div className="border-t border-slate-200 bg-white p-4">
+            <h3 className="mb-2 text-sm font-semibold text-slate-950">依赖加载功能说明</h3>
+            <div className="space-y-1 text-xs text-slate-600">
               <p><strong>观察要点:</strong></p>
               <ul className="list-disc list-inside space-y-1 ml-2">
                 <li>页面加载时应该显示依赖加载进度条</li>
@@ -310,7 +307,7 @@ const ExampleUsage: React.FC = () => {
                 <li>加载完成后进度条自动消失</li>
                 <li>如果依赖加载失败，会显示错误状态</li>
               </ul>
-              <p className="mt-2"><strong>当前依赖:</strong> {Object.keys(getDeps()).length > 0 ? Object.keys(getDeps()).join(', ') : '无外部依赖'}</p>
+              <p className="mt-2"><strong>当前依赖:</strong> {Object.keys(deps).length > 0 ? Object.keys(deps).join(', ') : '无外部依赖'}</p>
             </div>
           </div>
         )}
