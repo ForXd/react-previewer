@@ -11,6 +11,7 @@ export const ReactPreviewer: React.FC<ReactPreviewerProps> = ({
   entryFile = 'App.tsx', 
   onError, 
   depsInfo = {},
+  dependencyStyles = {},
   onElementClick,
   loggerConfig,
   compileDelay = 120,
@@ -24,9 +25,13 @@ export const ReactPreviewer: React.FC<ReactPreviewerProps> = ({
   const [recompileKey, setRecompileKey] = useState(0);
   const [status, setStatus] = useState<PreviewStatus>({
     isLoading: true,
+    phase: 'compiling',
     error: null,
     compileDuration: null,
-    transformedFiles: 0
+    transformedFiles: 0,
+    resourceTotal: 0,
+    resourceLoaded: 0,
+    resourceProgress: 0
   });
   const [viewport, setViewport] = useState<PreviewViewport>(
     defaultViewport ?? { label: 'Auto', width: '100%', height: '100%' }
@@ -82,7 +87,7 @@ export const ReactPreviewer: React.FC<ReactPreviewerProps> = ({
 
   return (
     <ErrorBoundary>
-      <div className={`flex flex-col h-full w-full bg-slate-100 ${className}`}>
+      <div className={`flex h-full w-full flex-col bg-slate-100 text-slate-950 ${className}`}>
         {showToolbar && (
           <PreviewerToolbar
             isLoading={status.isLoading}
@@ -98,9 +103,9 @@ export const ReactPreviewer: React.FC<ReactPreviewerProps> = ({
           />
         )}
 
-        <div className="flex-1 relative w-full min-h-0 overflow-auto p-4">
+        <div className="relative min-h-0 w-full flex-1 overflow-auto p-4">
           <div
-            className="mx-auto h-full min-h-[320px] overflow-hidden bg-white shadow-sm ring-1 ring-slate-200 transition-[width,height,transform] duration-200"
+            className="mx-auto h-full min-h-[320px] overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-slate-200 transition-[width,height,transform] duration-200"
             style={frameStyle}
           >
             <PreviewFrame
@@ -108,6 +113,7 @@ export const ReactPreviewer: React.FC<ReactPreviewerProps> = ({
               files={files}
               entryFile={entryFile}
               depsInfo={depsInfo}
+              dependencyStyles={dependencyStyles}
               onError={onError}
               onElementClick={onElementClick}
               isInspecting={isInspecting}

@@ -1,15 +1,6 @@
 # React Previewer
 
-一个强大的 React 代码预览器组件，支持实时编译、错误处理和依赖分析。
-
-## 功能特性
-
-- 🚀 **实时编译**: 支持 TypeScript/JSX 代码的实时编译和预览
-- 🔍 **错误处理**: 完善的编译时和运行时错误捕获与显示
-- 📦 **依赖分析**: 自动分析和管理代码依赖关系
-- 🎨 **可定制**: 支持自定义样式和配置
-- 📝 **日志系统**: 内置统一的日志管理系统
-- 🔧 **开发工具**: 提供调试面板和源码映射功能
+一个面向组件编辑器、低代码预览和在线示例的 React 代码预览组件。它在 iframe 中编译并运行 TSX/JSX 文件，支持第三方 ESM 依赖、组件库样式、本地 CSS、运行时错误捕获和源码定位。
 
 ## 安装
 
@@ -17,256 +8,184 @@
 npm install @zllling/react-previewer
 ```
 
-## 使用方法
-
-### 基本使用
+在应用入口引入组件库样式：
 
 ```tsx
-import React from 'react';
-import { ReactPreviewer } from '@zllling/react-previewer';
+import '@zllling/react-previewer/styles.css';
+```
 
-// 引入样式（必需）
+## 基本用法
+
+```tsx
+import { ReactPreviewer } from '@zllling/react-previewer';
 import '@zllling/react-previewer/styles.css';
 
-const App = () => {
-  const files = {
-    'App.tsx': `
+const files = {
+  'App.tsx': `
 import React from 'react';
+import './styles.css';
 
-const App = () => {
-  return (
-    <div>
-      <h1>Hello, React Previewer!</h1>
-      <p>这是一个实时预览的 React 组件</p>
-    </div>
-  );
+export default function App() {
+  return <div className="card">Hello React Previewer</div>;
+}
+  `,
+  'styles.css': `
+.card {
+  padding: 24px;
+  border-radius: 8px;
+  background: white;
+}
+  `
 };
 
-export default App;
-    `
-  };
-
-  const depsInfo = {
-    'react': '18.2.0',
-    'react-dom': '18.2.0'
-  };
-
-  return (
-    <ReactPreviewer
-      files={files}
-      depsInfo={depsInfo}
-      entryFile="App.tsx"
-      onError={(error) => console.error('Preview error:', error)}
-      onElementClick={(sourceInfo) => console.log('Element clicked:', sourceInfo)}
-    />
-  );
-};
-```
-
-### 样式引入方式
-
-有两种方式引入样式：
-
-#### 方式一：在入口文件引入（推荐）
-
-```tsx
-// 在你的应用入口文件（如 main.tsx 或 App.tsx）中
-import '@zllling/react-previewer/styles.css';
-```
-
-#### 方式二：在组件文件中引入
-
-```tsx
-import { ReactPreviewer } from '@zllling/react-previewer';
-import '@zllling/react-previewer/styles.css';
-
-// 你的组件代码...
-```
-
-### 高级配置
-
-```tsx
-import React from 'react';
-import { ReactPreviewer } from '@zllling/react-previewer';
-
-function App() {
-  const files = {
-    'App.tsx': `/* 你的 React 代码 */`,
-    'styles.css': `/* 你的 CSS 样式 */`
-  };
-
+export default function Page() {
   return (
     <ReactPreviewer
       files={files}
       entryFile="App.tsx"
       depsInfo={{
         react: '18.2.0',
-        'react-dom': '18.2.0',
-        '@arco-design/web-react': '2.66.1'
-      }}
-      onError={(error) => {
-        console.error('预览错误:', error);
-      }}
-      onElementClick={(sourceInfo) => {
-        console.log('点击的元素源码信息:', sourceInfo);
+        'react-dom': '18.2.0'
       }}
     />
   );
 }
 ```
 
-## API 参考
+## 依赖与 CSS
 
-### ReactPreviewer Props
-
-| 属性 | 类型 | 必需 | 默认值 | 描述 |
-|------|------|------|--------|------|
-| `files` | `Record<string, string>` | ✅ | - | 要预览的文件内容 |
-| `depsInfo` | `Record<string, string>` | ✅ | - | 依赖包信息 |
-| `entryFile` | `string` | ❌ | `'App.tsx'` | 入口文件名 |
-| `onError` | `(error: Error) => void` | ❌ | - | 错误回调函数 |
-| `onElementClick` | `(sourceInfo: SourceInfo) => void` | ❌ | - | 元素点击回调 |
-| `loggerConfig` | `Partial<LoggerConfig>` | ❌ | - | 日志配置 |
-
-### 类型定义
-
-```typescript
-interface SourceInfo {
-  file: string;
-  startLine: number;
-  endLine: number;
-  startColumn: number;
-  endColumn: number;
-  content: string;
-  position: { x: number; y: number };
-}
-
-interface LoggerConfig {
-  enabled: boolean;
-  level: LogLevel;
-  prefix?: string;
-  showTimestamp?: boolean;
-}
-```
-
-## 高级用法
-
-### 配置日志系统
+`depsInfo` 用于声明 iframe 内需要从 ESM CDN 加载的 JS 依赖。组件会自动生成 import map，并在渲染前加载依赖。
 
 ```tsx
-import { ReactPreviewer, LogLevel } from '@zllling/react-previewer';
-
 <ReactPreviewer
   files={files}
-  depsInfo={depsInfo}
-  loggerConfig={{
-    enabled: true,
-    level: LogLevel.DEBUG,
-    prefix: '[MyApp]',
-    showTimestamp: true
+  depsInfo={{
+    '@arco-design/web-react': '2.66.1',
+    '@arco-design/web-react/icon': '2.66.1'
   }}
 />
 ```
 
-### 使用独立的组件
+`dependencyStyles` 用于声明第三方依赖对应的 CSS。默认已内置 `@arco-design/web-react` 的样式地址，可以通过该配置覆盖或追加其他组件库样式：
 
 ```tsx
-import { 
-  PreviewFrame, 
-  ErrorBoundary, 
-  ErrorDisplay,
-  PreviewerToolbar 
-} from '@zllling/react-previewer';
-
-// 使用预览帧
-<PreviewFrame
+<ReactPreviewer
   files={files}
-  entryFile="App.tsx"
-  depsInfo={depsInfo}
-  onError={handleError}
-  isInspecting={true}
+  depsInfo={{
+    '@arco-design/web-react': '2.66.1',
+    antd: '5.18.0'
+  }}
+  dependencyStyles={{
+    antd: 'https://esm.sh/antd@5.18.0/dist/reset.css',
+    '@arco-design/web-react': [
+      'https://esm.sh/@arco-design/web-react@2.66.1/dist/css/arco.min.css'
+    ]
+  }}
 />
-
-// 使用错误边界
-<ErrorBoundary>
-  <YourComponent />
-</ErrorBoundary>
-
-// 使用错误显示
-<ErrorDisplay error={error} />
 ```
 
-### 使用编译器工具
+本地 CSS import 会被编译为 iframe 内的样式注入：
 
 ```tsx
-import { 
-  CodeTransformer, 
-  TypeScriptDependencyAnalyzer,
-  DependencyGraph 
-} from '@zllling/react-previewer';
-
-// 代码转换
-const transformer = new CodeTransformer();
-const result = await transformer.transform(code, 'App.tsx');
-
-// 依赖分析
-const analyzer = new TypeScriptDependencyAnalyzer();
-const dependencies = await analyzer.analyze(code, 'App.tsx', files);
-
-// 依赖图构建
-const graph = new DependencyGraph();
-graph.buildFromFiles(files);
+import './styles.css';
 ```
+
+远程 CSS import 会被编译为 iframe 内的 link 加载，并进入同一套资源进度：
+
+```tsx
+import 'https://example.com/theme.css';
+```
+
+## Loading 生命周期
+
+预览状态统一覆盖编译、JS 依赖、CSS 资源和渲染阶段。外层 loading 与 iframe 内 loading 都会展示当前阶段和资源进度，避免“组件已渲染但 CSS 还没加载”的闪烁。
+
+状态阶段：
+
+| phase | 含义 |
+| --- | --- |
+| `compiling` | 正在转换用户文件 |
+| `loading-js` | 正在加载 React、React DOM 或第三方 JS 依赖 |
+| `loading-css` | 正在加载组件库 CSS、Tailwind CDN 或用户 CSS |
+| `rendering` | 依赖已就绪，正在挂载 React 应用 |
+| `ready` | 预览已完成 |
+| `error` | 编译或运行错误 |
+
+## API
+
+```ts
+interface ReactPreviewerProps {
+  files: Record<string, string>;
+  depsInfo?: Record<string, string>;
+  dependencyStyles?: Record<string, string | string[]>;
+  entryFile?: string;
+  onError?: (error: Error) => void;
+  onElementClick?: (sourceInfo: SourceInfo) => void;
+  loggerConfig?: Partial<LoggerConfig>;
+  compileDelay?: number;
+  showToolbar?: boolean;
+  className?: string;
+  defaultViewport?: PreviewViewport;
+  defaultZoom?: number;
+  onStatusChange?: (status: PreviewStatus) => void;
+}
+```
+
+| 属性 | 默认值 | 说明 |
+| --- | --- | --- |
+| `files` | 必填 | 文件名到文件内容的映射，入口文件必须存在 |
+| `depsInfo` | `{}` | 第三方依赖版本，转换为 ESM CDN 地址 |
+| `dependencyStyles` | `{}` | 第三方依赖对应 CSS 地址，支持单个或多个 URL |
+| `entryFile` | `'App.tsx'` | 预览入口文件 |
+| `compileDelay` | `120` | 文件变化后的编译去抖时间，单位 ms |
+| `showToolbar` | `true` | 是否显示工具栏 |
+| `defaultViewport` | Auto | 初始预览尺寸 |
+| `defaultZoom` | `1` | 初始缩放比例 |
+| `onStatusChange` | - | 编译和资源加载状态回调 |
+| `onElementClick` | - | 检查模式下点击元素后的源码位置信息 |
+
+```ts
+interface PreviewStatus {
+  isLoading: boolean;
+  phase: 'idle' | 'compiling' | 'loading-js' | 'loading-css' | 'rendering' | 'ready' | 'error';
+  error: ErrorInfo | null;
+  compileDuration: number | null;
+  transformedFiles: number;
+  resourceTotal: number;
+  resourceLoaded: number;
+  resourceProgress: number;
+}
+```
+
+## 常见问题
+
+**为什么样式文件必须等待加载完成？**  
+组件库 CSS 和用户 CSS 会影响首屏布局。预览器会在渲染前等待关键 CSS 完成或超时，尽量避免首屏闪烁。
+
+**CSS 加载失败会怎样？**  
+失败会通过 iframe 消息记录为资源错误，同时 loading 不会永久卡住。预览会继续尝试渲染，便于用户看到 JS 结果和错误信息。
+
+**为什么需要固定依赖版本？**  
+固定版本能保证 ESM CDN 地址稳定，减少预览结果随时间变化的风险。
+
+**可以关闭工具栏吗？**  
+可以。传入 `showToolbar={false}` 后只保留预览区域。
 
 ## 开发
 
-### 安装依赖
-
 ```bash
 npm install
-```
-
-### 开发模式
-
-```bash
 npm run dev
+npm run lint
+npm run build:lib
 ```
 
-### 构建组件库
+发布前会执行：
 
 ```bash
 npm run build:lib
 ```
 
-### 发布到 npm
-
-```bash
-npm publish
-```
-
-## 注意事项
-
-1. **样式引入**：必须引入样式文件，否则组件可能显示异常
-2. **依赖管理**：确保在 `depsInfo` 中正确配置所需的依赖包
-3. **文件格式**：支持 `.tsx`、`.ts`、`.jsx`、`.js`、`.css` 等文件格式
-
-## 架构与优化点
-
-ReactPreview 的主链路分为四层：
-
-1. **ReactPreviewer**：管理工具栏、检查模式、视口尺寸、缩放和编译状态。
-2. **PreviewFrame**：管理 iframe 生命周期、编译调度、错误展示和父子窗口消息。
-3. **CodeTransformer**：构建依赖图，按依赖顺序转换 TS/JSX，并注入源码定位属性。
-4. **FileProcessor / HTMLGenerator**：生成模块 blob URL、注入 import map、加载依赖并渲染应用。
-
-本版本重点优化：
-
-- 使用完整文件内容和依赖版本生成签名，避免仅文件前缀变化检测导致的漏编译。
-- 编译任务支持去抖和运行序号取消，频繁编辑时只渲染最新结果。
-- 正确释放模块和 HTML blob URL，降低长时间预览或多次重编译后的内存压力。
-- 工具栏透出编译状态、耗时、文件数、响应式视口和缩放控制，便于调试复杂组件。
-- 自闭合 JSX 也会注入源码定位范围，检查模式覆盖更完整。
-
-## 许可证
+## License
 
 MIT
