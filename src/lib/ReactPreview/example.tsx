@@ -296,7 +296,7 @@ const ExampleUsage: React.FC = () => {
         </div>
 
         {/* 依赖加载功能说明区域 */}
-        {(selectedDemo.key === 'simpleReactDemo' || selectedDemo.key === 'dependencyLoadingDemo' || selectedDemo.key === 'arcoDesignDemo') && (
+        {(selectedDemo.key === 'simpleReactDemo' || selectedDemo.key === 'dependencyLoadingDemo' || selectedDemo.key === 'arcoDesignDemo' || selectedDemo.key === 'antdDesignDemo') && (
           <div className="border-t border-slate-200 bg-white p-4">
             <h3 className="mb-2 text-sm font-semibold text-slate-950">依赖加载功能说明</h3>
             <div className="space-y-1 text-xs text-slate-600">

@@ -837,17 +837,8 @@ ${JSON.stringify({imports:e},null,2)}
       dependencies: new Map(),
       loadedCount: 0,
       totalCount: 0,
-      loadingStartTime: null,
-      showLoadingThreshold: 100, // 100ms 内加载完成不显示加载界面
       
       init() {
-        this.loadingOverlay = document.getElementById('loading-overlay');
-        this.progressFill = document.getElementById('progress-fill');
-        this.progressText = document.getElementById('progress-text');
-        this.loadingDetails = document.getElementById('loading-details');
-        this.cacheInfo = document.getElementById('cache-info');
-        this.cacheRate = document.getElementById('cache-rate');
-        this.loadingText = document.getElementById('loading-text');
         this.moduleCache = new Map();
         this.styleCache = new Map();
       },
@@ -882,69 +873,8 @@ ${JSON.stringify({imports:e},null,2)}
       },
       
       updateUI() {
-        if (!this.progressFill || !this.progressText) return;
-        
-        const progress = this.totalCount > 0 ? (this.loadedCount / this.totalCount) * 100 : 0;
-        this.progressFill.style.width = progress + '%';
-        this.progressText.textContent = Math.round(progress) + '%';
         const active = Array.from(this.dependencies.entries()).find(([, dep]) => dep.status === 'loading');
-        if (this.loadingText) {
-          const hasCss = active?.[0].startsWith('style:') || active?.[0].startsWith('css:') || active?.[0].startsWith('inline:') || active?.[0] === 'tailwindcss';
-          this.loadingText.textContent = hasCss ? '正在加载样式资源...' : '正在加载依赖资源...';
-        }
         this.postStatus(active?.[0]);
-        
-        // 计算缓存命中率
-        const cachedCount = Array.from(this.dependencies.values()).filter(dep => dep.status === 'cached').length;
-        const cacheHitRate = this.totalCount > 0 ? (cachedCount / this.totalCount) * 100 : 0;
-        
-        // 显示缓存信息
-        if (this.cacheInfo && this.cacheRate) {
-          if (cachedCount > 0) {
-            this.cacheInfo.style.display = 'block';
-            this.cacheRate.textContent = Math.round(cacheHitRate) + '%';
-          } else {
-            this.cacheInfo.style.display = 'none';
-          }
-        }
-        
-        // 更新依赖详情
-        if (this.loadingDetails) {
-          this.loadingDetails.innerHTML = '';
-          this.dependencies.forEach((dep, name) => {
-            const item = document.createElement('div');
-            item.className = 'dependency-item';
-            const statusText = dep.status === 'cached' ? '缓存' : this.getStatusText(dep.status);
-            const statusClass = dep.status === 'cached' ? 'status-loaded' : \`status-\${dep.status}\`;
-            item.innerHTML = \`
-              <span class="dependency-name">\${name}</span>
-              <span class="dependency-status \${statusClass}">\${statusText}</span>
-            \`;
-            this.loadingDetails.appendChild(item);
-          });
-        }
-        
-        // 检查是否所有依赖都加载完成
-        if (this.loadedCount === this.totalCount && this.totalCount > 0) {
-          // 检查是否为快速加载
-          if (this.checkQuickLoad()) {
-            // 快速加载完成，直接隐藏加载界面
-            this.hideLoadingOverlay();
-            return;
-          }
-          
-          // 添加成功动画
-          if (this.loadingOverlay) {
-            const loadingContent = this.loadingOverlay.querySelector('.loading-content');
-            if (loadingContent) {
-              loadingContent.classList.add('completed');
-            }
-          }
-          
-          setTimeout(() => {
-            this.hideLoadingOverlay();
-          }, 800);
-        }
       },
 
       postStatus(activeName = '') {
@@ -958,82 +888,11 @@ ${JSON.stringify({imports:e},null,2)}
             phase,
             resourceTotal: this.totalCount,
             resourceLoaded: this.loadedCount,
-            resourceProgress: progress
+            resourceProgress: progress,
+            currentResource: activeName || ''
           }
         }, '*');
       },
-      
-      getStatusText(status) {
-        const statusMap = {
-          pending: '等待',
-          loading: '加载',
-          loaded: '完成',
-          cached: '缓存',
-          error: '失败'
-        };
-        return statusMap[status] || status;
-      },
-      
-      showLoadingOverlay() {
-        if (this.loadingOverlay) {
-          this.loadingOverlay.style.display = 'flex';
-          // 强制重排，然后添加动画类
-          this.loadingOverlay.offsetHeight;
-          this.loadingOverlay.classList.add('showing');
-        }
-      },
-      
-      hideLoadingOverlay() {
-        if (this.loadingOverlay) {
-          this.loadingOverlay.classList.remove('showing');
-          this.loadingOverlay.classList.add('hiding');
-          setTimeout(() => {
-            this.loadingOverlay.style.display = 'none';
-            this.loadingOverlay.classList.remove('hiding');
-          }, 400);
-        }
-      },
-      
-      // 检查是否需要显示加载界面
-      shouldShowLoading() {
-        if (!this.loadingStartTime) return false;
-        const elapsed = Date.now() - this.loadingStartTime;
-        
-        // 根据网络状况动态调整阈值
-        const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-        let threshold = this.showLoadingThreshold;
-        
-        if (connection) {
-          if (connection.effectiveType === 'slow-2g' || connection.effectiveType === '2g') {
-            threshold = 50; // 慢网络降低阈值
-          } else if (connection.effectiveType === '4g') {
-            threshold = 150; // 快网络提高阈值
-          }
-        }
-        
-        return elapsed > threshold;
-      },
-      
-      // 延迟显示加载界面
-      scheduleLoadingDisplay() {
-        setTimeout(() => {
-          if (this.shouldShowLoading()) {
-            this.showLoadingOverlay();
-          }
-        }, this.showLoadingThreshold);
-      },
-      
-      // 检查是否所有依赖都快速加载完成
-      checkQuickLoad() {
-        const elapsed = Date.now() - this.loadingStartTime;
-        const quickLoadThreshold = 200; // 200ms 内完成所有加载认为是快速加载
-        
-        if (elapsed < quickLoadThreshold && this.loadedCount === this.totalCount) {
-          console.log('🚀 所有依赖快速加载完成，跳过加载界面');
-          return true;
-        }
-        return false;
-      }
     };
     
     // 初始化动态依赖加载器
@@ -1052,9 +911,6 @@ ${JSON.stringify({imports:e},null,2)}
       tailwindResource
     ];
     dynamicDependencyLoader.addDependencies(resourceList);
-    
-    // 记录开始时间
-    dynamicDependencyLoader.loadingStartTime = Date.now();
     
     // 预加载依赖函数
     async function preloadDependency(name, url) {
@@ -1085,11 +941,6 @@ ${JSON.stringify({imports:e},null,2)}
         } else {
           dynamicDependencyLoader.setDependencyStatus(name, 'loaded');
           console.log(\`✅ 依赖 \${name} 加载成功 (\${loadTime}ms)\`);
-        }
-        
-        // 检查是否需要显示加载界面
-        if (dynamicDependencyLoader.shouldShowLoading() && !dynamicDependencyLoader.loadingOverlay.classList.contains('showing')) {
-          dynamicDependencyLoader.showLoadingOverlay();
         }
         
       } catch (error) {
@@ -1232,10 +1083,7 @@ ${JSON.stringify({imports:e},null,2)}
       console.error('依赖加载过程中出现错误:', error);
       window.dispatchEvent(new CustomEvent('dependencies-ready'));
     });
-    
-    // 延迟显示加载界面（如果加载时间超过阈值）
-    dynamicDependencyLoader.scheduleLoadingDisplay();
-  `}var ue={"@arco-design/web-react":`https://esm.sh/@arco-design/web-react@2.66.1/dist/css/arco.min.css`},N={react:`18.2.0`,"react-dom":`18.2.0`,"@arco-design/web-react":`2.66.1`,"@arco-design/web-react/icon":`2.66.1`},de={target:`es2022`,bundle:!1,external:[`react`,`react-dom`]},fe=k(`FileProcessor`),P=class{codeTransformer;blobUrls=new Map;constructor(){this.codeTransformer=new ae}async initialize(){await this.codeTransformer.initialize()}async processFiles(e,t){try{await this.cleanup();let n=se({...N,...t},de),r=await this.codeTransformer.transformFiles(e,n.dependencies);return fe.debug(`transformed`,r),this.blobUrls=r,r}catch(e){throw fe.error(`Error processing files:`,e),e}}async cleanup(){this.blobUrls.size>0&&(this.codeTransformer.cleanup(this.blobUrls),this.blobUrls.clear())}},pe=k(`ErrorHandler`),me=class{blobToFileMap=new Map;setBlobToFileMap(e){this.blobToFileMap.clear(),e.forEach((e,t)=>{pe.debug(`setBlobToFileMap:`,e,t),this.blobToFileMap.set(e,t)})}processRuntimeError(e){let t=e.filename;if(e.stack&&this.blobToFileMap.size>0){let n=e.stack.split(`
+  `}var ue={"@arco-design/web-react":`https://esm.sh/@arco-design/web-react@2.66.1/dist/css/arco.min.css`,antd:`https://esm.sh/antd@5.18.0/dist/reset.css`},N={react:`18.2.0`,"react-dom":`18.2.0`,"@arco-design/web-react":`2.66.1`,"@arco-design/web-react/icon":`2.66.1`},de={target:`es2022`,bundle:!1,external:[`react`,`react-dom`]},fe=k(`FileProcessor`),P=class{codeTransformer;blobUrls=new Map;constructor(){this.codeTransformer=new ae}async initialize(){await this.codeTransformer.initialize()}async processFiles(e,t){try{await this.cleanup();let n=se({...N,...t},de),r=await this.codeTransformer.transformFiles(e,n.dependencies);return fe.debug(`transformed`,r),this.blobUrls=r,r}catch(e){throw fe.error(`Error processing files:`,e),e}}async cleanup(){this.blobUrls.size>0&&(this.codeTransformer.cleanup(this.blobUrls),this.blobUrls.clear())}},pe=k(`ErrorHandler`),me=class{blobToFileMap=new Map;setBlobToFileMap(e){this.blobToFileMap.clear(),e.forEach((e,t)=>{pe.debug(`setBlobToFileMap:`,e,t),this.blobToFileMap.set(e,t)})}processRuntimeError(e){let t=e.filename;if(e.stack&&this.blobToFileMap.size>0){let n=e.stack.split(`
 `);for(let e of n){pe.trace(`stack line:`,e);let n=e.match(/(blob:[^)]*):\d+:\d+/);if(n&&n[1]){pe.debug(`matched blob url:`,n[1]);let e=this.blobToFileMap.get(n[1]);if(pe.debug(`mapped fileName:`,e),e){t=e;break}}}pe.debug(`runtime-error fileName:`,t,e.stack,this.blobToFileMap)}if(t&&t.startsWith(`blob:`)){let e=this.blobToFileMap.get(t);e&&(t=e)}if(!t&&e.stack){for(let[n,r]of this.blobToFileMap.entries())if(e.stack.includes(n)){t=r;break}if(!t){let n=e.stack.match(/(blob:[^\s)]+)/);if(n&&n[1]){let e=this.blobToFileMap.get(n[1]);e&&(t=e)}}}return{type:`runtime`,message:e.message||`Runtime error occurred`,stack:this.processStackTrace(e.stack),fileName:t,lineNumber:e.lineno,columnNumber:e.colno}}processCompileError(e){pe.debug(`processCompileError: =======`,e);let t=e.filename||e.fileName;if(t&&t.startsWith(`blob:`)){let e=this.blobToFileMap.get(t);e&&(t=e)}let n=e.loc?.line,r=e.loc?.column,i=e.codeFrame,a=e.message;return i&&a&&a.includes(i)&&(a=a.replace(i,``).trim()),{type:`compile`,message:a||`Compile error occurred`,stack:e.stack,fileName:t,lineNumber:n,columnNumber:r,codeFrame:i}}processStackTrace(e){if(!e)return e;let t=e;this.blobToFileMap.forEach((e,n)=>{let r=new RegExp(n.replace(/[.*+?^${}()|[\]\\]/g,`\\$&`),`g`);t=t.replace(r,e)});let n=Array.from(this.blobToFileMap.values()),r=t.split(`
 `),i=r.filter(e=>n.some(t=>e.includes(t)));if(i.length>0)return i.join(`
 `);let a=r.filter(e=>/blob:[^\s):]+/.test(e));return a.length>0?a.join(`
@@ -1253,25 +1101,6 @@ ${JSON.stringify({imports:e},null,2)}
       </head>
       <body>
         <div id="root"></div>
-        <div id="loading-overlay" class="loading-overlay" style="display: none;">
-          <div class="loading-content">
-            <div class="loading-spinner"></div>
-            <div class="loading-text" id="loading-text">正在加载资源...</div>
-            <div class="loading-progress">
-              <div class="progress-bar">
-                <div class="progress-fill" id="progress-fill"></div>
-              </div>
-              <div class="progress-text" id="progress-text">0%</div>
-            </div>
-            <div class="loading-details" id="loading-details"></div>
-            <div class="cache-info" id="cache-info" style="display: none;">
-              <div class="cache-hit-rate">
-                <span class="cache-icon">📦</span>
-                <span class="cache-text">缓存命中率: <span id="cache-rate">0%</span></span>
-              </div>
-            </div>
-          </div>
-        </div>
         <script type="module">
           ${o.dynamicLoaderScript}
           ${this.getPreviewScript(e)}
@@ -1288,258 +1117,6 @@ ${JSON.stringify({imports:e},null,2)}
         width: 100%;
         height: 100vh;
       }
-      
-      /* 加载覆盖层样式 - 现代化设计 */
-      .loading-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.98) 100%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 9999;
-        backdrop-filter: blur(8px);
-        opacity: 0;
-        transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-      }
-      
-      .loading-overlay.showing {
-        opacity: 1;
-        transform: scale(1);
-      }
-      
-      .loading-overlay.hiding {
-        opacity: 0;
-        transform: scale(0.95);
-      }
-      
-      .loading-content {
-        text-align: center;
-        max-width: 480px;
-        padding: 3rem 2rem;
-        background: rgba(255, 255, 255, 0.9);
-        border-radius: 20px;
-        box-shadow: 
-          0 20px 25px -5px rgba(0, 0, 0, 0.1),
-          0 10px 10px -5px rgba(0, 0, 0, 0.04),
-          0 0 0 1px rgba(255, 255, 255, 0.5);
-        backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        margin: 1rem;
-      }
-      
-      .loading-spinner {
-        width: 56px;
-        height: 56px;
-        border: 3px solid #e2e8f0;
-        border-top: 3px solid #3b82f6;
-        border-radius: 50%;
-        animation: spin 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
-        margin: 0 auto 1.5rem;
-        position: relative;
-      }
-      
-      .loading-spinner::after {
-        content: '';
-        position: absolute;
-        top: -3px;
-        left: -3px;
-        right: -3px;
-        bottom: -3px;
-        border: 3px solid transparent;
-        border-top: 3px solid rgba(59, 130, 246, 0.2);
-        border-radius: 50%;
-        animation: spin 2s linear infinite reverse;
-      }
-      
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-      
-      .loading-text {
-        font-size: 1.25rem;
-        font-weight: 600;
-        color: #1e293b;
-        margin-bottom: 1.5rem;
-        letter-spacing: -0.025em;
-      }
-      
-      .loading-progress {
-        margin-bottom: 1.5rem;
-      }
-      
-      .progress-bar {
-        width: 100%;
-        height: 6px;
-        background: #e2e8f0;
-        border-radius: 8px;
-        overflow: hidden;
-        margin-bottom: 0.75rem;
-        position: relative;
-        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
-      }
-      
-      .progress-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #3b82f6 0%, #1d4ed8 50%, #3b82f6 100%);
-        border-radius: 8px;
-        transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        width: 0%;
-        position: relative;
-        overflow: hidden;
-      }
-      
-      .progress-fill::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-        animation: shimmer 2s infinite;
-      }
-      
-      @keyframes shimmer {
-        0% { left: -100%; }
-        100% { left: 100%; }
-      }
-      
-      .progress-text {
-        font-size: 0.875rem;
-        color: #64748b;
-        font-weight: 500;
-        letter-spacing: 0.025em;
-      }
-      
-      .loading-details {
-        font-size: 0.875rem;
-        color: #64748b;
-        max-height: 120px;
-        overflow-y: auto;
-        text-align: left;
-        background: #f8fafc;
-        padding: 1rem;
-        border-radius: 12px;
-        border: 1px solid #e2e8f0;
-        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
-        scrollbar-width: thin;
-        scrollbar-color: #cbd5e1 #f1f5f9;
-      }
-      
-      .loading-details::-webkit-scrollbar {
-        width: 6px;
-      }
-      
-      .loading-details::-webkit-scrollbar-track {
-        background: #f1f5f9;
-        border-radius: 3px;
-      }
-      
-      .loading-details::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
-        border-radius: 3px;
-      }
-      
-      .loading-details::-webkit-scrollbar-thumb:hover {
-        background: #94a3b8;
-      }
-      
-      .loading-details .dependency-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.5rem 0;
-        border-bottom: 1px solid #f1f5f9;
-        transition: all 0.2s ease;
-      }
-      
-      .loading-details .dependency-item:last-child {
-        border-bottom: none;
-      }
-      
-      .loading-details .dependency-item:hover {
-        background: rgba(59, 130, 246, 0.02);
-        border-radius: 6px;
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
-        margin: 0 -0.5rem;
-      }
-      
-      .dependency-name {
-        font-weight: 500;
-        color: #334155;
-        font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-        font-size: 0.8125rem;
-      }
-      
-      .dependency-status {
-        font-size: 0.75rem;
-        padding: 0.25rem 0.75rem;
-        border-radius: 12px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        min-width: 60px;
-        text-align: center;
-        transition: all 0.2s ease;
-      }
-      
-      .status-pending {
-        background: #f1f5f9;
-        color: #64748b;
-      }
-      
-      .status-loading {
-        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-        color: #1e40af;
-        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-      }
-      
-      .status-loaded {
-        background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-        color: #166534;
-      }
-      
-      .status-cached {
-        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-        color: #92400e;
-      }
-      
-      .status-error {
-        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-        color: #dc2626;
-      }
-      
-      @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.7; }
-      }
-      
-      @keyframes successPulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.05); }
-        100% { transform: scale(1); }
-      }
-      
-      .loading-content.completed {
-        animation: successPulse 0.6s ease-out;
-      }
-      
-      .loading-content.completed .loading-spinner {
-        border-top-color: #10b981;
-        animation: none;
-      }
-      
-      .loading-content.completed .loading-spinner::after {
-        border-top-color: rgba(16, 185, 129, 0.2);
-        animation: none;
-      }
-      
       /* 检查模式相关样式，使用更高优先级避免被 Tailwind 覆盖 */
       .inspect-highlight {
         outline: 2px dashed #007acc !important;
@@ -1569,76 +1146,6 @@ ${JSON.stringify({imports:e},null,2)}
       .inspect-clickable:hover::after {
         border-color: #007acc;
         background-color: rgba(0, 122, 204, 0.05);
-      }
-      
-      /* 响应式设计 */
-      @media (max-width: 640px) {
-        .loading-content {
-          max-width: 90vw;
-          padding: 2rem 1.5rem;
-          margin: 0.5rem;
-        }
-        
-        .loading-spinner {
-          width: 48px;
-          height: 48px;
-        }
-        
-        .loading-text {
-          font-size: 1.125rem;
-        }
-        
-        .loading-details {
-          max-height: 100px;
-          font-size: 0.8125rem;
-        }
-      }
-      
-      @media (max-width: 480px) {
-        .loading-content {
-          padding: 1.5rem 1rem;
-        }
-        
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-        }
-        
-        .loading-text {
-          font-size: 1rem;
-        }
-        
-        .dependency-status {
-          font-size: 0.6875rem;
-          padding: 0.1875rem 0.5rem;
-        }
-      }
-      
-      .cache-info {
-        margin-top: 1rem;
-        padding: 0.75rem;
-        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-        border-radius: 8px;
-        border: 1px solid #f59e0b;
-        animation: fadeIn 0.5s ease-out;
-      }
-      
-      .cache-hit-rate {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-        font-size: 0.875rem;
-        font-weight: 600;
-        color: #92400e;
-      }
-      
-      .cache-icon {
-        font-size: 1rem;
-      }
-      
-      .cache-text {
-        letter-spacing: 0.025em;
       }
     `}resolveStyleResources(e,t){let n={...ue,...t};return Object.entries(n).filter(([t])=>t in e).flatMap(([e,t])=>{let n=Array.isArray(t)?t:[t];return n.map((t,r)=>({name:n.length>1?`${e}:${r+1}`:e,url:t}))})}getPreviewScript(e){return`
       // 等待依赖加载完成后再渲染应用
@@ -1881,10 +1388,10 @@ ${JSON.stringify({imports:e},null,2)}
           event.stopPropagation();
         }
       }, true);
-    `}},ge=k(`MessageHandler`),_e=class{errorHandler;onError;onElementClick;onDependencyError;constructor(e,t){this.errorHandler=e,this.onError=t.onError,this.onElementClick=t.onElementClick,this.onDependencyError=t.onDependencyError}handleMessage(e){try{let{type:t,data:n}=e.data;if(ge.debug(`MessageHandler received:`,t,n),!t||typeof t!=`string`){ge.warn(`Invalid message type:`,t);return}switch(t){case`runtime-error`:this.handleRuntimeError(n);break;case`element-click`:this.handleElementClick(n);break;case`console-log`:this.handleConsoleLog(n);break;case`toggle-inspect`:this.handleToggleInspect(n);break;case`dependency-error`:this.handleDependencyError(n);break;default:ge.warn(`Unknown message type:`,t)}}catch(e){ge.error(`Error handling message:`,e)}}handleRuntimeError(e){try{let t=this.errorHandler.processRuntimeError(e);this.onError?.(t)}catch(e){ge.error(`Error processing runtime error:`,e)}}handleElementClick(e){try{if(!e||typeof e!=`object`){ge.warn(`Invalid element click data:`,e);return}let{file:t,startLine:n,endLine:r,startColumn:i,endColumn:a,x:o,y:s}=e;if(typeof t!=`string`||typeof n!=`number`||typeof r!=`number`||typeof i!=`number`||typeof a!=`number`||typeof o!=`number`||typeof s!=`number`){ge.warn(`Invalid element click data format:`,e);return}ge.debug(`MessageHandler calling onElementClick with:`,e),this.onElementClick?.(e)}catch(e){ge.error(`Error handling element click:`,e)}}handleConsoleLog(e){try{e&&Array.isArray(e.args)&&ge.debug(`[Preview]`,...e.args)}catch(e){ge.error(`Error handling console log:`,e)}}handleToggleInspect(e){try{ge.debug(`Toggle inspect mode:`,e)}catch(e){ge.error(`Error handling toggle inspect:`,e)}}handleDependencyError(e){try{if(!e||typeof e!=`object`){ge.warn(`Invalid dependency error data:`,e);return}let{name:t,url:n,error:r}=e;if(typeof t!=`string`||typeof n!=`string`||typeof r!=`string`){ge.warn(`Invalid dependency error data format:`,e);return}ge.warn(`依赖加载失败: ${t} (${n}) - ${r}`),this.onDependencyError?.(e)}catch(e){ge.error(`Error handling dependency error:`,e)}}},ve=o((e=>{var t=u(),n=Symbol.for(`react.element`),r=Symbol.for(`react.fragment`),i=Object.prototype.hasOwnProperty,a=t.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED.ReactCurrentOwner,o={key:!0,ref:!0,__self:!0,__source:!0};function s(e,t,r){var s,c={},l=null,u=null;for(s in r!==void 0&&(l=``+r),t.key!==void 0&&(l=``+t.key),t.ref!==void 0&&(u=t.ref),t)i.call(t,s)&&!o.hasOwnProperty(s)&&(c[s]=t[s]);if(e&&e.defaultProps)for(s in t=e.defaultProps,t)c[s]===void 0&&(c[s]=t[s]);return{$$typeof:n,type:e,key:l,ref:u,props:c,_owner:a.current}}e.Fragment=r,e.jsx=s,e.jsxs=s})),F=o(((e,t)=>{t.exports=ve()}))(),ye={idle:`准备预览...`,compiling:`正在编译预览...`,"loading-js":`正在加载依赖...`,"loading-css":`正在加载样式...`,rendering:`正在渲染组件...`,ready:`预览已就绪`,error:`预览失败`},be=({status:e})=>{let t=e.resourceTotal>0&&e.phase!==`compiling`;return(0,F.jsx)(`div`,{className:`absolute inset-0 z-[1000] flex items-center justify-center bg-white/90 backdrop-blur-sm`,children:(0,F.jsxs)(`div`,{className:`w-[min(360px,calc(100%-32px))] rounded-lg border border-slate-200 bg-white p-6 text-center shadow-sm`,children:[(0,F.jsx)(`div`,{className:`relative`,children:(0,F.jsx)(`div`,{className:`mx-auto h-10 w-10 rounded-full border-2 border-slate-200 border-t-slate-900 animate-spin`})}),(0,F.jsx)(`div`,{className:`mt-4 text-sm font-semibold text-slate-900`,children:ye[e.phase]}),(0,F.jsx)(`div`,{className:`mt-1 text-xs text-slate-500`,children:t?`${e.resourceLoaded}/${e.resourceTotal} resources`:`请稍候，正在处理您的代码`}),t&&(0,F.jsxs)(`div`,{className:`mt-4`,children:[(0,F.jsx)(`div`,{className:`h-1.5 overflow-hidden rounded-full bg-slate-100`,children:(0,F.jsx)(`div`,{className:`h-full rounded-full bg-slate-900 transition-[width] duration-200`,style:{width:`${e.resourceProgress}%`}})}),(0,F.jsxs)(`div`,{className:`mt-2 text-xs tabular-nums text-slate-500`,children:[e.resourceProgress,`%`]})]})]})})},xe=k(`PreviewFrame`),Se=e=>{let t=2166136261,n=e=>{for(let n=0;n<e.length;n+=1)t^=e.charCodeAt(n),t=Math.imul(t,16777619)};return Object.keys(e).sort().forEach(t=>{n(t),n(`\0`),n(e[t]??``),n(`\0`)}),t.toString(36)},Ce=(e={})=>Object.keys(e).sort().map(t=>`${t}@${e[t]}`).join(`|`),we=(e={})=>Object.keys(e).sort().map(t=>{let n=e[t];return`${t}:${Array.isArray(n)?n.join(`,`):n}`}).join(`|`),Te=e=>e,Ee=()=>({isLoading:!0,phase:`compiling`,error:null,compileDuration:null,transformedFiles:0,resourceTotal:0,resourceLoaded:0,resourceProgress:0}),De=g.memo(({files:e,entryFile:t,depsInfo:n={},dependencyStyles:r={},onError:i,onElementClick:a,isInspecting:o=!1,onInspectToggle:s,onStatusChange:c,compileDelay:l=120})=>{let[u,d]=(0,g.useState)(!0),[f,p]=(0,g.useState)(null),[m,h]=(0,g.useState)(null),[_,v]=(0,g.useState)(()=>Ee()),y=(0,g.useRef)(null),b=(0,g.useRef)(new P),x=(0,g.useRef)(new me),S=(0,g.useRef)(new he),C=(0,g.useRef)(null),w=(0,g.useRef)(``),T=(0,g.useRef)(``),E=(0,g.useRef)(``),D=(0,g.useRef)(``),O=(0,g.useRef)(a),k=(0,g.useRef)(i),A=(0,g.useRef)(s),j=(0,g.useRef)(c),M=(0,g.useRef)(0),ee=(0,g.useRef)(null),te=(0,g.useRef)(0),ne=(0,g.useRef)(null);O.current=a,k.current=i,A.current=s,j.current=c;let re=(0,g.useCallback)((e={})=>{let t={isLoading:u,phase:u?`compiling`:`idle`,error:Te(f?{type:`compile`,message:f,...m}:null),compileDuration:ne.current,transformedFiles:te.current,resourceTotal:0,resourceLoaded:0,resourceProgress:0,...e};v(t),j.current?.(t)},[f,m,u]),ie=(0,g.useCallback)(t=>{try{if(xe.debug(`Element clicked:`,t,`isInspecting:`,o),!o){xe.debug(`Not in inspecting mode, ignoring click`);return}if(!t||!t.file||!t.startLine||!t.endLine||!t.startColumn||!t.endColumn){xe.warn(`Missing file or line data`);return}let n=e[t.file];if(!n){xe.warn(`File content not found for:`,t.file);return}xe.debug(`Processing file content for:`,t.file);let r=n.split(`
+    `}},ge=k(`MessageHandler`),_e=class{errorHandler;onError;onElementClick;onDependencyError;constructor(e,t){this.errorHandler=e,this.onError=t.onError,this.onElementClick=t.onElementClick,this.onDependencyError=t.onDependencyError}handleMessage(e){try{let{type:t,data:n}=e.data;if(ge.debug(`MessageHandler received:`,t,n),!t||typeof t!=`string`){ge.warn(`Invalid message type:`,t);return}switch(t){case`runtime-error`:this.handleRuntimeError(n);break;case`element-click`:this.handleElementClick(n);break;case`console-log`:this.handleConsoleLog(n);break;case`toggle-inspect`:this.handleToggleInspect(n);break;case`dependency-error`:this.handleDependencyError(n);break;default:ge.warn(`Unknown message type:`,t)}}catch(e){ge.error(`Error handling message:`,e)}}handleRuntimeError(e){try{let t=this.errorHandler.processRuntimeError(e);this.onError?.(t)}catch(e){ge.error(`Error processing runtime error:`,e)}}handleElementClick(e){try{if(!e||typeof e!=`object`){ge.warn(`Invalid element click data:`,e);return}let{file:t,startLine:n,endLine:r,startColumn:i,endColumn:a,x:o,y:s}=e;if(typeof t!=`string`||typeof n!=`number`||typeof r!=`number`||typeof i!=`number`||typeof a!=`number`||typeof o!=`number`||typeof s!=`number`){ge.warn(`Invalid element click data format:`,e);return}ge.debug(`MessageHandler calling onElementClick with:`,e),this.onElementClick?.(e)}catch(e){ge.error(`Error handling element click:`,e)}}handleConsoleLog(e){try{e&&Array.isArray(e.args)&&ge.debug(`[Preview]`,...e.args)}catch(e){ge.error(`Error handling console log:`,e)}}handleToggleInspect(e){try{ge.debug(`Toggle inspect mode:`,e)}catch(e){ge.error(`Error handling toggle inspect:`,e)}}handleDependencyError(e){try{if(!e||typeof e!=`object`){ge.warn(`Invalid dependency error data:`,e);return}let{name:t,url:n,error:r}=e;if(typeof t!=`string`||typeof n!=`string`||typeof r!=`string`){ge.warn(`Invalid dependency error data format:`,e);return}ge.warn(`依赖加载失败: ${t} (${n}) - ${r}`),this.onDependencyError?.(e)}catch(e){ge.error(`Error handling dependency error:`,e)}}},ve=o((e=>{var t=u(),n=Symbol.for(`react.element`),r=Symbol.for(`react.fragment`),i=Object.prototype.hasOwnProperty,a=t.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED.ReactCurrentOwner,o={key:!0,ref:!0,__self:!0,__source:!0};function s(e,t,r){var s,c={},l=null,u=null;for(s in r!==void 0&&(l=``+r),t.key!==void 0&&(l=``+t.key),t.ref!==void 0&&(u=t.ref),t)i.call(t,s)&&!o.hasOwnProperty(s)&&(c[s]=t[s]);if(e&&e.defaultProps)for(s in t=e.defaultProps,t)c[s]===void 0&&(c[s]=t[s]);return{$$typeof:n,type:e,key:l,ref:u,props:c,_owner:a.current}}e.Fragment=r,e.jsx=s,e.jsxs=s})),F=o(((e,t)=>{t.exports=ve()}))(),ye={idle:`准备预览...`,compiling:`正在编译预览...`,"loading-js":`正在加载依赖...`,"loading-css":`正在加载样式...`,rendering:`正在渲染组件...`,ready:`预览已就绪`,error:`预览失败`},be=({status:e})=>{let t=e.resourceTotal>0&&e.phase!==`compiling`;return(0,F.jsx)(`div`,{className:`absolute inset-0 z-[1000] flex items-center justify-center bg-white/90 backdrop-blur-sm`,children:(0,F.jsxs)(`div`,{className:`w-[min(360px,calc(100%-32px))] rounded-lg border border-slate-200 bg-white p-6 text-center shadow-sm`,children:[(0,F.jsx)(`div`,{className:`relative`,children:(0,F.jsx)(`div`,{className:`mx-auto h-10 w-10 rounded-full border-2 border-slate-200 border-t-slate-900 animate-spin`})}),(0,F.jsx)(`div`,{className:`mt-4 text-sm font-semibold text-slate-900`,children:ye[e.phase]}),(0,F.jsx)(`div`,{className:`mt-1 text-xs text-slate-500`,children:t?`${e.resourceLoaded}/${e.resourceTotal} resources`:`请稍候，正在处理您的代码`}),t&&e.currentResource&&(0,F.jsx)(`div`,{className:`mt-2 truncate rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-600`,children:e.currentResource}),t&&(0,F.jsxs)(`div`,{className:`mt-4`,children:[(0,F.jsx)(`div`,{className:`h-1.5 overflow-hidden rounded-full bg-slate-100`,children:(0,F.jsx)(`div`,{className:`h-full rounded-full bg-slate-900 transition-[width] duration-200`,style:{width:`${e.resourceProgress}%`}})}),(0,F.jsxs)(`div`,{className:`mt-2 text-xs tabular-nums text-slate-500`,children:[e.resourceProgress,`%`]})]})]})})},xe=k(`PreviewFrame`),Se=e=>{let t=2166136261,n=e=>{for(let n=0;n<e.length;n+=1)t^=e.charCodeAt(n),t=Math.imul(t,16777619)};return Object.keys(e).sort().forEach(t=>{n(t),n(`\0`),n(e[t]??``),n(`\0`)}),t.toString(36)},Ce=(e={})=>Object.keys(e).sort().map(t=>`${t}@${e[t]}`).join(`|`),we=(e={})=>Object.keys(e).sort().map(t=>{let n=e[t];return`${t}:${Array.isArray(n)?n.join(`,`):n}`}).join(`|`),Te=e=>e,Ee=()=>({isLoading:!0,phase:`compiling`,error:null,compileDuration:null,transformedFiles:0,resourceTotal:0,resourceLoaded:0,resourceProgress:0}),De=g.memo(({files:e,entryFile:t,depsInfo:n={},dependencyStyles:r={},onError:i,onElementClick:a,isInspecting:o=!1,onInspectToggle:s,onStatusChange:c,compileDelay:l=120})=>{let[u,d]=(0,g.useState)(!0),[f,p]=(0,g.useState)(null),[m,h]=(0,g.useState)(null),[_,v]=(0,g.useState)(()=>Ee()),y=(0,g.useRef)(null),b=(0,g.useRef)(new P),x=(0,g.useRef)(new me),S=(0,g.useRef)(new he),C=(0,g.useRef)(null),w=(0,g.useRef)(``),T=(0,g.useRef)(``),E=(0,g.useRef)(``),D=(0,g.useRef)(``),O=(0,g.useRef)(a),k=(0,g.useRef)(i),A=(0,g.useRef)(s),j=(0,g.useRef)(c),M=(0,g.useRef)(0),ee=(0,g.useRef)(null),te=(0,g.useRef)(0),ne=(0,g.useRef)(null);O.current=a,k.current=i,A.current=s,j.current=c;let re=(0,g.useCallback)((e={})=>{let t={isLoading:u,phase:u?`compiling`:`idle`,error:Te(f?{type:`compile`,message:f,...m}:null),compileDuration:ne.current,transformedFiles:te.current,resourceTotal:0,resourceLoaded:0,resourceProgress:0,...e};v(t),j.current?.(t)},[f,m,u]),ie=(0,g.useCallback)(t=>{try{if(xe.debug(`Element clicked:`,t,`isInspecting:`,o),!o){xe.debug(`Not in inspecting mode, ignoring click`);return}if(!t||!t.file||!t.startLine||!t.endLine||!t.startColumn||!t.endColumn){xe.warn(`Missing file or line data`);return}let n=e[t.file];if(!n){xe.warn(`File content not found for:`,t.file);return}xe.debug(`Processing file content for:`,t.file);let r=n.split(`
 `),i=r.length,a=Math.max(1,Math.min(t.startLine,i)),s=Math.max(1,Math.min(t.endLine,i));xe.debug(`Line range: ${a}-${s}, max lines: ${i}`);let c=``;if(a===s){let e=r[a-1];if(e){let n=e.length,r=Math.max(0,Math.min(t.startColumn,n)),i=Math.max(r,Math.min(t.endColumn,n));c=e.slice(r,i)}}else for(let e=a-1;e<s;e++){let n=r[e];if(n)if(e===a-1){let e=n.length,r=Math.max(0,Math.min(t.startColumn,e));c+=n.slice(r)+`
 `}else if(e===s-1){let e=n.length,r=Math.max(0,Math.min(t.endColumn,e));c+=n.slice(0,r)}else c+=n+`
-`}xe.debug(`text Str is: `,c);let l={file:t.file,startLine:a,endLine:s,startColumn:t.startColumn,endColumn:t.endColumn,content:c,position:{x:t.x,y:t.y}};xe.debug(`Setting source info:`,l),O.current&&O.current(l)}catch(e){xe.error(`Error in handleElementClick:`,e)}},[e,o]);(0,g.useEffect)(()=>{C.current=new _e(x.current,{onError:e=>{p(e.message),h({fileName:e.fileName,lineNumber:e.lineNumber,columnNumber:e.columnNumber,codeFrame:e.codeFrame}),k.current&&k.current(Error(e.message)),re({isLoading:!1,error:e})},onElementClick:ie,onDependencyError:e=>{xe.warn(`依赖加载失败:`,e)}})},[ie,re]);let ae=(0,g.useCallback)((e,t)=>{if(!y.current)return;let i=e.get(t);if(!i)throw Error(`Entry file ${t} not found`);let a=S.current.generatePreviewHTML(i,n,r),o=new Blob([a],{type:`text/html`}),s=URL.createObjectURL(o);ee.current&&URL.revokeObjectURL(ee.current),ee.current=s,y.current.src=s},[n,r]),oe=(0,g.useCallback)(async r=>{let i=r??M.current+1;M.current=i;let a=performance.now();try{d(!0),p(null),h(null),re({isLoading:!0,phase:`compiling`,error:null}),await b.current.initialize();let r=await b.current.processFiles(e,n);if(i!==M.current)return;xe.debug(`processFiles=======`),x.current.setBlobToFileMap(r),te.current=r.size,ae(r,t),ne.current=Math.round(performance.now()-a),re({isLoading:!0,phase:`loading-js`,error:null,compileDuration:ne.current,transformedFiles:te.current})}catch(e){if(i!==M.current)return;let t=x.current.processCompileError(e instanceof Error?e:Error(`Unknown error`));p(t.message),h({fileName:t.fileName,lineNumber:t.lineNumber,columnNumber:t.columnNumber,codeFrame:t.codeFrame}),k.current&&k.current(e instanceof Error?e:Error(`Unknown error`)),d(!1),re({isLoading:!1,phase:`error`,error:t})}},[e,n,t,re,ae]);return(0,g.useEffect)(()=>{let i=Se(e),a=Ce(n),o=we(r),s=i,c=t,u=a,d=o;if(w.current!==s||T.current!==c||E.current!==u||D.current!==d){xe.debug(`PreviewFrame: File content changed, reprocessing files`),xe.debug(`Files hash changed:`,{old:w.current,new:s});let e=M.current+1;M.current=e;let t=window.setTimeout(()=>{w.current=s,T.current=c,E.current=u,D.current=d,oe(e)},Math.max(0,l));return()=>window.clearTimeout(t)}},[e,t,n,r,oe,l]),(0,g.useEffect)(()=>{let e=e=>{try{if(e.source!==y.current?.contentWindow)return;if(xe.debug(`Received message:`,e.data),e.data.type===`request-inspect-state`){xe.debug(`Iframe requested inspect state, sending:`,o),y.current?.contentWindow&&y.current.contentWindow.postMessage({type:`toggle-inspect`,enabled:o},`*`);return}if(e.data.type===`resource-status`){let t=e.data.data||{};re({isLoading:!0,phase:t.phase||`loading-js`,resourceTotal:Number(t.resourceTotal)||0,resourceLoaded:Number(t.resourceLoaded)||0,resourceProgress:Number(t.resourceProgress)||0});return}if(e.data.type===`preview-ready`){let t=e.data.data||{};d(!1),re({isLoading:!1,phase:`ready`,error:null,resourceTotal:Number(t.resourceTotal)||0,resourceLoaded:Number(t.resourceLoaded)||0,resourceProgress:100});return}if(e.data.type===`resource-error`){xe.warn(`资源加载失败:`,e.data.data);return}C.current?.handleMessage(e)}catch(e){xe.error(`Error handling message:`,e)}};return window.addEventListener(`message`,e),()=>window.removeEventListener(`message`,e)},[o,re]),(0,g.useEffect)(()=>{y.current?.contentWindow&&y.current.contentWindow.postMessage({type:`toggle-inspect`,enabled:o},`*`)},[o]),(0,g.useEffect)(()=>{let e=b.current;return()=>{M.current+=1,ee.current&&=(URL.revokeObjectURL(ee.current),null),e.cleanup()}},[]),(0,F.jsxs)(`div`,{className:`relative w-full h-full`,children:[u&&(0,F.jsx)(be,{status:_}),f&&(0,F.jsxs)(`div`,{className:`absolute inset-0 bg-red-50 border border-red-200 rounded-lg p-4 overflow-auto`,children:[(0,F.jsx)(`div`,{className:`text-red-800 font-medium mb-2`,children:`编译错误:`}),m?.fileName&&(0,F.jsxs)(`div`,{className:`text-red-700 text-sm mb-2`,children:[(0,F.jsx)(`span`,{className:`font-medium`,children:`文件:`}),` `,m.fileName,m.lineNumber&&(0,F.jsxs)(`span`,{className:`ml-4`,children:[(0,F.jsx)(`span`,{className:`font-medium`,children:`行:`}),` `,m.lineNumber,m.columnNumber&&(0,F.jsxs)(`span`,{className:`ml-2`,children:[(0,F.jsx)(`span`,{className:`font-medium`,children:`列:`}),` `,m.columnNumber]})]})]}),(0,F.jsx)(`div`,{className:`text-red-600 text-sm whitespace-pre-wrap mb-3`,children:f}),m?.codeFrame&&(0,F.jsx)(`div`,{className:`bg-gray-100 p-3 rounded border text-xs font-mono overflow-x-auto`,children:(0,F.jsx)(`pre`,{className:`text-gray-800 whitespace-pre`,children:m.codeFrame})})]}),(0,F.jsx)(`iframe`,{ref:y,title:`React preview`,className:`w-full h-full border-none transition-opacity duration-200 ${u?`opacity-50`:`opacity-100`}`,sandbox:`allow-scripts allow-same-origin`})]})},(e,t)=>{if(e.isInspecting!==t.isInspecting)return xe.debug(`PreviewFrame: Re-rendering due to inspect mode change`),!1;if(e.onError!==t.onError||e.onElementClick!==t.onElementClick||e.onInspectToggle!==t.onInspectToggle||e.onStatusChange!==t.onStatusChange)return!1;let n=JSON.stringify({filesHash:Se(e.files),entryFile:e.entryFile,depsInfo:Ce(e.depsInfo||{}),dependencyStyles:we(e.dependencyStyles||{}),compileDelay:e.compileDelay}),r=JSON.stringify({filesHash:Se(t.files),entryFile:t.entryFile,depsInfo:Ce(t.depsInfo||{}),dependencyStyles:we(t.dependencyStyles||{}),compileDelay:t.compileDelay});return n===r?(xe.debug(`prevKey`,n),xe.debug(`nextKey`,r),xe.debug(`PreviewFrame: Skipping re-render, key props unchanged`),xe.debug(`Files comparison:`,{prevFiles:Object.keys(e.files),nextFiles:Object.keys(t.files),prevFilesHash:Se(e.files),nextFilesHash:Se(t.files)}),!0):(xe.debug(`PreviewFrame: Re-rendering due to key props change`),xe.debug(`Files comparison:`,{prevFiles:Object.keys(e.files),nextFiles:Object.keys(t.files),prevFilesHash:Se(e.files),nextFilesHash:Se(t.files)}),!1)}),Oe={idle:`Idle`,compiling:`Compiling`,"loading-js":`Loading JS`,"loading-css":`Loading CSS`,rendering:`Rendering`,ready:`Ready`,error:`Error`},ke=({isLoading:e,isInspecting:t,status:n,viewport:r,viewportPresets:i,zoom:a,onRecompile:o,onToggleInspect:s,onViewportChange:c,onZoomChange:l})=>(0,F.jsxs)(`div`,{className:`flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3`,children:[(0,F.jsxs)(`div`,{className:`flex flex-wrap items-center gap-2`,children:[(0,F.jsx)(`button`,{onClick:o,disabled:e,title:`重新编译`,className:`inline-flex h-9 w-9 items-center justify-center rounded-md text-sm font-medium transition-colors duration-150 ${e?`cursor-not-allowed bg-slate-100 text-slate-400`:`bg-slate-900 text-white hover:bg-slate-700 active:bg-slate-950`}`,children:e?(0,F.jsxs)(`svg`,{className:`h-4 w-4 animate-spin text-slate-400`,fill:`none`,viewBox:`0 0 24 24`,children:[(0,F.jsx)(`circle`,{className:`opacity-25`,cx:`12`,cy:`12`,r:`10`,stroke:`currentColor`,strokeWidth:`4`}),(0,F.jsx)(`path`,{className:`opacity-75`,fill:`currentColor`,d:`M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z`})]}):(0,F.jsx)(`svg`,{className:`h-4 w-4`,fill:`none`,stroke:`currentColor`,viewBox:`0 0 24 24`,children:(0,F.jsx)(`path`,{strokeLinecap:`round`,strokeLinejoin:`round`,strokeWidth:2,d:`M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15`})})}),(0,F.jsx)(`button`,{onClick:s,title:t?`关闭源码检查`:`打开源码检查`,className:`inline-flex h-9 w-9 items-center justify-center rounded-md border text-sm font-medium transition-colors duration-150 ${t?`border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100`:`border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-950`}`,children:t?(0,F.jsx)(`svg`,{className:`h-4 w-4`,fill:`none`,stroke:`currentColor`,viewBox:`0 0 24 24`,children:(0,F.jsx)(`path`,{strokeLinecap:`round`,strokeLinejoin:`round`,strokeWidth:2,d:`M6 18L18 6M6 6l12 12`})}):(0,F.jsx)(`svg`,{className:`h-4 w-4`,fill:`none`,stroke:`currentColor`,viewBox:`0 0 24 24`,children:(0,F.jsx)(`path`,{strokeLinecap:`round`,strokeLinejoin:`round`,strokeWidth:2,d:`M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z`})})}),(0,F.jsx)(`div`,{className:`flex h-9 items-center rounded-md border border-slate-200 bg-slate-50 p-0.5`,children:i.map(e=>(0,F.jsx)(`button`,{type:`button`,onClick:()=>c(e),className:`h-8 px-3 text-xs font-medium transition-colors ${r.label===e.label?`rounded bg-white text-slate-950 shadow-sm`:`text-slate-600 hover:text-slate-950`}`,children:e.label},e.label))}),(0,F.jsxs)(`label`,{className:`flex h-9 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600`,children:[(0,F.jsx)(`svg`,{className:`h-4 w-4 text-slate-500`,fill:`none`,stroke:`currentColor`,viewBox:`0 0 24 24`,children:(0,F.jsx)(`path`,{strokeLinecap:`round`,strokeLinejoin:`round`,strokeWidth:2,d:`M21 21l-4.35-4.35M10.5 7.5v6m-3-3h6m4 0a7 7 0 11-14 0 7 7 0 0114 0z`})}),(0,F.jsx)(`input`,{"aria-label":`缩放`,type:`range`,min:`0.5`,max:`1.5`,step:`0.05`,value:a,onChange:e=>l(Number(e.target.value)),className:`w-24 accent-slate-900`}),(0,F.jsxs)(`span`,{className:`w-10 text-right tabular-nums`,children:[Math.round(a*100),`%`]})]})]}),(0,F.jsxs)(`div`,{className:`flex flex-wrap items-center gap-2`,children:[e&&(0,F.jsxs)(`div`,{className:`flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-700`,children:[(0,F.jsxs)(`svg`,{className:`h-4 w-4 animate-spin flex-shrink-0 text-slate-500`,fill:`none`,viewBox:`0 0 24 24`,children:[(0,F.jsx)(`circle`,{className:`opacity-25`,cx:`12`,cy:`12`,r:`10`,stroke:`currentColor`,strokeWidth:`4`}),(0,F.jsx)(`path`,{className:`opacity-75`,fill:`currentColor`,d:`M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z`})]}),(0,F.jsx)(`span`,{children:Oe[n.phase]}),n.resourceTotal>0&&(0,F.jsxs)(`span`,{className:`tabular-nums text-slate-500`,children:[n.resourceProgress,`%`]})]}),!e&&n.compileDuration!==null&&!n.error&&(0,F.jsxs)(`div`,{className:`flex items-center rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm text-emerald-700`,children:[(0,F.jsxs)(`span`,{className:`font-medium`,children:[n.transformedFiles,` files`]}),(0,F.jsx)(`span`,{className:`mx-2 text-emerald-300`,children:`/`}),(0,F.jsxs)(`span`,{children:[n.compileDuration,`ms`]})]}),n.error&&(0,F.jsx)(`div`,{className:`flex items-center rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-sm text-red-700`,children:(0,F.jsx)(`span`,{children:`编译失败`})}),t&&(0,F.jsxs)(`div`,{className:`flex items-center rounded-md border border-amber-200 bg-amber-50 px-3 py-1.5 text-sm text-amber-700`,children:[(0,F.jsx)(`svg`,{className:`mr-2 h-4 w-4 flex-shrink-0`,fill:`none`,stroke:`currentColor`,viewBox:`0 0 24 24`,children:(0,F.jsx)(`path`,{strokeLinecap:`round`,strokeLinejoin:`round`,strokeWidth:2,d:`M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z`})}),(0,F.jsx)(`span`,{className:`whitespace-nowrap`,children:`点击元素查看源码`})]})]})]}),Ae=class extends g.Component{constructor(e){super(e),this.state={hasError:!1}}static getDerivedStateFromError(e){return{hasError:!0,error:e}}componentDidCatch(e,t){console.error(`ErrorBoundary caught an error:`,e,t)}render(){return this.state.hasError?this.props.fallback||(0,F.jsxs)(`div`,{className:`p-4 bg-red-50 border border-red-200 rounded-lg`,children:[(0,F.jsx)(`h3`,{className:`text-red-800 font-semibold mb-2`,children:`组件渲染错误`}),(0,F.jsx)(`p`,{className:`text-red-600 text-sm`,children:this.state.error?.message||`未知错误`}),(0,F.jsx)(`button`,{onClick:()=>this.setState({hasError:!1,error:void 0}),className:`mt-2 px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700`,children:`重试`})]}):this.props.children}},je=({files:e,entryFile:t=`App.tsx`,onError:n,depsInfo:r={},dependencyStyles:i={},onElementClick:a,loggerConfig:o,compileDelay:s=120,showToolbar:c=!0,className:l=``,defaultViewport:u,defaultZoom:d=1,onStatusChange:f})=>{let[p,m]=(0,g.useState)(!1),[h,_]=(0,g.useState)(0),[v,y]=(0,g.useState)({isLoading:!0,phase:`compiling`,error:null,compileDuration:null,transformedFiles:0,resourceTotal:0,resourceLoaded:0,resourceProgress:0}),[b,x]=(0,g.useState)(u??{label:`Auto`,width:`100%`,height:`100%`}),[S,C]=(0,g.useState)(d),w=(0,g.useMemo)(()=>[{label:`Auto`,width:`100%`,height:`100%`},{label:`Desktop`,width:1280,height:800},{label:`Tablet`,width:820,height:1180},{label:`Mobile`,width:390,height:844}],[]);(0,g.useEffect)(()=>{o&&(O.configure(o),O.info(`Logger configured with:`,o))},[o]);let T=(0,g.useCallback)(()=>{m(e=>!e),O.debug(`Inspect mode toggled:`,!p)},[p]),E=(0,g.useCallback)(()=>{_(e=>e+1),O.info(`Forcing recompile with new key:`,h+1)},[h]),D=(0,g.useCallback)(e=>{y(e),f?.(e)},[f]),k=(0,g.useCallback)(e=>{C(Math.min(1.5,Math.max(.5,e)))},[]),A=(0,g.useMemo)(()=>({width:typeof b.width==`number`?`${b.width}px`:b.width,height:typeof b.height==`number`?`${b.height}px`:b.height,transform:`scale(${S})`,transformOrigin:`top center`}),[b,S]);return(0,F.jsx)(Ae,{children:(0,F.jsxs)(`div`,{className:`flex h-full w-full flex-col bg-slate-100 text-slate-950 ${l}`,children:[c&&(0,F.jsx)(ke,{isLoading:v.isLoading,isInspecting:p,status:v,viewport:b,viewportPresets:w,zoom:S,onRecompile:E,onToggleInspect:T,onViewportChange:x,onZoomChange:k}),(0,F.jsx)(`div`,{className:`relative min-h-0 w-full flex-1 overflow-auto p-4`,children:(0,F.jsx)(`div`,{className:`mx-auto h-full min-h-[320px] overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-slate-200 transition-[width,height,transform] duration-200`,style:A,children:(0,F.jsx)(De,{files:e,entryFile:t,depsInfo:r,dependencyStyles:i,onError:n,onElementClick:a,isInspecting:p,onStatusChange:D,compileDelay:s},h)})})]})})},Me=k(`SourceTooltip`),Ne=({sourceInfo:e,containerElement:t,onClose:n})=>{let r=(0,g.useRef)(null),{left:i,top:a}=(()=>{let n=t.getBoundingClientRect(),r=e.position.x-n.left+10,i=e.position.y-n.top+10;return r+500>n.width-20&&(r=e.position.x-n.left-500-10),i+300>n.height-20&&(i=e.position.y-n.top-300-10),r=Math.max(20,r),i=Math.max(20,i),{left:r+n.left,top:i+n.top}})();return(0,g.useEffect)(()=>{Me.debug(`SourceTooltip mounted with:`,e);let t=e=>{r.current&&!r.current.contains(e.target)&&n()};return document.addEventListener(`mousedown`,t),()=>{document.removeEventListener(`mousedown`,t),Me.debug(`SourceTooltip unmounted`)}},[e,n]),(0,F.jsxs)(F.Fragment,{children:[(0,F.jsx)(`div`,{className:`fixed inset-0 bg-transparent z-[9999]`,onClick:e=>{e.stopPropagation(),e.preventDefault(),n()}}),(0,F.jsxs)(`div`,{ref:r,className:`fixed bg-gray-800 text-gray-200 p-4 rounded-lg text-xs font-mono shadow-2xl z-[10001] max-w-[500px] max-h-[300px] border border-gray-600 overflow-auto pointer-events-auto`,style:{left:`${i}px`,top:`${a}px`},onClick:e=>{e.stopPropagation(),e.preventDefault()},children:[(0,F.jsxs)(`div`,{className:`flex justify-between items-center mb-3 pb-2 border-b border-gray-600`,children:[(0,F.jsxs)(`div`,{className:`font-bold text-blue-300 text-sm`,children:[e.file,`:`,e.startLine,`-`,e.endLine]}),(0,F.jsx)(`button`,{onClick:e=>{e.stopPropagation(),n()},className:`bg-transparent border-none text-gray-400 cursor-pointer text-base p-0 w-5 h-5 flex items-center justify-center hover:text-white transition-colors`,title:`关闭`,children:`×`})]}),(0,F.jsxs)(`div`,{className:`flex bg-[#23272e] rounded-md overflow-auto border border-gray-700`,children:[(0,F.jsx)(`div`,{className:`py-2 px-2 text-right select-none bg-[#20232a] text-gray-500 border-r border-gray-700`,children:Array.from({length:e.endLine-e.startLine+1},(t,n)=>(0,F.jsx)(`div`,{className:`leading-6 h-6`,children:e.startLine+n},n))}),(0,F.jsx)(`pre`,{className:`py-2 px-3 m-0 whitespace-pre leading-6 text-xs text-gray-100 bg-transparent font-mono min-w-[60px]`,children:e.content})]})]})]})},Pe=Object.entries({demo1:{name:`Arco Design 基础`,description:`基础的 Arco Design 组件使用示例`,files:{"App.tsx":`import { useState } from 'react';
+`}xe.debug(`text Str is: `,c);let l={file:t.file,startLine:a,endLine:s,startColumn:t.startColumn,endColumn:t.endColumn,content:c,position:{x:t.x,y:t.y}};xe.debug(`Setting source info:`,l),O.current&&O.current(l)}catch(e){xe.error(`Error in handleElementClick:`,e)}},[e,o]);(0,g.useEffect)(()=>{C.current=new _e(x.current,{onError:e=>{p(e.message),h({fileName:e.fileName,lineNumber:e.lineNumber,columnNumber:e.columnNumber,codeFrame:e.codeFrame}),k.current&&k.current(Error(e.message)),re({isLoading:!1,error:e})},onElementClick:ie,onDependencyError:e=>{xe.warn(`依赖加载失败:`,e)}})},[ie,re]);let ae=(0,g.useCallback)((e,t)=>{if(!y.current)return;let i=e.get(t);if(!i)throw Error(`Entry file ${t} not found`);let a=S.current.generatePreviewHTML(i,n,r),o=new Blob([a],{type:`text/html`}),s=URL.createObjectURL(o);ee.current&&URL.revokeObjectURL(ee.current),ee.current=s,y.current.src=s},[n,r]),oe=(0,g.useCallback)(async r=>{let i=r??M.current+1;M.current=i;let a=performance.now();try{d(!0),p(null),h(null),re({isLoading:!0,phase:`compiling`,error:null}),await b.current.initialize();let r=await b.current.processFiles(e,n);if(i!==M.current)return;xe.debug(`processFiles=======`),x.current.setBlobToFileMap(r),te.current=r.size,ae(r,t),ne.current=Math.round(performance.now()-a),re({isLoading:!0,phase:`loading-js`,error:null,compileDuration:ne.current,transformedFiles:te.current})}catch(e){if(i!==M.current)return;let t=x.current.processCompileError(e instanceof Error?e:Error(`Unknown error`));p(t.message),h({fileName:t.fileName,lineNumber:t.lineNumber,columnNumber:t.columnNumber,codeFrame:t.codeFrame}),k.current&&k.current(e instanceof Error?e:Error(`Unknown error`)),d(!1),re({isLoading:!1,phase:`error`,error:t})}},[e,n,t,re,ae]);return(0,g.useEffect)(()=>{let i=Se(e),a=Ce(n),o=we(r),s=i,c=t,u=a,d=o;if(w.current!==s||T.current!==c||E.current!==u||D.current!==d){xe.debug(`PreviewFrame: File content changed, reprocessing files`),xe.debug(`Files hash changed:`,{old:w.current,new:s});let e=M.current+1;M.current=e;let t=window.setTimeout(()=>{w.current=s,T.current=c,E.current=u,D.current=d,oe(e)},Math.max(0,l));return()=>window.clearTimeout(t)}},[e,t,n,r,oe,l]),(0,g.useEffect)(()=>{let e=e=>{try{if(e.source!==y.current?.contentWindow)return;if(xe.debug(`Received message:`,e.data),e.data.type===`request-inspect-state`){xe.debug(`Iframe requested inspect state, sending:`,o),y.current?.contentWindow&&y.current.contentWindow.postMessage({type:`toggle-inspect`,enabled:o},`*`);return}if(e.data.type===`resource-status`){let t=e.data.data||{};re({isLoading:!0,phase:t.phase||`loading-js`,resourceTotal:Number(t.resourceTotal)||0,resourceLoaded:Number(t.resourceLoaded)||0,resourceProgress:Number(t.resourceProgress)||0,currentResource:typeof t.currentResource==`string`?t.currentResource:void 0});return}if(e.data.type===`preview-ready`){let t=e.data.data||{};d(!1),re({isLoading:!1,phase:`ready`,error:null,resourceTotal:Number(t.resourceTotal)||0,resourceLoaded:Number(t.resourceLoaded)||0,resourceProgress:100});return}if(e.data.type===`resource-error`){xe.warn(`资源加载失败:`,e.data.data);return}C.current?.handleMessage(e)}catch(e){xe.error(`Error handling message:`,e)}};return window.addEventListener(`message`,e),()=>window.removeEventListener(`message`,e)},[o,re]),(0,g.useEffect)(()=>{y.current?.contentWindow&&y.current.contentWindow.postMessage({type:`toggle-inspect`,enabled:o},`*`)},[o]),(0,g.useEffect)(()=>{let e=b.current;return()=>{M.current+=1,ee.current&&=(URL.revokeObjectURL(ee.current),null),e.cleanup()}},[]),(0,F.jsxs)(`div`,{className:`relative w-full h-full`,children:[u&&(0,F.jsx)(be,{status:_}),f&&(0,F.jsxs)(`div`,{className:`absolute inset-0 bg-red-50 border border-red-200 rounded-lg p-4 overflow-auto`,children:[(0,F.jsx)(`div`,{className:`text-red-800 font-medium mb-2`,children:`编译错误:`}),m?.fileName&&(0,F.jsxs)(`div`,{className:`text-red-700 text-sm mb-2`,children:[(0,F.jsx)(`span`,{className:`font-medium`,children:`文件:`}),` `,m.fileName,m.lineNumber&&(0,F.jsxs)(`span`,{className:`ml-4`,children:[(0,F.jsx)(`span`,{className:`font-medium`,children:`行:`}),` `,m.lineNumber,m.columnNumber&&(0,F.jsxs)(`span`,{className:`ml-2`,children:[(0,F.jsx)(`span`,{className:`font-medium`,children:`列:`}),` `,m.columnNumber]})]})]}),(0,F.jsx)(`div`,{className:`text-red-600 text-sm whitespace-pre-wrap mb-3`,children:f}),m?.codeFrame&&(0,F.jsx)(`div`,{className:`bg-gray-100 p-3 rounded border text-xs font-mono overflow-x-auto`,children:(0,F.jsx)(`pre`,{className:`text-gray-800 whitespace-pre`,children:m.codeFrame})})]}),(0,F.jsx)(`iframe`,{ref:y,title:`React preview`,className:`w-full h-full border-none transition-opacity duration-200 ${u?`opacity-50`:`opacity-100`}`,sandbox:`allow-scripts allow-same-origin`})]})},(e,t)=>{if(e.isInspecting!==t.isInspecting)return xe.debug(`PreviewFrame: Re-rendering due to inspect mode change`),!1;if(e.onError!==t.onError||e.onElementClick!==t.onElementClick||e.onInspectToggle!==t.onInspectToggle||e.onStatusChange!==t.onStatusChange)return!1;let n=JSON.stringify({filesHash:Se(e.files),entryFile:e.entryFile,depsInfo:Ce(e.depsInfo||{}),dependencyStyles:we(e.dependencyStyles||{}),compileDelay:e.compileDelay}),r=JSON.stringify({filesHash:Se(t.files),entryFile:t.entryFile,depsInfo:Ce(t.depsInfo||{}),dependencyStyles:we(t.dependencyStyles||{}),compileDelay:t.compileDelay});return n===r?(xe.debug(`prevKey`,n),xe.debug(`nextKey`,r),xe.debug(`PreviewFrame: Skipping re-render, key props unchanged`),xe.debug(`Files comparison:`,{prevFiles:Object.keys(e.files),nextFiles:Object.keys(t.files),prevFilesHash:Se(e.files),nextFilesHash:Se(t.files)}),!0):(xe.debug(`PreviewFrame: Re-rendering due to key props change`),xe.debug(`Files comparison:`,{prevFiles:Object.keys(e.files),nextFiles:Object.keys(t.files),prevFilesHash:Se(e.files),nextFilesHash:Se(t.files)}),!1)}),Oe={idle:`Idle`,compiling:`Compiling`,"loading-js":`Loading JS`,"loading-css":`Loading CSS`,rendering:`Rendering`,ready:`Ready`,error:`Error`},ke=({isLoading:e,isInspecting:t,status:n,viewport:r,viewportPresets:i,zoom:a,onRecompile:o,onToggleInspect:s,onViewportChange:c,onZoomChange:l})=>(0,F.jsxs)(`div`,{className:`flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3`,children:[(0,F.jsxs)(`div`,{className:`flex flex-wrap items-center gap-2`,children:[(0,F.jsx)(`button`,{onClick:o,disabled:e,title:`重新编译`,className:`inline-flex h-9 w-9 items-center justify-center rounded-md text-sm font-medium transition-colors duration-150 ${e?`cursor-not-allowed bg-slate-100 text-slate-400`:`bg-slate-900 text-white hover:bg-slate-700 active:bg-slate-950`}`,children:e?(0,F.jsxs)(`svg`,{className:`h-4 w-4 animate-spin text-slate-400`,fill:`none`,viewBox:`0 0 24 24`,children:[(0,F.jsx)(`circle`,{className:`opacity-25`,cx:`12`,cy:`12`,r:`10`,stroke:`currentColor`,strokeWidth:`4`}),(0,F.jsx)(`path`,{className:`opacity-75`,fill:`currentColor`,d:`M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z`})]}):(0,F.jsx)(`svg`,{className:`h-4 w-4`,fill:`none`,stroke:`currentColor`,viewBox:`0 0 24 24`,children:(0,F.jsx)(`path`,{strokeLinecap:`round`,strokeLinejoin:`round`,strokeWidth:2,d:`M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15`})})}),(0,F.jsx)(`button`,{onClick:s,title:t?`关闭源码检查`:`打开源码检查`,className:`inline-flex h-9 w-9 items-center justify-center rounded-md border text-sm font-medium transition-colors duration-150 ${t?`border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100`:`border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-950`}`,children:t?(0,F.jsx)(`svg`,{className:`h-4 w-4`,fill:`none`,stroke:`currentColor`,viewBox:`0 0 24 24`,children:(0,F.jsx)(`path`,{strokeLinecap:`round`,strokeLinejoin:`round`,strokeWidth:2,d:`M6 18L18 6M6 6l12 12`})}):(0,F.jsx)(`svg`,{className:`h-4 w-4`,fill:`none`,stroke:`currentColor`,viewBox:`0 0 24 24`,children:(0,F.jsx)(`path`,{strokeLinecap:`round`,strokeLinejoin:`round`,strokeWidth:2,d:`M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z`})})}),(0,F.jsx)(`div`,{className:`flex h-9 items-center rounded-md border border-slate-200 bg-slate-50 p-0.5`,children:i.map(e=>(0,F.jsx)(`button`,{type:`button`,onClick:()=>c(e),className:`h-8 px-3 text-xs font-medium transition-colors ${r.label===e.label?`rounded bg-white text-slate-950 shadow-sm`:`text-slate-600 hover:text-slate-950`}`,children:e.label},e.label))}),(0,F.jsxs)(`label`,{className:`flex h-9 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600`,children:[(0,F.jsx)(`svg`,{className:`h-4 w-4 text-slate-500`,fill:`none`,stroke:`currentColor`,viewBox:`0 0 24 24`,children:(0,F.jsx)(`path`,{strokeLinecap:`round`,strokeLinejoin:`round`,strokeWidth:2,d:`M21 21l-4.35-4.35M10.5 7.5v6m-3-3h6m4 0a7 7 0 11-14 0 7 7 0 0114 0z`})}),(0,F.jsx)(`input`,{"aria-label":`缩放`,type:`range`,min:`0.5`,max:`1.5`,step:`0.05`,value:a,onChange:e=>l(Number(e.target.value)),className:`w-24 accent-slate-900`}),(0,F.jsxs)(`span`,{className:`w-10 text-right tabular-nums`,children:[Math.round(a*100),`%`]})]})]}),(0,F.jsxs)(`div`,{className:`flex flex-wrap items-center gap-2`,children:[e&&(0,F.jsxs)(`div`,{className:`flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-700`,children:[(0,F.jsxs)(`svg`,{className:`h-4 w-4 animate-spin flex-shrink-0 text-slate-500`,fill:`none`,viewBox:`0 0 24 24`,children:[(0,F.jsx)(`circle`,{className:`opacity-25`,cx:`12`,cy:`12`,r:`10`,stroke:`currentColor`,strokeWidth:`4`}),(0,F.jsx)(`path`,{className:`opacity-75`,fill:`currentColor`,d:`M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z`})]}),(0,F.jsx)(`span`,{children:Oe[n.phase]}),n.resourceTotal>0&&(0,F.jsxs)(`span`,{className:`tabular-nums text-slate-500`,children:[n.resourceProgress,`%`]})]}),!e&&n.compileDuration!==null&&!n.error&&(0,F.jsxs)(`div`,{className:`flex items-center rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm text-emerald-700`,children:[(0,F.jsxs)(`span`,{className:`font-medium`,children:[n.transformedFiles,` files`]}),(0,F.jsx)(`span`,{className:`mx-2 text-emerald-300`,children:`/`}),(0,F.jsxs)(`span`,{children:[n.compileDuration,`ms`]})]}),n.error&&(0,F.jsx)(`div`,{className:`flex items-center rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-sm text-red-700`,children:(0,F.jsx)(`span`,{children:`编译失败`})}),t&&(0,F.jsxs)(`div`,{className:`flex items-center rounded-md border border-amber-200 bg-amber-50 px-3 py-1.5 text-sm text-amber-700`,children:[(0,F.jsx)(`svg`,{className:`mr-2 h-4 w-4 flex-shrink-0`,fill:`none`,stroke:`currentColor`,viewBox:`0 0 24 24`,children:(0,F.jsx)(`path`,{strokeLinecap:`round`,strokeLinejoin:`round`,strokeWidth:2,d:`M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z`})}),(0,F.jsx)(`span`,{className:`whitespace-nowrap`,children:`点击元素查看源码`})]})]})]}),Ae=class extends g.Component{constructor(e){super(e),this.state={hasError:!1}}static getDerivedStateFromError(e){return{hasError:!0,error:e}}componentDidCatch(e,t){console.error(`ErrorBoundary caught an error:`,e,t)}render(){return this.state.hasError?this.props.fallback||(0,F.jsxs)(`div`,{className:`p-4 bg-red-50 border border-red-200 rounded-lg`,children:[(0,F.jsx)(`h3`,{className:`text-red-800 font-semibold mb-2`,children:`组件渲染错误`}),(0,F.jsx)(`p`,{className:`text-red-600 text-sm`,children:this.state.error?.message||`未知错误`}),(0,F.jsx)(`button`,{onClick:()=>this.setState({hasError:!1,error:void 0}),className:`mt-2 px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700`,children:`重试`})]}):this.props.children}},je=({files:e,entryFile:t=`App.tsx`,onError:n,depsInfo:r={},dependencyStyles:i={},onElementClick:a,loggerConfig:o,compileDelay:s=120,showToolbar:c=!0,className:l=``,defaultViewport:u,defaultZoom:d=1,onStatusChange:f})=>{let[p,m]=(0,g.useState)(!1),[h,_]=(0,g.useState)(0),[v,y]=(0,g.useState)({isLoading:!0,phase:`compiling`,error:null,compileDuration:null,transformedFiles:0,resourceTotal:0,resourceLoaded:0,resourceProgress:0}),[b,x]=(0,g.useState)(u??{label:`Auto`,width:`100%`,height:`100%`}),[S,C]=(0,g.useState)(d),w=(0,g.useMemo)(()=>[{label:`Auto`,width:`100%`,height:`100%`},{label:`Desktop`,width:1280,height:800},{label:`Tablet`,width:820,height:1180},{label:`Mobile`,width:390,height:844}],[]);(0,g.useEffect)(()=>{o&&(O.configure(o),O.info(`Logger configured with:`,o))},[o]);let T=(0,g.useCallback)(()=>{m(e=>!e),O.debug(`Inspect mode toggled:`,!p)},[p]),E=(0,g.useCallback)(()=>{_(e=>e+1),O.info(`Forcing recompile with new key:`,h+1)},[h]),D=(0,g.useCallback)(e=>{y(e),f?.(e)},[f]),k=(0,g.useCallback)(e=>{C(Math.min(1.5,Math.max(.5,e)))},[]),A=(0,g.useMemo)(()=>({width:typeof b.width==`number`?`${b.width}px`:b.width,height:typeof b.height==`number`?`${b.height}px`:b.height,transform:`scale(${S})`,transformOrigin:`top center`}),[b,S]);return(0,F.jsx)(Ae,{children:(0,F.jsxs)(`div`,{className:`flex h-full w-full flex-col bg-slate-100 text-slate-950 ${l}`,children:[c&&(0,F.jsx)(ke,{isLoading:v.isLoading,isInspecting:p,status:v,viewport:b,viewportPresets:w,zoom:S,onRecompile:E,onToggleInspect:T,onViewportChange:x,onZoomChange:k}),(0,F.jsx)(`div`,{className:`relative min-h-0 w-full flex-1 overflow-auto p-4`,children:(0,F.jsx)(`div`,{className:`mx-auto h-full min-h-[320px] overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-slate-200 transition-[width,height,transform] duration-200`,style:A,children:(0,F.jsx)(De,{files:e,entryFile:t,depsInfo:r,dependencyStyles:i,onError:n,onElementClick:a,isInspecting:p,onStatusChange:D,compileDelay:s},h)})})]})})},Me=k(`SourceTooltip`),Ne=({sourceInfo:e,containerElement:t,onClose:n})=>{let r=(0,g.useRef)(null),{left:i,top:a}=(()=>{let n=t.getBoundingClientRect(),r=e.position.x-n.left+10,i=e.position.y-n.top+10;return r+500>n.width-20&&(r=e.position.x-n.left-500-10),i+300>n.height-20&&(i=e.position.y-n.top-300-10),r=Math.max(20,r),i=Math.max(20,i),{left:r+n.left,top:i+n.top}})();return(0,g.useEffect)(()=>{Me.debug(`SourceTooltip mounted with:`,e);let t=e=>{r.current&&!r.current.contains(e.target)&&n()};return document.addEventListener(`mousedown`,t),()=>{document.removeEventListener(`mousedown`,t),Me.debug(`SourceTooltip unmounted`)}},[e,n]),(0,F.jsxs)(F.Fragment,{children:[(0,F.jsx)(`div`,{className:`fixed inset-0 bg-transparent z-[9999]`,onClick:e=>{e.stopPropagation(),e.preventDefault(),n()}}),(0,F.jsxs)(`div`,{ref:r,className:`fixed bg-gray-800 text-gray-200 p-4 rounded-lg text-xs font-mono shadow-2xl z-[10001] max-w-[500px] max-h-[300px] border border-gray-600 overflow-auto pointer-events-auto`,style:{left:`${i}px`,top:`${a}px`},onClick:e=>{e.stopPropagation(),e.preventDefault()},children:[(0,F.jsxs)(`div`,{className:`flex justify-between items-center mb-3 pb-2 border-b border-gray-600`,children:[(0,F.jsxs)(`div`,{className:`font-bold text-blue-300 text-sm`,children:[e.file,`:`,e.startLine,`-`,e.endLine]}),(0,F.jsx)(`button`,{onClick:e=>{e.stopPropagation(),n()},className:`bg-transparent border-none text-gray-400 cursor-pointer text-base p-0 w-5 h-5 flex items-center justify-center hover:text-white transition-colors`,title:`关闭`,children:`×`})]}),(0,F.jsxs)(`div`,{className:`flex bg-[#23272e] rounded-md overflow-auto border border-gray-700`,children:[(0,F.jsx)(`div`,{className:`py-2 px-2 text-right select-none bg-[#20232a] text-gray-500 border-r border-gray-700`,children:Array.from({length:e.endLine-e.startLine+1},(t,n)=>(0,F.jsx)(`div`,{className:`leading-6 h-6`,children:e.startLine+n},n))}),(0,F.jsx)(`pre`,{className:`py-2 px-3 m-0 whitespace-pre leading-6 text-xs text-gray-100 bg-transparent font-mono min-w-[60px]`,children:e.content})]})]})]})},Pe=Object.entries({demo1:{name:`Arco Design 基础`,description:`基础的 Arco Design 组件使用示例`,files:{"App.tsx":`import { useState } from 'react';
 import { Form, Grid, Message } from '@arco-design/web-react';
 import { Search } from './Search';
 import { Table } from './Table';
@@ -2676,62 +2183,11 @@ const DependencyLoadingTest: React.FC = () => {
   );
 };
 
-export default DependencyLoadingTest;`,"deps.json":`{"@arco-design/web-react": "2.66.1"}`},entryFile:`App.tsx`},arcoDesignDemo:{name:`Arco Design 组件测试`,description:`测试 Arco Design 组件的动态加载功能`,files:{"App.tsx":`import React from 'react';
+export default DependencyLoadingTest;`,"deps.json":`{"@arco-design/web-react": "2.66.1"}`},entryFile:`App.tsx`},arcoDesignDemo:{name:`Arco Design 组件测试`,description:`测试 Arco Design 组件库和样式加载功能`,files:{"App.tsx":`import React from 'react';
+import { Button, Space, Typography } from '@arco-design/web-react';
 
 const ArcoDesignTest: React.FC = () => {
   const [count, setCount] = React.useState(0);
-  const [arcoComponents, setArcoComponents] = React.useState(null);
-  const [loading, setLoading] = React.useState(true);
-
-  React.useEffect(() => {
-    // 动态导入 Arco Design 组件
-    const loadArcoComponents = async () => {
-      try {
-        const arco = await import('@arco-design/web-react');
-        setArcoComponents(arco);
-        setLoading(false);
-      } catch (error) {
-        console.error('Failed to load Arco Design components:', error);
-        setLoading(false);
-      }
-    };
-
-    loadArcoComponents();
-  }, []);
-
-  if (loading) {
-    return (
-      <div style={{ padding: '20px', textAlign: 'center' }}>
-        <div style={{ 
-          width: '40px', 
-          height: '40px', 
-          border: '4px solid #f3f3f3',
-          borderTop: '4px solid #1890ff',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite',
-          margin: '0 auto 16px'
-        }}></div>
-        <p>正在加载 Arco Design 组件...</p>
-        <style>{\`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        \`}</style>
-      </div>
-    );
-  }
-
-  if (!arcoComponents) {
-    return (
-      <div style={{ padding: '20px', textAlign: 'center', color: '#ff4d4f' }}>
-        <h3>Arco Design 组件加载失败</h3>
-        <p>请检查网络连接或依赖配置</p>
-      </div>
-    );
-  }
-
-  const { Button, Space, Typography } = arcoComponents;
   const { Title, Paragraph } = Typography;
 
   return (
@@ -2775,7 +2231,60 @@ const ArcoDesignTest: React.FC = () => {
   );
 };
 
-export default ArcoDesignTest;`,"deps.json":`{"@arco-design/web-react": "2.66.1"}`},entryFile:`App.tsx`},simpleReactDemo:{name:`简单 React 组件测试`,description:`测试简单 React 组件的功能`,files:{"App.tsx":`import React from 'react';
+export default ArcoDesignTest;`,"deps.json":`{"@arco-design/web-react": "2.66.1"}`},entryFile:`App.tsx`},antdDesignDemo:{name:`Ant Design 组件测试`,description:`测试 Ant Design 组件库和样式加载功能`,files:{"App.tsx":`import React from 'react';
+import { Button, Card, DatePicker, Form, Input, Space, Table, Tag, Typography } from 'antd';
+
+const { Title, Paragraph } = Typography;
+
+const AntdDesignTest: React.FC = () => {
+  const [selected, setSelected] = React.useState('未选择');
+  const dataSource = [
+    { key: '1', name: 'Preview compile', owner: 'ReactPreview', status: 'ready' },
+    { key: '2', name: 'Style resources', owner: 'antd', status: 'loaded' },
+    { key: '3', name: 'Runtime render', owner: 'iframe', status: 'active' }
+  ];
+
+  const columns = [
+    { title: '任务', dataIndex: 'name' },
+    { title: '来源', dataIndex: 'owner' },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      render: (status) => <Tag color={status === 'ready' ? 'green' : status === 'loaded' ? 'blue' : 'gold'}>{status}</Tag>
+    }
+  ];
+
+  return (
+    <div style={{ padding: 24, maxWidth: 760, margin: '0 auto' }}>
+      <Title level={2}>Ant Design 组件测试</Title>
+      <Paragraph>
+        这个示例用于验证 antd 组件库、CSS reset 和表单/表格组件在预览器中的加载表现。
+      </Paragraph>
+
+      <Card style={{ marginBottom: 20 }}>
+        <Form layout="inline" onFinish={(values) => setSelected(values.keyword || '未填写')}>
+          <Form.Item name="keyword">
+            <Input placeholder="输入测试关键字" style={{ width: 220 }} />
+          </Form.Item>
+          <Form.Item name="date">
+            <DatePicker placeholder="选择日期" />
+          </Form.Item>
+          <Form.Item>
+            <Space>
+              <Button type="primary" htmlType="submit">提交</Button>
+              <Button onClick={() => setSelected('已重置')}>重置</Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Card>
+
+      <Paragraph>当前输入：{selected}</Paragraph>
+      <Table columns={columns} dataSource={dataSource} pagination={false} />
+    </div>
+  );
+};
+
+export default AntdDesignTest;`,"deps.json":`{"antd": "5.18.0"}`},entryFile:`App.tsx`},simpleReactDemo:{name:`简单 React 组件测试`,description:`测试简单 React 组件的功能`,files:{"App.tsx":`import React from 'react';
 
 const SimpleReactDemo: React.FC = () => {
   const [count, setCount] = React.useState(0);
@@ -2858,4 +2367,4 @@ export default SimpleReactDemo;`,"deps.json":`{}`},entryFile:`App.tsx`}}).map(([
                   `,children:[(0,F.jsx)(`div`,{className:`font-semibold text-sm mb-1`,children:n.name}),(0,F.jsx)(`div`,{className:`text-xs opacity-75 leading-relaxed`,children:n.description})]},n.key))})}),!n&&(0,F.jsxs)(`div`,{className:`border-t border-slate-200 p-4`,children:[(0,F.jsx)(`h3`,{className:`mb-3 text-sm font-semibold text-slate-950`,children:`日志配置`}),(0,F.jsxs)(`div`,{className:`space-y-2`,children:[(0,F.jsxs)(`label`,{className:`flex items-center`,children:[(0,F.jsx)(`input`,{type:`checkbox`,checked:u.enabled,onChange:e=>d(t=>({...t,enabled:e.target.checked})),className:`mr-2`}),(0,F.jsx)(`span`,{className:`text-xs text-slate-700`,children:`启用日志`})]}),(0,F.jsxs)(`div`,{children:[(0,F.jsx)(`label`,{className:`mb-1 block text-xs text-slate-700`,children:`日志级别`}),(0,F.jsxs)(`select`,{value:u.level,onChange:e=>d(t=>({...t,level:parseInt(e.target.value)})),className:`w-full rounded-md border border-slate-200 px-2 py-1 text-xs`,children:[(0,F.jsx)(`option`,{value:0,children:`ERROR`}),(0,F.jsx)(`option`,{value:1,children:`WARN`}),(0,F.jsx)(`option`,{value:2,children:`INFO`}),(0,F.jsx)(`option`,{value:3,children:`DEBUG`}),(0,F.jsx)(`option`,{value:4,children:`TRACE`})]})]}),(0,F.jsxs)(`label`,{className:`flex items-center`,children:[(0,F.jsx)(`input`,{type:`checkbox`,checked:u.showTimestamp,onChange:e=>d(t=>({...t,showTimestamp:e.target.checked})),className:`mr-2`}),(0,F.jsx)(`span`,{className:`text-xs text-slate-700`,children:`显示时间戳`})]})]})]})]}),(0,F.jsxs)(`div`,{className:`flex-1 flex flex-col`,children:[(0,F.jsx)(`div`,{className:`border-b border-slate-200 bg-white px-6 py-4`,children:(0,F.jsxs)(`div`,{className:`flex items-center justify-between`,children:[(0,F.jsxs)(`div`,{children:[(0,F.jsx)(`h1`,{className:`text-xl font-semibold text-slate-950`,children:e.name}),(0,F.jsx)(`p`,{className:`mt-1 text-sm text-slate-600`,children:e.description})]}),(0,F.jsxs)(`div`,{className:`flex items-center space-x-3`,children:[(0,F.jsxs)(`div`,{className:`text-sm text-slate-500`,children:[`入口文件: `,e.entryFile]}),(0,F.jsx)(`button`,{onClick:()=>s(!o),className:`
                   rounded-md px-4 py-2 text-sm font-medium transition-colors
                   ${o?`bg-emerald-600 text-white hover:bg-emerald-700`:`bg-slate-900 text-white hover:bg-slate-700`}
-                `,children:o?`退出编辑`:`实时编辑`}),o&&(0,F.jsx)(`button`,{onClick:b,className:`rounded-md bg-slate-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700`,children:`重置`})]})]})}),(0,F.jsxs)(`div`,{className:`flex-1 flex`,children:[o&&(0,F.jsxs)(`div`,{className:`w-1/2 overflow-y-auto border-r border-slate-200 bg-white p-4`,children:[(0,F.jsx)(`h3`,{className:`mb-4 text-base font-semibold text-slate-950`,children:`文件编辑`}),(0,F.jsx)(`div`,{className:`space-y-4`,children:Object.entries(x).map(([e,t])=>(0,F.jsxs)(`div`,{children:[(0,F.jsx)(`h4`,{className:`mb-2 text-sm font-medium text-slate-700`,children:e}),(0,F.jsx)(`textarea`,{value:t,onChange:t=>y(e,t.target.value),className:`h-32 w-full resize-none rounded-md border border-slate-200 p-2 font-mono text-xs outline-none focus:border-slate-400`,placeholder:`输入代码...`})]},e))})]}),(0,F.jsx)(`div`,{className:`${o?`w-1/2`:`w-full`} relative`,children:(0,F.jsx)(`div`,{className:`absolute inset-0`,children:(Fe.debug(`Rendering ReactPreviewer:`,{selectedDemo:e.key,files:Object.keys(x),deps:Object.keys(h),entryFile:e.entryFile}),(0,F.jsx)(je,{files:x,depsInfo:h,entryFile:e.entryFile,onElementClick:_,loggerConfig:u}))})})]}),(e.key===`simpleReactDemo`||e.key===`dependencyLoadingDemo`||e.key===`arcoDesignDemo`)&&(0,F.jsxs)(`div`,{className:`border-t border-slate-200 bg-white p-4`,children:[(0,F.jsx)(`h3`,{className:`mb-2 text-sm font-semibold text-slate-950`,children:`依赖加载功能说明`}),(0,F.jsxs)(`div`,{className:`space-y-1 text-xs text-slate-600`,children:[(0,F.jsx)(`p`,{children:(0,F.jsx)(`strong`,{children:`观察要点:`})}),(0,F.jsxs)(`ul`,{className:`list-disc list-inside space-y-1 ml-2`,children:[(0,F.jsx)(`li`,{children:`页面加载时应该显示依赖加载进度条`}),(0,F.jsx)(`li`,{children:`进度条显示每个依赖的加载状态（等待中、加载中、已加载、加载失败）`}),(0,F.jsx)(`li`,{children:`加载完成后进度条自动消失`}),(0,F.jsx)(`li`,{children:`如果依赖加载失败，会显示错误状态`})]}),(0,F.jsxs)(`p`,{className:`mt-2`,children:[(0,F.jsx)(`strong`,{children:`当前依赖:`}),` `,Object.keys(h).length>0?Object.keys(h).join(`, `):`无外部依赖`]})]})]})]}),i&&(0,F.jsx)(Ne,{sourceInfo:i,containerElement:f.current||document.body,onClose:v})]})};function I(){return(0,F.jsx)(F.Fragment,{children:(0,F.jsx)(Ie,{})})}(0,_.createRoot)(document.getElementById(`root`)).render((0,F.jsx)(g.StrictMode,{children:(0,F.jsx)(I,{})}));
+                `,children:o?`退出编辑`:`实时编辑`}),o&&(0,F.jsx)(`button`,{onClick:b,className:`rounded-md bg-slate-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700`,children:`重置`})]})]})}),(0,F.jsxs)(`div`,{className:`flex-1 flex`,children:[o&&(0,F.jsxs)(`div`,{className:`w-1/2 overflow-y-auto border-r border-slate-200 bg-white p-4`,children:[(0,F.jsx)(`h3`,{className:`mb-4 text-base font-semibold text-slate-950`,children:`文件编辑`}),(0,F.jsx)(`div`,{className:`space-y-4`,children:Object.entries(x).map(([e,t])=>(0,F.jsxs)(`div`,{children:[(0,F.jsx)(`h4`,{className:`mb-2 text-sm font-medium text-slate-700`,children:e}),(0,F.jsx)(`textarea`,{value:t,onChange:t=>y(e,t.target.value),className:`h-32 w-full resize-none rounded-md border border-slate-200 p-2 font-mono text-xs outline-none focus:border-slate-400`,placeholder:`输入代码...`})]},e))})]}),(0,F.jsx)(`div`,{className:`${o?`w-1/2`:`w-full`} relative`,children:(0,F.jsx)(`div`,{className:`absolute inset-0`,children:(Fe.debug(`Rendering ReactPreviewer:`,{selectedDemo:e.key,files:Object.keys(x),deps:Object.keys(h),entryFile:e.entryFile}),(0,F.jsx)(je,{files:x,depsInfo:h,entryFile:e.entryFile,onElementClick:_,loggerConfig:u}))})})]}),(e.key===`simpleReactDemo`||e.key===`dependencyLoadingDemo`||e.key===`arcoDesignDemo`||e.key===`antdDesignDemo`)&&(0,F.jsxs)(`div`,{className:`border-t border-slate-200 bg-white p-4`,children:[(0,F.jsx)(`h3`,{className:`mb-2 text-sm font-semibold text-slate-950`,children:`依赖加载功能说明`}),(0,F.jsxs)(`div`,{className:`space-y-1 text-xs text-slate-600`,children:[(0,F.jsx)(`p`,{children:(0,F.jsx)(`strong`,{children:`观察要点:`})}),(0,F.jsxs)(`ul`,{className:`list-disc list-inside space-y-1 ml-2`,children:[(0,F.jsx)(`li`,{children:`页面加载时应该显示依赖加载进度条`}),(0,F.jsx)(`li`,{children:`进度条显示每个依赖的加载状态（等待中、加载中、已加载、加载失败）`}),(0,F.jsx)(`li`,{children:`加载完成后进度条自动消失`}),(0,F.jsx)(`li`,{children:`如果依赖加载失败，会显示错误状态`})]}),(0,F.jsxs)(`p`,{className:`mt-2`,children:[(0,F.jsx)(`strong`,{children:`当前依赖:`}),` `,Object.keys(h).length>0?Object.keys(h).join(`, `):`无外部依赖`]})]})]})]}),i&&(0,F.jsx)(Ne,{sourceInfo:i,containerElement:f.current||document.body,onClose:v})]})};function I(){return(0,F.jsx)(F.Fragment,{children:(0,F.jsx)(Ie,{})})}(0,_.createRoot)(document.getElementById(`root`)).render((0,F.jsx)(g.StrictMode,{children:(0,F.jsx)(I,{})}));

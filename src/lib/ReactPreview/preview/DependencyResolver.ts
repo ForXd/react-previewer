@@ -218,17 +218,8 @@ function generateDynamicDependencyLoader(
       dependencies: new Map(),
       loadedCount: 0,
       totalCount: 0,
-      loadingStartTime: null,
-      showLoadingThreshold: 100, // 100ms 内加载完成不显示加载界面
       
       init() {
-        this.loadingOverlay = document.getElementById('loading-overlay');
-        this.progressFill = document.getElementById('progress-fill');
-        this.progressText = document.getElementById('progress-text');
-        this.loadingDetails = document.getElementById('loading-details');
-        this.cacheInfo = document.getElementById('cache-info');
-        this.cacheRate = document.getElementById('cache-rate');
-        this.loadingText = document.getElementById('loading-text');
         this.moduleCache = new Map();
         this.styleCache = new Map();
       },
@@ -263,69 +254,8 @@ function generateDynamicDependencyLoader(
       },
       
       updateUI() {
-        if (!this.progressFill || !this.progressText) return;
-        
-        const progress = this.totalCount > 0 ? (this.loadedCount / this.totalCount) * 100 : 0;
-        this.progressFill.style.width = progress + '%';
-        this.progressText.textContent = Math.round(progress) + '%';
         const active = Array.from(this.dependencies.entries()).find(([, dep]) => dep.status === 'loading');
-        if (this.loadingText) {
-          const hasCss = active?.[0].startsWith('style:') || active?.[0].startsWith('css:') || active?.[0].startsWith('inline:') || active?.[0] === 'tailwindcss';
-          this.loadingText.textContent = hasCss ? '正在加载样式资源...' : '正在加载依赖资源...';
-        }
         this.postStatus(active?.[0]);
-        
-        // 计算缓存命中率
-        const cachedCount = Array.from(this.dependencies.values()).filter(dep => dep.status === 'cached').length;
-        const cacheHitRate = this.totalCount > 0 ? (cachedCount / this.totalCount) * 100 : 0;
-        
-        // 显示缓存信息
-        if (this.cacheInfo && this.cacheRate) {
-          if (cachedCount > 0) {
-            this.cacheInfo.style.display = 'block';
-            this.cacheRate.textContent = Math.round(cacheHitRate) + '%';
-          } else {
-            this.cacheInfo.style.display = 'none';
-          }
-        }
-        
-        // 更新依赖详情
-        if (this.loadingDetails) {
-          this.loadingDetails.innerHTML = '';
-          this.dependencies.forEach((dep, name) => {
-            const item = document.createElement('div');
-            item.className = 'dependency-item';
-            const statusText = dep.status === 'cached' ? '缓存' : this.getStatusText(dep.status);
-            const statusClass = dep.status === 'cached' ? 'status-loaded' : \`status-\${dep.status}\`;
-            item.innerHTML = \`
-              <span class="dependency-name">\${name}</span>
-              <span class="dependency-status \${statusClass}">\${statusText}</span>
-            \`;
-            this.loadingDetails.appendChild(item);
-          });
-        }
-        
-        // 检查是否所有依赖都加载完成
-        if (this.loadedCount === this.totalCount && this.totalCount > 0) {
-          // 检查是否为快速加载
-          if (this.checkQuickLoad()) {
-            // 快速加载完成，直接隐藏加载界面
-            this.hideLoadingOverlay();
-            return;
-          }
-          
-          // 添加成功动画
-          if (this.loadingOverlay) {
-            const loadingContent = this.loadingOverlay.querySelector('.loading-content');
-            if (loadingContent) {
-              loadingContent.classList.add('completed');
-            }
-          }
-          
-          setTimeout(() => {
-            this.hideLoadingOverlay();
-          }, 800);
-        }
       },
 
       postStatus(activeName = '') {
@@ -339,82 +269,11 @@ function generateDynamicDependencyLoader(
             phase,
             resourceTotal: this.totalCount,
             resourceLoaded: this.loadedCount,
-            resourceProgress: progress
+            resourceProgress: progress,
+            currentResource: activeName || ''
           }
         }, '*');
       },
-      
-      getStatusText(status) {
-        const statusMap = {
-          pending: '等待',
-          loading: '加载',
-          loaded: '完成',
-          cached: '缓存',
-          error: '失败'
-        };
-        return statusMap[status] || status;
-      },
-      
-      showLoadingOverlay() {
-        if (this.loadingOverlay) {
-          this.loadingOverlay.style.display = 'flex';
-          // 强制重排，然后添加动画类
-          this.loadingOverlay.offsetHeight;
-          this.loadingOverlay.classList.add('showing');
-        }
-      },
-      
-      hideLoadingOverlay() {
-        if (this.loadingOverlay) {
-          this.loadingOverlay.classList.remove('showing');
-          this.loadingOverlay.classList.add('hiding');
-          setTimeout(() => {
-            this.loadingOverlay.style.display = 'none';
-            this.loadingOverlay.classList.remove('hiding');
-          }, 400);
-        }
-      },
-      
-      // 检查是否需要显示加载界面
-      shouldShowLoading() {
-        if (!this.loadingStartTime) return false;
-        const elapsed = Date.now() - this.loadingStartTime;
-        
-        // 根据网络状况动态调整阈值
-        const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-        let threshold = this.showLoadingThreshold;
-        
-        if (connection) {
-          if (connection.effectiveType === 'slow-2g' || connection.effectiveType === '2g') {
-            threshold = 50; // 慢网络降低阈值
-          } else if (connection.effectiveType === '4g') {
-            threshold = 150; // 快网络提高阈值
-          }
-        }
-        
-        return elapsed > threshold;
-      },
-      
-      // 延迟显示加载界面
-      scheduleLoadingDisplay() {
-        setTimeout(() => {
-          if (this.shouldShowLoading()) {
-            this.showLoadingOverlay();
-          }
-        }, this.showLoadingThreshold);
-      },
-      
-      // 检查是否所有依赖都快速加载完成
-      checkQuickLoad() {
-        const elapsed = Date.now() - this.loadingStartTime;
-        const quickLoadThreshold = 200; // 200ms 内完成所有加载认为是快速加载
-        
-        if (elapsed < quickLoadThreshold && this.loadedCount === this.totalCount) {
-          console.log('🚀 所有依赖快速加载完成，跳过加载界面');
-          return true;
-        }
-        return false;
-      }
     };
     
     // 初始化动态依赖加载器
@@ -433,9 +292,6 @@ function generateDynamicDependencyLoader(
       tailwindResource
     ];
     dynamicDependencyLoader.addDependencies(resourceList);
-    
-    // 记录开始时间
-    dynamicDependencyLoader.loadingStartTime = Date.now();
     
     // 预加载依赖函数
     async function preloadDependency(name, url) {
@@ -466,11 +322,6 @@ function generateDynamicDependencyLoader(
         } else {
           dynamicDependencyLoader.setDependencyStatus(name, 'loaded');
           console.log(\`✅ 依赖 \${name} 加载成功 (\${loadTime}ms)\`);
-        }
-        
-        // 检查是否需要显示加载界面
-        if (dynamicDependencyLoader.shouldShowLoading() && !dynamicDependencyLoader.loadingOverlay.classList.contains('showing')) {
-          dynamicDependencyLoader.showLoadingOverlay();
         }
         
       } catch (error) {
@@ -613,9 +464,6 @@ function generateDynamicDependencyLoader(
       console.error('依赖加载过程中出现错误:', error);
       window.dispatchEvent(new CustomEvent('dependencies-ready'));
     });
-    
-    // 延迟显示加载界面（如果加载时间超过阈值）
-    dynamicDependencyLoader.scheduleLoadingDisplay();
   `;
 }
 

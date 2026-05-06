@@ -660,61 +660,10 @@ export default DependencyLoadingTest;`,
 
 export const arcoDesignDemo = {
   "App.tsx": `import React from 'react';
+import { Button, Space, Typography } from '@arco-design/web-react';
 
 const ArcoDesignTest: React.FC = () => {
   const [count, setCount] = React.useState(0);
-  const [arcoComponents, setArcoComponents] = React.useState(null);
-  const [loading, setLoading] = React.useState(true);
-
-  React.useEffect(() => {
-    // 动态导入 Arco Design 组件
-    const loadArcoComponents = async () => {
-      try {
-        const arco = await import('@arco-design/web-react');
-        setArcoComponents(arco);
-        setLoading(false);
-      } catch (error) {
-        console.error('Failed to load Arco Design components:', error);
-        setLoading(false);
-      }
-    };
-
-    loadArcoComponents();
-  }, []);
-
-  if (loading) {
-    return (
-      <div style={{ padding: '20px', textAlign: 'center' }}>
-        <div style={{ 
-          width: '40px', 
-          height: '40px', 
-          border: '4px solid #f3f3f3',
-          borderTop: '4px solid #1890ff',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite',
-          margin: '0 auto 16px'
-        }}></div>
-        <p>正在加载 Arco Design 组件...</p>
-        <style>{\`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        \`}</style>
-      </div>
-    );
-  }
-
-  if (!arcoComponents) {
-    return (
-      <div style={{ padding: '20px', textAlign: 'center', color: '#ff4d4f' }}>
-        <h3>Arco Design 组件加载失败</h3>
-        <p>请检查网络连接或依赖配置</p>
-      </div>
-    );
-  }
-
-  const { Button, Space, Typography } = arcoComponents;
   const { Title, Paragraph } = Typography;
 
   return (
@@ -760,6 +709,64 @@ const ArcoDesignTest: React.FC = () => {
 
 export default ArcoDesignTest;`,
   "deps.json": "{\"@arco-design/web-react\": \"2.66.1\"}"
+};
+
+export const antdDesignDemo = {
+  "App.tsx": `import React from 'react';
+import { Button, Card, DatePicker, Form, Input, Space, Table, Tag, Typography } from 'antd';
+
+const { Title, Paragraph } = Typography;
+
+const AntdDesignTest: React.FC = () => {
+  const [selected, setSelected] = React.useState('未选择');
+  const dataSource = [
+    { key: '1', name: 'Preview compile', owner: 'ReactPreview', status: 'ready' },
+    { key: '2', name: 'Style resources', owner: 'antd', status: 'loaded' },
+    { key: '3', name: 'Runtime render', owner: 'iframe', status: 'active' }
+  ];
+
+  const columns = [
+    { title: '任务', dataIndex: 'name' },
+    { title: '来源', dataIndex: 'owner' },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      render: (status) => <Tag color={status === 'ready' ? 'green' : status === 'loaded' ? 'blue' : 'gold'}>{status}</Tag>
+    }
+  ];
+
+  return (
+    <div style={{ padding: 24, maxWidth: 760, margin: '0 auto' }}>
+      <Title level={2}>Ant Design 组件测试</Title>
+      <Paragraph>
+        这个示例用于验证 antd 组件库、CSS reset 和表单/表格组件在预览器中的加载表现。
+      </Paragraph>
+
+      <Card style={{ marginBottom: 20 }}>
+        <Form layout="inline" onFinish={(values) => setSelected(values.keyword || '未填写')}>
+          <Form.Item name="keyword">
+            <Input placeholder="输入测试关键字" style={{ width: 220 }} />
+          </Form.Item>
+          <Form.Item name="date">
+            <DatePicker placeholder="选择日期" />
+          </Form.Item>
+          <Form.Item>
+            <Space>
+              <Button type="primary" htmlType="submit">提交</Button>
+              <Button onClick={() => setSelected('已重置')}>重置</Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Card>
+
+      <Paragraph>当前输入：{selected}</Paragraph>
+      <Table columns={columns} dataSource={dataSource} pagination={false} />
+    </div>
+  );
+};
+
+export default AntdDesignTest;`,
+  "deps.json": "{\"antd\": \"5.18.0\"}"
 };
 
 export const simpleReactDemo = {
@@ -884,8 +891,14 @@ export const demoMap = {
   },
   arcoDesignDemo: {
     name: 'Arco Design 组件测试',
-    description: '测试 Arco Design 组件的动态加载功能',
+    description: '测试 Arco Design 组件库和样式加载功能',
     files: arcoDesignDemo,
+    entryFile: 'App.tsx'
+  },
+  antdDesignDemo: {
+    name: 'Ant Design 组件测试',
+    description: '测试 Ant Design 组件库和样式加载功能',
+    files: antdDesignDemo,
     entryFile: 'App.tsx'
   },
   simpleReactDemo: {
