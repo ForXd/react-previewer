@@ -35,6 +35,8 @@ interface TransformResult {
   };
 }
 
+const FORCE_BUNDLED_PACKAGES = new Set(['antd']);
+
 /**
  * 解析包名和子路径
  * @param packagePath 完整的包路径
@@ -111,7 +113,7 @@ function transformDepsToEsmLinks(
       params.append('target', target);
     }
     
-    if (bundle) {
+    if (bundle || FORCE_BUNDLED_PACKAGES.has(packageName)) {
       params.append('bundle', '');
     }
     
