@@ -97,20 +97,23 @@ const ExampleUsage: React.FC = () => {
   }, [editingMode, editedFiles, getFiles, selectedDemo.key]);
 
   return (
-    <div className="flex h-screen w-full bg-slate-100 text-slate-950">
+    <div ref={containerRef} className="flex h-screen w-full bg-zinc-100 text-zinc-950">
       {/* 左侧边栏 - Demo 选择器 */}
       <div className={`
-        flex flex-col border-r border-slate-200 bg-white transition-all duration-300 ease-in-out
+        flex flex-col border-r border-zinc-200 bg-zinc-950 text-white shadow-xl shadow-zinc-950/10 transition-all duration-300 ease-in-out
         ${sidebarCollapsed ? 'w-16' : 'w-80'}
       `}>
         {/* 侧边栏头部 */}
-        <div className="flex items-center justify-between border-b border-slate-200 p-4">
+        <div className="flex items-center justify-between border-b border-white/10 p-4">
           {!sidebarCollapsed && (
-            <h2 className="text-base font-semibold text-slate-950">示例列表</h2>
+            <div>
+              <h2 className="text-base font-semibold text-white">React Previewer</h2>
+              <p className="mt-1 text-xs text-zinc-400">组件示例与实时预览</p>
+            </div>
           )}
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="rounded-md p-2 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-950"
+            className="rounded-md p-2 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white"
             title={sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
           >
             <svg
@@ -125,7 +128,7 @@ const ExampleUsage: React.FC = () => {
         </div>
 
         {/* Demo 列表 */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto p-3">
           {sidebarCollapsed ? (
             // 收起状态：只显示图标
             <div className="space-y-2">
@@ -136,8 +139,8 @@ const ExampleUsage: React.FC = () => {
                   className={`
                     flex w-full items-center justify-center rounded-md p-3 transition-colors duration-150
                     ${selectedDemo.key === demo.key
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      ? 'bg-cyan-400 text-zinc-950'
+                      : 'bg-white/5 text-zinc-300 hover:bg-white/10 hover:text-white'
                     }
                   `}
                   title={demo.name}
@@ -148,21 +151,21 @@ const ExampleUsage: React.FC = () => {
             </div>
           ) : (
             // 展开状态：显示完整信息
-            <div className="space-y-3">
+            <div className="space-y-2">
               {demoList.map((demo) => (
                 <button
                   key={demo.key}
                   onClick={() => setSelectedDemo(demo)}
                   className={`
-                    w-full rounded-md border p-4 text-left transition-colors duration-150
+                    w-full rounded-md border p-3 text-left transition-colors duration-150
                     ${selectedDemo.key === demo.key
-                      ? 'border-slate-900 bg-slate-900 text-white'
-                      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                      ? 'border-cyan-300/60 bg-cyan-400 text-zinc-950 shadow-sm shadow-cyan-950/20'
+                      : 'border-white/10 bg-white/[0.04] text-zinc-300 hover:border-white/20 hover:bg-white/[0.08] hover:text-white'
                     }
                   `}
                 >
-                  <div className="font-semibold text-sm mb-1">{demo.name}</div>
-                  <div className="text-xs opacity-75 leading-relaxed">{demo.description}</div>
+                  <div className="mb-1 text-sm font-semibold">{demo.name}</div>
+                  <div className="text-xs leading-relaxed opacity-75">{demo.description}</div>
                 </button>
               ))}
             </div>
@@ -171,24 +174,24 @@ const ExampleUsage: React.FC = () => {
 
         {/* 日志配置区域 */}
         {!sidebarCollapsed && (
-          <div className="border-t border-slate-200 p-4">
-            <h3 className="mb-3 text-sm font-semibold text-slate-950">日志配置</h3>
+          <div className="border-t border-white/10 bg-black/10 p-4">
+            <h3 className="mb-3 text-sm font-semibold text-white">日志配置</h3>
             <div className="space-y-2">
               <label className="flex items-center">
                 <input
                   type="checkbox"
                   checked={loggerConfig.enabled}
                   onChange={(e) => setLoggerConfig(prev => ({ ...prev, enabled: e.target.checked }))}
-                  className="mr-2"
+                  className="mr-2 accent-cyan-400"
                 />
-                <span className="text-xs text-slate-700">启用日志</span>
+                <span className="text-xs text-zinc-300">启用日志</span>
               </label>
               <div>
-                <label className="mb-1 block text-xs text-slate-700">日志级别</label>
+                <label className="mb-1 block text-xs text-zinc-300">日志级别</label>
                 <select
                   value={loggerConfig.level}
                   onChange={(e) => setLoggerConfig(prev => ({ ...prev, level: parseInt(e.target.value) }))}
-                  className="w-full rounded-md border border-slate-200 px-2 py-1 text-xs"
+                  className="w-full rounded-md border border-white/10 bg-zinc-900 px-2 py-1 text-xs text-white outline-none focus:border-cyan-300"
                 >
                   <option value={0}>ERROR</option>
                   <option value={1}>WARN</option>
@@ -202,9 +205,9 @@ const ExampleUsage: React.FC = () => {
                   type="checkbox"
                   checked={loggerConfig.showTimestamp}
                   onChange={(e) => setLoggerConfig(prev => ({ ...prev, showTimestamp: e.target.checked }))}
-                  className="mr-2"
+                  className="mr-2 accent-cyan-400"
                 />
-                <span className="text-xs text-slate-700">显示时间戳</span>
+                <span className="text-xs text-zinc-300">显示时间戳</span>
               </label>
             </div>
           </div>
@@ -212,26 +215,26 @@ const ExampleUsage: React.FC = () => {
       </div>
 
       {/* 右侧主区域 */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
         {/* 顶部工具栏 */}
-        <div className="border-b border-slate-200 bg-white px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-semibold text-slate-950">{selectedDemo.name}</h1>
-              <p className="mt-1 text-sm text-slate-600">{selectedDemo.description}</p>
-              
-            </div>
-            <div className="flex items-center space-x-3">
-              <div className="text-sm text-slate-500">
-                入口文件: {selectedDemo.entryFile}
+        <div className="border-b border-zinc-200 bg-white/90 px-6 py-4 shadow-sm backdrop-blur">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="min-w-0">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <span className="rounded-md bg-cyan-50 px-2 py-1 text-xs font-medium text-cyan-700 ring-1 ring-cyan-200">Demo</span>
+                <span className="rounded-md bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-600 ring-1 ring-zinc-200">{selectedDemo.entryFile}</span>
               </div>
+              <h1 className="text-xl font-semibold text-zinc-950">{selectedDemo.name}</h1>
+              <p className="mt-1 text-sm text-zinc-600">{selectedDemo.description}</p>
+            </div>
+            <div className="flex items-center gap-3">
               <button
                 onClick={() => setEditingMode(!editingMode)}
                 className={`
-                  rounded-md px-4 py-2 text-sm font-medium transition-colors
+                  rounded-md px-4 py-2 text-sm font-medium shadow-sm transition-colors
                   ${editingMode 
                     ? 'bg-emerald-600 text-white hover:bg-emerald-700' 
-                    : 'bg-slate-900 text-white hover:bg-slate-700'
+                    : 'bg-zinc-950 text-white hover:bg-zinc-800'
                   }
                 `}
               >
@@ -240,7 +243,7 @@ const ExampleUsage: React.FC = () => {
               {editingMode && (
                 <button
                   onClick={handleResetFiles}
-                  className="rounded-md bg-slate-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700"
+                  className="rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 shadow-sm transition-colors hover:bg-zinc-50"
                 >
                   重置
                 </button>
@@ -250,19 +253,19 @@ const ExampleUsage: React.FC = () => {
         </div>
 
         {/* 主要内容区域 */}
-        <div className="flex-1 flex">
+        <div className="flex min-h-0 flex-1">
           {/* 编辑区域 */}
           {editingMode && (
-            <div className="w-1/2 overflow-y-auto border-r border-slate-200 bg-white p-4">
-              <h3 className="mb-4 text-base font-semibold text-slate-950">文件编辑</h3>
+            <div className="w-1/2 overflow-y-auto border-r border-zinc-200 bg-white p-4">
+              <h3 className="mb-4 text-base font-semibold text-zinc-950">文件编辑</h3>
               <div className="space-y-4">
                 {Object.entries(currentFiles).map(([fileName, content]) => (
                   <div key={fileName}>
-                    <h4 className="mb-2 text-sm font-medium text-slate-700">{fileName}</h4>
+                    <h4 className="mb-2 text-sm font-medium text-zinc-700">{fileName}</h4>
                     <textarea
                       value={content}
                       onChange={(e) => handleFileEdit(fileName, e.target.value)}
-                      className="h-32 w-full resize-none rounded-md border border-slate-200 p-2 font-mono text-xs outline-none focus:border-slate-400"
+                      className="h-32 w-full resize-none rounded-md border border-zinc-200 bg-zinc-50 p-3 font-mono text-xs text-zinc-900 outline-none transition focus:border-cyan-400 focus:bg-white"
                       placeholder="输入代码..."
                     />
                   </div>
@@ -272,7 +275,7 @@ const ExampleUsage: React.FC = () => {
           )}
 
           {/* 预览区域 */}
-          <div className={`${editingMode ? 'w-1/2' : 'w-full'} relative`}>
+          <div className={`${editingMode ? 'w-1/2' : 'w-full'} relative min-w-0`}>
             <div className="absolute inset-0">
               {(() => {
                 logger.debug('Rendering ReactPreviewer:', {
@@ -297,9 +300,9 @@ const ExampleUsage: React.FC = () => {
 
         {/* 依赖加载功能说明区域 */}
         {(selectedDemo.key === 'simpleReactDemo' || selectedDemo.key === 'dependencyLoadingDemo' || selectedDemo.key === 'arcoDesignDemo' || selectedDemo.key === 'antdDesignDemo') && (
-          <div className="border-t border-slate-200 bg-white p-4">
-            <h3 className="mb-2 text-sm font-semibold text-slate-950">依赖加载功能说明</h3>
-            <div className="space-y-1 text-xs text-slate-600">
+          <div className="border-t border-zinc-200 bg-white px-6 py-4">
+            <h3 className="mb-2 text-sm font-semibold text-zinc-950">依赖加载功能说明</h3>
+            <div className="space-y-1 text-xs text-zinc-600">
               <p><strong>观察要点:</strong></p>
               <ul className="list-disc list-inside space-y-1 ml-2">
                 <li>页面加载时应该显示依赖加载进度条</li>
