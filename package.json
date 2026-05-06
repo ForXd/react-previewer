@@ -21,6 +21,7 @@
   ],
   "scripts": {
     "dev": "vite",
+    "build": "npm run build:lib",
     "build:page": "tsc -b && vite build",
     "build:lib": "vite build --config vite.lib.config.ts && npx @tailwindcss/cli -i src/lib/ReactPreview/index.css -o dist/styles.css --config tailwind.config.js",
     "lint": "eslint .",

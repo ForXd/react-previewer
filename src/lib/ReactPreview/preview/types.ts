@@ -32,6 +32,7 @@ export interface PreviewStatus {
   resourceTotal: number;
   resourceLoaded: number;
   resourceProgress: number;
+  currentResource?: string;
 }
 
 export type PreviewPhase =

@@ -2,6 +2,7 @@
 export const COMPONENT_LIBRARY_STYLE: Record<string, string> = {
   '@arco-design/web-react':
     'https://esm.sh/@arco-design/web-react@2.66.1/dist/css/arco.min.css',
+  antd: 'https://esm.sh/antd@5.18.0/dist/reset.css',
 };
 
 export const DEFAULT_DEPENDENCIES = {

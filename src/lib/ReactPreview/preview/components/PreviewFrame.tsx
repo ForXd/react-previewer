@@ -400,7 +400,8 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
             phase: data.phase || 'loading-js',
             resourceTotal: Number(data.resourceTotal) || 0,
             resourceLoaded: Number(data.resourceLoaded) || 0,
-            resourceProgress: Number(data.resourceProgress) || 0
+            resourceProgress: Number(data.resourceProgress) || 0,
+            currentResource: typeof data.currentResource === 'string' ? data.currentResource : undefined
           });
           return;
         }

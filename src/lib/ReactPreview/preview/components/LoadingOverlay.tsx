@@ -31,6 +31,11 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ status }) => {
             ? `${status.resourceLoaded}/${status.resourceTotal} resources`
             : '请稍候，正在处理您的代码'}
         </div>
+        {showProgress && status.currentResource && (
+          <div className="mt-2 truncate rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-600">
+            {status.currentResource}
+          </div>
+        )}
         {showProgress && (
           <div className="mt-4">
             <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
