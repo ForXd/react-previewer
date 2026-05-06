@@ -98,7 +98,7 @@ import 'https://example.com/theme.css';
 
 ## Loading 生命周期
 
-预览状态统一覆盖编译、JS 依赖、CSS 资源和渲染阶段。外层 loading 与 iframe 内 loading 都会展示当前阶段和资源进度，避免“组件已渲染但 CSS 还没加载”的闪烁。
+预览状态统一覆盖编译、JS 依赖、CSS 资源和渲染阶段。外层 loading 会展示当前阶段、资源进度和正在加载的资源，避免“组件已渲染但 CSS 还没加载”的闪烁。
 
 状态阶段：
 
