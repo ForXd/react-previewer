@@ -75,7 +75,9 @@ export const ReactPreviewer: React.FC<ReactPreviewerProps> = ({
 
   const frameStyle = useMemo<React.CSSProperties>(() => {
     const width = typeof viewport.width === 'number' ? `${viewport.width}px` : viewport.width;
-    const height = typeof viewport.height === 'number' ? `${viewport.height}px` : viewport.height;
+    const height = typeof viewport.height === 'number'
+      ? `${viewport.height + 42}px`
+      : viewport.height;
 
     return {
       width,
@@ -87,7 +89,7 @@ export const ReactPreviewer: React.FC<ReactPreviewerProps> = ({
 
   return (
     <ErrorBoundary>
-      <div className={`flex h-full w-full flex-col bg-slate-100 text-slate-950 ${className}`}>
+      <div className={`flex h-full w-full flex-col bg-zinc-100 text-zinc-950 ${className}`}>
         {showToolbar && (
           <PreviewerToolbar
             isLoading={status.isLoading}
@@ -103,23 +105,36 @@ export const ReactPreviewer: React.FC<ReactPreviewerProps> = ({
           />
         )}
 
-        <div className="relative min-h-0 w-full flex-1 overflow-auto p-4">
+        <div className="relative min-h-0 w-full flex-1 overflow-auto bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.12),transparent_30%),linear-gradient(180deg,#f8fafc,#e5e7eb)] p-5">
           <div
-            className="mx-auto h-full min-h-[320px] overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-slate-200 transition-[width,height,transform] duration-200"
+            className="mx-auto flex h-full min-h-[360px] flex-col overflow-hidden rounded-lg bg-white shadow-xl shadow-zinc-950/10 ring-1 ring-zinc-950/10 transition-[width,height,transform] duration-200"
             style={frameStyle}
           >
-            <PreviewFrame
-              key={recompileKey} // 使用 key 来强制重新渲染
-              files={files}
-              entryFile={entryFile}
-              depsInfo={depsInfo}
-              dependencyStyles={dependencyStyles}
-              onError={onError}
-              onElementClick={onElementClick}
-              isInspecting={isInspecting}
-              onStatusChange={handleStatusChange}
-              compileDelay={compileDelay}
-            />
+            <div className="flex h-[42px] flex-none items-center gap-3 border-b border-zinc-200 bg-zinc-50 px-4">
+              <div className="flex items-center gap-1.5" aria-hidden="true">
+                <span className="h-3 w-3 rounded-full bg-red-400 ring-1 ring-red-500/20" />
+                <span className="h-3 w-3 rounded-full bg-amber-400 ring-1 ring-amber-500/20" />
+                <span className="h-3 w-3 rounded-full bg-emerald-400 ring-1 ring-emerald-500/20" />
+              </div>
+              <div className="flex min-w-0 flex-1 items-center rounded-md border border-zinc-200 bg-white px-3 py-1 text-xs text-zinc-500 shadow-inner">
+                <span className="truncate">preview.local/{entryFile}</span>
+              </div>
+              <div className="hidden text-xs font-medium text-zinc-500 sm:block">{viewport.label}</div>
+            </div>
+            <div className="min-h-0 flex-1 bg-white">
+              <PreviewFrame
+                key={recompileKey} // 使用 key 来强制重新渲染
+                files={files}
+                entryFile={entryFile}
+                depsInfo={depsInfo}
+                dependencyStyles={dependencyStyles}
+                onError={onError}
+                onElementClick={onElementClick}
+                isInspecting={isInspecting}
+                onStatusChange={handleStatusChange}
+                compileDelay={compileDelay}
+              />
+            </div>
           </div>
         </div>
       </div>
