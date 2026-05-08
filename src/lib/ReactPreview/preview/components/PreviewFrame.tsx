@@ -100,7 +100,7 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
   const onRouteChangeRef = useRef(onRouteChange);
   const onStatusChangeRef = useRef(onStatusChange);
   const compileRunRef = useRef(0);
-  const htmlUrlRef = useRef<string | null>(null);
+  const pendingHtmlRef = useRef<string | null>(null);
   const transformedCountRef = useRef(0);
   const compileDurationRef = useRef<number | null>(null);
   
@@ -175,6 +175,20 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
     });
   }, [handleElementClick, publishStatus]);
 
+  const writePendingPreviewHtml = useCallback(() => {
+    const iframe = iframeRef.current;
+    const html = pendingHtmlRef.current;
+    if (!iframe || !html) return;
+
+    const doc = iframe.contentDocument;
+    if (!doc) return;
+
+    pendingHtmlRef.current = null;
+    doc.open();
+    doc.write(html);
+    doc.close();
+  }, []);
+
   const renderPreview = useCallback((fileUrls: Map<string, string>, entry: string) => {
     if (!iframeRef.current) return;
 
@@ -184,15 +198,16 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
     }
 
     const html = htmlGenerator.current.generatePreviewHTML(entryUrl, depsInfo, dependencyStyles, previewPathRef.current);
-    const htmlBlob = new Blob([html], { type: 'text/html' });
-    const htmlUrl = URL.createObjectURL(htmlBlob);
+    pendingHtmlRef.current = html;
 
-    if (htmlUrlRef.current) {
-      URL.revokeObjectURL(htmlUrlRef.current);
+    const previewUrl = createPreviewDocumentUrl(previewPathRef.current);
+    if (iframeRef.current.src !== previewUrl) {
+      iframeRef.current.src = previewUrl;
+      return;
     }
-    htmlUrlRef.current = htmlUrl;
-    iframeRef.current.src = htmlUrl;
-  }, [depsInfo, dependencyStyles]);
+
+    writePendingPreviewHtml();
+  }, [depsInfo, dependencyStyles, writePendingPreviewHtml]);
 
   // 创建一个内部函数来处理文件，可以访问最新的 props
   const processFilesInternal = useCallback(async (runId?: number) => {
@@ -373,10 +388,7 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
     const processor = fileProcessor.current;
     return () => {
       compileRunRef.current += 1;
-      if (htmlUrlRef.current) {
-        URL.revokeObjectURL(htmlUrlRef.current);
-        htmlUrlRef.current = null;
-      }
+      pendingHtmlRef.current = null;
       processor.cleanup();
     };
   }, []);
@@ -394,6 +406,7 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
       <iframe
         ref={iframeRef}
         title="React preview"
+        onLoad={writePendingPreviewHtml}
         className={`w-full h-full border-none transition-opacity duration-200 ${
           isLoading ? 'opacity-50' : 'opacity-100'
         }`}
@@ -459,3 +472,13 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
   });
   return false; // false 表示 props 不相等，需要重新渲染
 }); 
+
+const createPreviewDocumentUrl = (path: string): string => {
+  const routePath = normalizePreviewPath(path);
+
+  try {
+    return new URL(routePath, window.location.origin).href;
+  } catch {
+    return routePath;
+  }
+};
