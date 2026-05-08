@@ -6,8 +6,10 @@ export interface ReactPreviewerProps {
   depsInfo?: Record<string, string>;
   dependencyStyles?: Record<string, string | string[]>;
   entryFile?: string;
+  initialPath?: string;
   onError?: (error: Error) => void;
   onElementClick?: (sourceInfo: SourceInfo) => void;
+  onRouteChange?: (route: PreviewRouteState) => void;
   loggerConfig?: Partial<LoggerConfig>;
   compileDelay?: number;
   showToolbar?: boolean;
@@ -21,6 +23,13 @@ export interface PreviewViewport {
   label: string;
   width: number | '100%';
   height: number | '100%';
+}
+
+export interface PreviewRouteState {
+  pathname: string;
+  search: string;
+  hash: string;
+  href: string;
 }
 
 export interface PreviewStatus {
@@ -73,7 +82,8 @@ export interface MessageData {
     | 'dependency-error'
     | 'resource-error'
     | 'resource-status'
-    | 'preview-ready';
+    | 'preview-ready'
+    | 'route-change';
   data: Record<string, unknown>;
 }
 

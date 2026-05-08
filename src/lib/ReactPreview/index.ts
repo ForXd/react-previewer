@@ -7,6 +7,7 @@ export type {
   PreviewStatus,
   PreviewPhase,
   PreviewViewport,
+  PreviewRouteState,
   ErrorInfo,
   SourceInfo,
   MessageData,

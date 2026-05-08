@@ -10,7 +10,8 @@ export class HTMLGenerator {
   generatePreviewHTML(
     entryUrl: string,
     depsInfo: Record<string, string> = {},
-    dependencyStyles: Record<string, string | string[]> = {}
+    dependencyStyles: Record<string, string | string[]> = {},
+    initialPath = '/'
   ): string {
     // 合并默认依赖和传入的依赖
     const allDeps = {
@@ -47,7 +48,7 @@ export class HTMLGenerator {
         <div id="root"></div>
         <script type="module">
           ${cached.dynamicLoaderScript}
-          ${this.getPreviewScript(entryUrl)}
+          ${this.getPreviewScript(entryUrl, initialPath)}
         </script>
       </body>
       </html>
@@ -118,8 +119,89 @@ export class HTMLGenerator {
       });
   }
 
-  private getPreviewScript(entryUrl: string): string {
+  private getPreviewScript(entryUrl: string, initialPath: string): string {
     return `
+      const configuredInitialPath = ${JSON.stringify(initialPath || '/')};
+
+      function normalizePreviewPath(value) {
+        const fallback = window.location.pathname + window.location.search + window.location.hash;
+        if (typeof value !== 'string' || value.trim() === '') {
+          return fallback || '/';
+        }
+
+        const trimmed = value.trim();
+        if (trimmed.startsWith('#')) {
+          return window.location.pathname + window.location.search + trimmed;
+        }
+
+        try {
+          const url = new URL(trimmed, window.location.origin);
+          return url.pathname + url.search + url.hash;
+        } catch (error) {
+          return trimmed.startsWith('/') ? trimmed : '/' + trimmed;
+        }
+      }
+
+      function getRouteState() {
+        const pathname = window.location.pathname || '/';
+        const search = window.location.search || '';
+        const hash = window.location.hash || '';
+        return {
+          pathname,
+          search,
+          hash,
+          href: pathname + search + hash
+        };
+      }
+
+      function postRouteChange() {
+        window.parent.postMessage({
+          type: 'route-change',
+          data: getRouteState()
+        }, '*');
+      }
+
+      function applyPreviewRoute(nextPath, mode = 'push') {
+        const normalizedPath = normalizePreviewPath(nextPath);
+        const currentPath = window.location.pathname + window.location.search + window.location.hash;
+        if (normalizedPath === currentPath) {
+          postRouteChange();
+          return;
+        }
+
+        try {
+          const method = mode === 'replace' ? 'replaceState' : 'pushState';
+          window.history[method](window.history.state, '', normalizedPath);
+          window.dispatchEvent(new PopStateEvent('popstate', { state: window.history.state }));
+          postRouteChange();
+        } catch (error) {
+          console.warn('Failed to update preview route:', error);
+        }
+      }
+
+      function installRouteSync() {
+        const originalPushState = window.history.pushState.bind(window.history);
+        const originalReplaceState = window.history.replaceState.bind(window.history);
+
+        window.history.pushState = function pushState(state, title, url) {
+          const result = originalPushState(state, title, url);
+          postRouteChange();
+          return result;
+        };
+
+        window.history.replaceState = function replaceState(state, title, url) {
+          const result = originalReplaceState(state, title, url);
+          postRouteChange();
+          return result;
+        };
+
+        window.addEventListener('popstate', postRouteChange);
+        window.addEventListener('hashchange', postRouteChange);
+      }
+
+      installRouteSync();
+      applyPreviewRoute(configuredInitialPath, 'replace');
+
       // 等待依赖加载完成后再渲染应用
       async function renderApp() {
         try {
@@ -300,6 +382,11 @@ export class HTMLGenerator {
           }
           
           addInspectStyles();
+          return;
+        }
+
+        if (event.data.type === 'navigate-preview') {
+          applyPreviewRoute(event.data.path, event.data.replace ? 'replace' : 'push');
         }
       });
 

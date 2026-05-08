@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import type { PreviewStatus, PreviewViewport, ReactPreviewerProps } from './types';
+import type { PreviewRouteState, PreviewStatus, PreviewViewport, ReactPreviewerProps } from './types';
 import { PreviewFrame } from './components/PreviewFrame';
 import { PreviewerToolbar } from './components/PreviewerToolbar';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -8,10 +8,12 @@ import { logger } from './utils/Logger';
 export const ReactPreviewer: React.FC<ReactPreviewerProps> = ({ 
   files, 
   entryFile = 'App.tsx', 
+  initialPath = '/',
   onError, 
   depsInfo = {},
   dependencyStyles = {},
   onElementClick,
+  onRouteChange,
   loggerConfig,
   compileDelay = 120,
   showToolbar = true,
@@ -22,6 +24,8 @@ export const ReactPreviewer: React.FC<ReactPreviewerProps> = ({
 }) => {
   const [isInspecting, setIsInspecting] = useState(false);
   const [recompileKey, setRecompileKey] = useState(0);
+  const [previewPath, setPreviewPath] = useState(() => normalizePreviewPath(initialPath));
+  const [routeInputValue, setRouteInputValue] = useState(() => normalizePreviewPath(initialPath));
   const [status, setStatus] = useState<PreviewStatus>({
     isLoading: true,
     phase: 'compiling',
@@ -52,6 +56,12 @@ export const ReactPreviewer: React.FC<ReactPreviewerProps> = ({
     }
   }, [loggerConfig]);
 
+  useEffect(() => {
+    const normalizedPath = normalizePreviewPath(initialPath);
+    setPreviewPath(normalizedPath);
+    setRouteInputValue(normalizedPath);
+  }, [initialPath, entryFile]);
+
   const handleToggleInspect = useCallback(() => {
     setIsInspecting((prev) => {
       logger.debug('Inspect mode toggled:', !prev);
@@ -70,6 +80,19 @@ export const ReactPreviewer: React.FC<ReactPreviewerProps> = ({
     setStatus(nextStatus);
     onStatusChange?.(nextStatus);
   }, [onStatusChange]);
+
+  const handleRouteChange = useCallback((route: PreviewRouteState) => {
+    setPreviewPath((currentPath) => (currentPath === route.href ? currentPath : route.href));
+    setRouteInputValue((currentValue) => (currentValue === route.href ? currentValue : route.href));
+    onRouteChange?.(route);
+  }, [onRouteChange]);
+
+  const handleRouteSubmit = useCallback((event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const normalizedPath = normalizePreviewPath(routeInputValue);
+    setRouteInputValue(normalizedPath);
+    setPreviewPath(normalizedPath);
+  }, [routeInputValue]);
 
   const handleZoomChange = useCallback((value: number) => {
     setZoom(Math.min(1.5, Math.max(0.5, value)));
@@ -118,9 +141,28 @@ export const ReactPreviewer: React.FC<ReactPreviewerProps> = ({
                 <span className="h-3 w-3 rounded-full bg-[#ebebeb] ring-1 ring-black/10" />
                 <span className="h-3 w-3 rounded-full bg-[#171717] ring-1 ring-black/10" />
               </div>
-              <div className="flex min-w-0 flex-1 items-center rounded-md bg-[#fafafa] px-3 py-1 text-xs text-[#666666] shadow-[0_0_0_1px_#ebebeb]">
-                <span className="truncate">preview.local/{entryFile}</span>
-              </div>
+              <form
+                className="flex min-w-0 flex-1 items-center overflow-hidden rounded-md bg-[#fafafa] text-xs text-[#666666] shadow-[0_0_0_1px_#ebebeb] focus-within:bg-white focus-within:shadow-[0_0_0_1px_#171717]"
+                onSubmit={handleRouteSubmit}
+              >
+                <span className="flex-none border-r border-[#ebebeb] px-3 py-1 font-medium text-[#808080]">preview.local</span>
+                <input
+                  aria-label="预览路由路径"
+                  value={routeInputValue}
+                  onChange={(event) => setRouteInputValue(event.target.value)}
+                  className="min-w-0 flex-1 bg-transparent px-2 py-1 font-mono text-xs text-[#4d4d4d] outline-none"
+                  spellCheck={false}
+                />
+                <button
+                  type="submit"
+                  title="跳转到输入的预览路由"
+                  className="flex h-7 w-7 flex-none items-center justify-center border-l border-[#ebebeb] text-[#666666] transition-colors hover:bg-white hover:text-[#171717]"
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14m-6-6 6 6-6 6" />
+                  </svg>
+                </button>
+              </form>
               <div className="hidden text-xs font-medium text-[#666666] sm:block">{viewport.label}</div>
             </div>
             <div className="min-h-0 flex-1 bg-white">
@@ -130,8 +172,10 @@ export const ReactPreviewer: React.FC<ReactPreviewerProps> = ({
                 entryFile={entryFile}
                 depsInfo={depsInfo}
                 dependencyStyles={dependencyStyles}
+                previewPath={previewPath}
                 onError={onError}
                 onElementClick={onElementClick}
+                onRouteChange={handleRouteChange}
                 isInspecting={isInspecting}
                 onStatusChange={handleStatusChange}
                 compileDelay={compileDelay}
@@ -142,4 +186,20 @@ export const ReactPreviewer: React.FC<ReactPreviewerProps> = ({
       </div>
     </ErrorBoundary>
   );
+};
+
+const normalizePreviewPath = (path?: string): string => {
+  const value = path?.trim();
+  if (!value) return '/';
+
+  if (value.startsWith('#')) {
+    return `/${value}`;
+  }
+
+  try {
+    const url = new URL(value, 'https://preview.local');
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return value.startsWith('/') ? value : `/${value}`;
+  }
 };

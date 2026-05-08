@@ -119,8 +119,10 @@ interface ReactPreviewerProps {
   depsInfo?: Record<string, string>;
   dependencyStyles?: Record<string, string | string[]>;
   entryFile?: string;
+  initialPath?: string;
   onError?: (error: Error) => void;
   onElementClick?: (sourceInfo: SourceInfo) => void;
+  onRouteChange?: (route: PreviewRouteState) => void;
   loggerConfig?: Partial<LoggerConfig>;
   compileDelay?: number;
   showToolbar?: boolean;
@@ -137,12 +139,23 @@ interface ReactPreviewerProps {
 | `depsInfo` | `{}` | 第三方依赖版本，转换为 ESM CDN 地址 |
 | `dependencyStyles` | `{}` | 第三方依赖对应 CSS 地址，支持单个或多个 URL |
 | `entryFile` | `'App.tsx'` | 预览入口文件 |
+| `initialPath` | `'/'` | 预览应用启动时的路由路径，支持 pathname、query 和 hash |
 | `compileDelay` | `120` | 文件变化后的编译去抖时间，单位 ms |
 | `showToolbar` | `true` | 是否显示工具栏 |
 | `defaultViewport` | Auto | 初始预览尺寸 |
 | `defaultZoom` | `1` | 初始缩放比例 |
 | `onStatusChange` | - | 编译和资源加载状态回调 |
 | `onElementClick` | - | 检查模式下点击元素后的源码位置信息 |
+| `onRouteChange` | - | iframe 内路由变化回调，包含 pathname、search、hash 和 href |
+
+```ts
+interface PreviewRouteState {
+  pathname: string;
+  search: string;
+  hash: string;
+  href: string;
+}
+```
 
 ```ts
 interface PreviewStatus {

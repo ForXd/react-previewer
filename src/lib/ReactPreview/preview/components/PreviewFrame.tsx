@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import type { ErrorInfo, PreviewStatus, SourceInfo } from '../types';
+import type { ErrorInfo, PreviewRouteState, PreviewStatus, SourceInfo } from '../types';
 import { FileProcessor } from '../utils/FileProcessor';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import { HTMLGenerator } from '../utils/HTMLGenerator';
@@ -18,8 +18,10 @@ export interface PreviewFrameProps {
   entryFile: string;
   depsInfo?: Record<string, string>;
   dependencyStyles?: Record<string, string | string[]>;
+  previewPath?: string;
   onError?: (error: Error) => void;
   onElementClick?: (sourceInfo: SourceInfo) => void;
+  onRouteChange?: (route: PreviewRouteState) => void;
   isInspecting?: boolean;
   onStatusChange?: (status: PreviewStatus) => void;
   compileDelay?: number;
@@ -36,14 +38,41 @@ const createInitialStatus = (): PreviewStatus => ({
   resourceProgress: 0
 });
 
+const normalizePreviewPath = (path?: string): string => {
+  const value = path?.trim();
+  if (!value) return '/';
+
+  if (value.startsWith('#')) {
+    return `/${value}`;
+  }
+
+  try {
+    const url = new URL(value, 'https://preview.local');
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return value.startsWith('/') ? value : `/${value}`;
+  }
+};
+
+const toRouteState = (data: Record<string, unknown>): PreviewRouteState => {
+  const pathname = typeof data.pathname === 'string' && data.pathname ? data.pathname : '/';
+  const search = typeof data.search === 'string' ? data.search : '';
+  const hash = typeof data.hash === 'string' ? data.hash : '';
+  const href = typeof data.href === 'string' && data.href ? data.href : `${pathname}${search}${hash}`;
+
+  return { pathname, search, hash, href };
+};
+
 // 使用 React.memo 避免不必要的重新渲染
 export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
   files,
   entryFile,
   depsInfo = {},
   dependencyStyles = {},
+  previewPath = '/',
   onError,
   onElementClick,
+  onRouteChange,
   isInspecting = false,
   onStatusChange,
   compileDelay = 120
@@ -63,10 +92,12 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
   const currentEntryFileRef = useRef<string>('');
   const currentDepsInfoRef = useRef<string>('');
   const currentDependencyStylesRef = useRef<string>('');
+  const previewPathRef = useRef(normalizePreviewPath(previewPath));
   
   // 使用 useRef 稳定回调函数的引用
   const onElementClickRef = useRef(onElementClick);
   const onErrorRef = useRef(onError);
+  const onRouteChangeRef = useRef(onRouteChange);
   const onStatusChangeRef = useRef(onStatusChange);
   const compileRunRef = useRef(0);
   const htmlUrlRef = useRef<string | null>(null);
@@ -75,7 +106,9 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
   
   onElementClickRef.current = onElementClick;
   onErrorRef.current = onError;
+  onRouteChangeRef.current = onRouteChange;
   onStatusChangeRef.current = onStatusChange;
+  previewPathRef.current = normalizePreviewPath(previewPath);
 
   const publishStatus = useCallback((next: Partial<PreviewStatus> = {}) => {
     const nextStatus: PreviewStatus = {
@@ -150,7 +183,7 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
       throw new Error(`Entry file ${entry} not found`);
     }
 
-    const html = htmlGenerator.current.generatePreviewHTML(entryUrl, depsInfo, dependencyStyles);
+    const html = htmlGenerator.current.generatePreviewHTML(entryUrl, depsInfo, dependencyStyles, previewPathRef.current);
     const htmlBlob = new Blob([html], { type: 'text/html' });
     const htmlUrl = URL.createObjectURL(htmlBlob);
 
@@ -291,6 +324,13 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
           return;
         }
 
+        if (event.data.type === 'route-change') {
+          const data = event.data.data || {};
+          const routeState = toRouteState(data);
+          onRouteChangeRef.current?.(routeState);
+          return;
+        }
+
         if (event.data.type === 'resource-error') {
           logger.warn('资源加载失败:', event.data.data);
           return;
@@ -305,6 +345,18 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, [isInspecting, publishStatus]);
+
+  useEffect(() => {
+    const normalizedPath = normalizePreviewPath(previewPath);
+    previewPathRef.current = normalizedPath;
+
+    if (iframeRef.current?.contentWindow) {
+      iframeRef.current.contentWindow.postMessage({
+        type: 'navigate-preview',
+        path: normalizedPath
+      }, '*');
+    }
+  }, [previewPath]);
 
   // 监听检查模式变化，同步到 iframe
   useEffect(() => {
@@ -359,6 +411,7 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
   if (
     prevProps.onError !== nextProps.onError ||
     prevProps.onElementClick !== nextProps.onElementClick ||
+    prevProps.onRouteChange !== nextProps.onRouteChange ||
     prevProps.onStatusChange !== nextProps.onStatusChange
   ) {
     return false;
@@ -370,6 +423,7 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
     entryFile: prevProps.entryFile,
     depsInfo: createDepsHash(prevProps.depsInfo || {}),
     dependencyStyles: createStylesHash(prevProps.dependencyStyles || {}),
+    previewPath: normalizePreviewPath(prevProps.previewPath),
     compileDelay: prevProps.compileDelay
   });
   
@@ -378,6 +432,7 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
     entryFile: nextProps.entryFile,
     depsInfo: createDepsHash(nextProps.depsInfo || {}),
     dependencyStyles: createStylesHash(nextProps.dependencyStyles || {}),
+    previewPath: normalizePreviewPath(nextProps.previewPath),
     compileDelay: nextProps.compileDelay
   });
   
