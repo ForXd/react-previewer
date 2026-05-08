@@ -1,9 +1,5 @@
-// utils/HTMLGenerator.ts
 import { COMPONENT_LIBRARY_STYLE, TRANSFORM_OPTIONS } from '../constant';
 import { generateDynamicDependencyLoader, transformDepsToEsmLinks, generateImportMapScript } from '../DependencyResolver';
-// import { createModuleLogger } from './Logger';
-
-// const logger = createModuleLogger('HTMLGenerator');
 
 export class HTMLGenerator {
   private cache = new Map<string, {
@@ -197,13 +193,11 @@ export class HTMLGenerator {
       
       // 监听依赖就绪事件
       window.addEventListener('dependencies-ready', () => {
-        console.log('依赖就绪，开始渲染应用');
         renderApp();
       });
       
       // 如果没有依赖加载器或没有依赖，直接渲染
       if (typeof dynamicDependencyLoader === 'undefined' || dynamicDependencyLoader.totalCount === 0) {
-        console.log('无依赖需要加载，直接渲染应用');
         renderApp();
       }
       
@@ -265,7 +259,6 @@ export class HTMLGenerator {
 
       function addInspectStyles() {
         const elements = document.querySelectorAll('[data-pipo-line][data-pipo-column][data-pipo-end-line][data-pipo-end-column][data-pipo-file]');
-        console.log('Found elements with data attributes:', elements.length);
         elements.forEach(el => {
           if (isInspecting) {
             el.classList.add('inspect-clickable');
@@ -297,10 +290,8 @@ export class HTMLGenerator {
       }
 
       window.addEventListener('message', (event) => {
-        console.log('iframe received message:', event.data);
         if (event.data.type === 'toggle-inspect') {
           isInspecting = event.data.enabled;
-          console.log('Setting inspect mode to:', isInspecting);
           document.body.classList.toggle('inspect-mode', isInspecting);
           
           if (!isInspecting && currentHighlight) {

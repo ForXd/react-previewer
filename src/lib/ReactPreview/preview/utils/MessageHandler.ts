@@ -1,11 +1,10 @@
-// utils/MessageHandler.ts (修复版本)
 import type { MessageData, ErrorInfo } from '../types';
 import { ErrorHandler } from './ErrorHandler';
 import { createModuleLogger } from './Logger';
 
 const logger = createModuleLogger('MessageHandler');
 
-interface ElementClickData {
+export interface ElementClickData {
   file: string;
   startLine: number;
   endLine: number;
@@ -67,9 +66,6 @@ export class MessageHandler {
         case 'console-log':
           this.handleConsoleLog(data as unknown as ConsoleLogData);
           break;
-        case 'toggle-inspect':
-          this.handleToggleInspect(data as Record<string, unknown>);
-          break;
         case 'dependency-error':
           this.handleDependencyError(data as unknown as DependencyErrorData);
           break;
@@ -127,15 +123,6 @@ export class MessageHandler {
       }
     } catch (error) {
       logger.error('Error handling console log:', error);
-    }
-  }
-
-  private handleToggleInspect(data: Record<string, unknown>): void {
-    try {
-      // 处理检查模式切换
-      logger.debug('Toggle inspect mode:', data);
-    } catch (error) {
-      logger.error('Error handling toggle inspect:', error);
     }
   }
 
