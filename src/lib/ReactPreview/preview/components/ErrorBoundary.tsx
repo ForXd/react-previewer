@@ -29,14 +29,14 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return this.props.fallback || (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-          <h3 className="text-red-800 font-semibold mb-2">组件渲染错误</h3>
-          <p className="text-red-600 text-sm">
+        <div className="rounded-lg bg-white p-4 shadow-[0_0_0_1px_rgba(255,91,79,0.24),0_2px_2px_rgba(0,0,0,0.04)]">
+          <h3 className="mb-2 text-sm font-semibold text-[#c73a31]">组件渲染错误</h3>
+          <p className="text-sm text-[#4d4d4d]">
             {this.state.error?.message || '未知错误'}
           </p>
           <button
             onClick={() => this.setState({ hasError: false, error: undefined })}
-            className="mt-2 px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+            className="mt-3 rounded-md bg-[#171717] px-3 py-1.5 text-sm font-medium text-white hover:bg-black"
           >
             重试
           </button>

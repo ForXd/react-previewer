@@ -265,31 +265,31 @@ const App: React.FC = () => {
   const [count, setCount] = useState(0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
+    <div className="min-h-screen bg-white p-8 text-[#171717]">
       <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h1 className="text-3xl font-bold text-gray-800 mb-4">
+        <div className="mb-6 rounded-lg bg-white p-6 shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_2px_2px_rgba(0,0,0,0.04)]">
+          <h1 className="mb-4 text-3xl font-semibold text-[#171717]">
             Tailwind CSS + Arco Design 测试
           </h1>
-          <p className="text-gray-600 mb-4">
+          <p className="mb-4 text-[#666666]">
             这个 demo 展示了 Tailwind CSS 和远程 CSS 导入的功能
           </p>
           
           <div className="flex items-center space-x-4">
             <button 
               onClick={() => setCount(count - 1)}
-              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+              className="rounded-md bg-white px-4 py-2 text-[#c73a31] shadow-[0_0_0_1px_rgba(255,91,79,0.22)] transition-colors hover:bg-[#fff7f6]"
             >
               减少
             </button>
             
-            <span className="text-2xl font-bold text-blue-600 px-4 py-2 bg-blue-100 rounded">
+            <span className="rounded-md bg-[#fafafa] px-4 py-2 text-2xl font-semibold text-[#171717] shadow-[0_0_0_1px_#ebebeb]">
               {count}
             </span>
             
             <button 
               onClick={() => setCount(count + 1)}
-              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+              className="rounded-md bg-[#171717] px-4 py-2 text-white transition-colors hover:bg-black"
             >
               增加
             </button>
@@ -297,19 +297,19 @@ const App: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">卡片 1</h3>
-            <p className="text-gray-600">这是一个使用 Tailwind CSS 样式的卡片</p>
+          <div className="rounded-lg bg-white p-6 shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_2px_2px_rgba(0,0,0,0.04)] transition-shadow hover:shadow-[0_0_0_1px_rgba(0,0,0,0.12),0_4px_8px_rgba(0,0,0,0.06)]">
+            <h3 className="mb-2 text-lg font-semibold text-[#171717]">卡片 1</h3>
+            <p className="text-[#666666]">这是一个使用 Tailwind CSS 样式的卡片</p>
           </div>
           
-          <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">卡片 2</h3>
-            <p className="text-gray-600">响应式网格布局</p>
+          <div className="rounded-lg bg-white p-6 shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_2px_2px_rgba(0,0,0,0.04)] transition-shadow hover:shadow-[0_0_0_1px_rgba(0,0,0,0.12),0_4px_8px_rgba(0,0,0,0.06)]">
+            <h3 className="mb-2 text-lg font-semibold text-[#171717]">卡片 2</h3>
+            <p className="text-[#666666]">响应式网格布局</p>
           </div>
           
-          <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">卡片 3</h3>
-            <p className="text-gray-600">悬停效果和过渡动画</p>
+          <div className="rounded-lg bg-white p-6 shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_2px_2px_rgba(0,0,0,0.04)] transition-shadow hover:shadow-[0_0_0_1px_rgba(0,0,0,0.12),0_4px_8px_rgba(0,0,0,0.06)]">
+            <h3 className="mb-2 text-lg font-semibold text-[#171717]">卡片 3</h3>
+            <p className="text-[#666666]">悬停效果和过渡动画</p>
           </div>
         </div>
       </div>
@@ -328,22 +328,22 @@ import React from 'react';
 
 const App: React.FC = () => {
 return (
-  <div className="p-8 bg-gradient-to-r from-blue-500 to-purple-600 min-h-screen">
-    <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-6">
-      <h1 className="text-2xl font-bold text-gray-800 mb-4">
+  <div className="min-h-screen bg-white p-8 text-[#171717]">
+    <div className="mx-auto max-w-md rounded-lg bg-white p-6 shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_2px_2px_rgba(0,0,0,0.04)]">
+      <h1 className="mb-4 text-2xl font-semibold text-[#171717]">
         检查模式测试
       </h1>
-      <p className="text-gray-600 mb-4">
+      <p className="mb-4 text-[#666666]">
         点击检查按钮，然后刷新 iframe，检查模式应该会自动恢复。
       </p>
       <div className="space-y-3">
-        <button className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors">
+        <button className="w-full rounded-md bg-[#171717] px-4 py-2 text-white transition-colors hover:bg-black">
           按钮 1
         </button>
-        <button className="w-full bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors">
+        <button className="w-full rounded-md bg-white px-4 py-2 text-[#171717] shadow-[0_0_0_1px_#ebebeb] transition-colors hover:bg-[#fafafa]">
           按钮 2
         </button>
-        <button className="w-full bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors">
+        <button className="w-full rounded-md bg-[#fff7f6] px-4 py-2 text-[#c73a31] shadow-[0_0_0_1px_rgba(255,91,79,0.22)] transition-colors hover:bg-[#fff1f0]">
           按钮 3
         </button>
       </div>
@@ -460,55 +460,55 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="p-8 bg-gradient-to-r from-red-50 to-orange-50 min-h-screen">
+    <div className="min-h-screen bg-white p-8 text-[#171717]">
       <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h1 className="text-3xl font-bold text-gray-800 mb-4">
+        <div className="mb-6 rounded-lg bg-white p-6 shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_2px_2px_rgba(0,0,0,0.04)]">
+          <h1 className="mb-4 text-3xl font-semibold text-[#171717]">
             运行时错误测试
           </h1>
-          <p className="text-gray-600 mb-6">
+          <p className="mb-6 text-[#666666]">
             点击下面的按钮来测试不同类型的运行时错误捕获功能
           </p>
           
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             <button 
               onClick={handleEventError}
-              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+              className="rounded-md bg-[#fff7f6] px-4 py-2 text-[#c73a31] shadow-[0_0_0_1px_rgba(255,91,79,0.22)] transition-colors hover:bg-[#fff1f0]"
             >
               事件错误
             </button>
             
             <button 
               onClick={handleReferenceError}
-              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+              className="rounded-md bg-[#fff7f6] px-4 py-2 text-[#c73a31] shadow-[0_0_0_1px_rgba(255,91,79,0.22)] transition-colors hover:bg-[#fff1f0]"
             >
               引用错误
             </button>
             
             <button 
               onClick={handleTypeError}
-              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+              className="rounded-md bg-[#fff7f6] px-4 py-2 text-[#c73a31] shadow-[0_0_0_1px_rgba(255,91,79,0.22)] transition-colors hover:bg-[#fff1f0]"
             >
               类型错误
             </button>
             
             <button 
               onClick={handleSyntaxError}
-              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+              className="rounded-md bg-[#fff7f6] px-4 py-2 text-[#c73a31] shadow-[0_0_0_1px_rgba(255,91,79,0.22)] transition-colors hover:bg-[#fff1f0]"
             >
               语法错误
             </button>
             
             <button 
               onClick={handleNetworkError}
-              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+              className="rounded-md bg-[#fff7f6] px-4 py-2 text-[#c73a31] shadow-[0_0_0_1px_rgba(255,91,79,0.22)] transition-colors hover:bg-[#fff1f0]"
             >
               网络错误
             </button>
             
             <button 
               onClick={handleCustomError}
-              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+              className="rounded-md bg-[#fff7f6] px-4 py-2 text-[#c73a31] shadow-[0_0_0_1px_rgba(255,91,79,0.22)] transition-colors hover:bg-[#fff1f0]"
             >
               自定义错误
             </button>
@@ -518,14 +518,14 @@ const App: React.FC = () => {
                 setErrorType('async');
                 setShouldThrow(true);
               }}
-              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+              className="rounded-md bg-[#fff7f6] px-4 py-2 text-[#c73a31] shadow-[0_0_0_1px_rgba(255,91,79,0.22)] transition-colors hover:bg-[#fff1f0]"
             >
               异步错误
             </button>
             
             <button 
               onClick={handleStateError}
-              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+              className="rounded-md bg-[#fff7f6] px-4 py-2 text-[#c73a31] shadow-[0_0_0_1px_rgba(255,91,79,0.22)] transition-colors hover:bg-[#fff1f0]"
             >
               状态错误
             </button>
@@ -535,21 +535,21 @@ const App: React.FC = () => {
                 setErrorType('render');
                 setShouldThrow(true);
               }}
-              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+              className="rounded-md bg-[#fff7f6] px-4 py-2 text-[#c73a31] shadow-[0_0_0_1px_rgba(255,91,79,0.22)] transition-colors hover:bg-[#fff1f0]"
             >
               渲染错误
             </button>
             
             <button 
               onClick={handleRecursionError}
-              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+              className="rounded-md bg-[#fff7f6] px-4 py-2 text-[#c73a31] shadow-[0_0_0_1px_rgba(255,91,79,0.22)] transition-colors hover:bg-[#fff1f0]"
             >
               递归错误
             </button>
             
             <button 
               onClick={handleMemoryError}
-              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+              className="rounded-md bg-[#fff7f6] px-4 py-2 text-[#c73a31] shadow-[0_0_0_1px_rgba(255,91,79,0.22)] transition-colors hover:bg-[#fff1f0]"
             >
               内存错误
             </button>
@@ -559,22 +559,22 @@ const App: React.FC = () => {
                 setShouldThrow(false);
                 setErrorType('none');
               }}
-              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+              className="rounded-md bg-[#171717] px-4 py-2 text-white transition-colors hover:bg-black"
             >
               重置状态
             </button>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">当前状态</h3>
+        <div className="rounded-lg bg-white p-6 shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_2px_2px_rgba(0,0,0,0.04)]">
+          <h3 className="mb-4 text-lg font-semibold text-[#171717]">当前状态</h3>
           <div className="space-y-2 text-sm">
             <p><span className="font-medium">错误类型:</span> {errorType}</p>
             <p><span className="font-medium">是否抛出错误:</span> {shouldThrow ? '是' : '否'}</p>
           </div>
           
-          <div className="mt-4 p-4 bg-gray-50 rounded">
-            <h4 className="font-medium text-gray-700 mb-2">错误组件测试区域:</h4>
+          <div className="mt-4 rounded-md bg-[#fafafa] p-4 shadow-[0_0_0_1px_#ebebeb]">
+            <h4 className="mb-2 font-medium text-[#4d4d4d]">错误组件测试区域:</h4>
             <ErrorComponent />
           </div>
         </div>

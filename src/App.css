@@ -2,5 +2,31 @@
   min-height: 100vh;
 }
 
+html {
+  color: #171717;
+  background: #ffffff;
+  font-family: Geist, Arial, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+  font-feature-settings: "liga";
+}
+
+body {
+  margin: 0;
+  background: #ffffff;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid hsl(212 100% 48%);
+  outline-offset: 2px;
+}
 
 @import "tailwindcss";

@@ -30,13 +30,13 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ error, files }) => {
   }, [error, files]);
 
   return (
-    <div className="mx-4 my-3 bg-red-50 border border-red-200 rounded-lg overflow-hidden shadow-sm">
-      <div className="px-4 py-3 bg-red-100 border-b border-red-200">
+    <div className="mx-4 my-3 overflow-hidden rounded-lg bg-white shadow-[0_0_0_1px_rgba(255,91,79,0.22),0_2px_2px_rgba(0,0,0,0.04)]">
+      <div className="border-b border-[#ffe1de] bg-[#fff7f6] px-4 py-3">
         <div className="flex items-center">
-          <svg className="w-5 h-5 text-red-600 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="mr-2 h-5 w-5 flex-shrink-0 text-[#ff5b4f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <h3 className="text-red-800 font-semibold text-sm">
+          <h3 className="text-sm font-semibold text-[#c73a31]">
             {error.type === 'compile' ? '编译错误' : '运行时错误'}
           </h3>
         </div>
@@ -44,9 +44,9 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ error, files }) => {
       
       <div className="p-4 space-y-4">
         <div>
-          <div className="text-sm font-medium text-gray-700 mb-2">错误信息:</div>
-          <div className="bg-white border border-red-200 rounded-md p-3">
-            <pre className="text-xs text-red-700 whitespace-pre-wrap font-mono leading-relaxed">
+          <div className="mb-2 text-sm font-medium text-[#4d4d4d]">错误信息:</div>
+          <div className="rounded-md bg-[#fff7f6] p-3 shadow-[0_0_0_1px_rgba(255,91,79,0.18)]">
+            <pre className="whitespace-pre-wrap font-mono text-xs leading-relaxed text-[#c73a31]">
               {error.message}
             </pre>
           </div>
@@ -55,21 +55,21 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ error, files }) => {
         {/* 源码片段展示 */}
         {error.type === 'compile' && error.codeFrame ? (
           <div>
-            <div className="text-xs text-gray-500 mb-1">{error.fileName}{typeof error.lineNumber === 'number' ? ` (第${error.lineNumber}行)` : ''}</div>
-            <pre className="bg-[#23272e] text-xs text-gray-100 rounded-md p-3 overflow-auto border border-gray-700 font-mono leading-6 whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: error.codeFrame }} />
+            <div className="mb-1 text-xs text-[#666666]">{error.fileName}{typeof error.lineNumber === 'number' ? ` (第${error.lineNumber}行)` : ''}</div>
+            <pre className="overflow-auto rounded-md bg-[#171717] p-3 font-mono text-xs leading-6 whitespace-pre-wrap text-[#fafafa] shadow-[0_0_0_1px_rgba(0,0,0,0.08)]" dangerouslySetInnerHTML={{ __html: error.codeFrame }} />
           </div>
         ) : error.type === 'compile' && error.fileName && typeof error.lineNumber === 'number' && codeLines.length > 0 && (
           <div>
-            <div className="text-xs text-gray-500 mb-1">{error.fileName} (第{error.lineNumber}行)</div>
-            <div className="flex bg-[#23272e] rounded-md overflow-auto border border-gray-700">
-              <div className="py-2 px-2 text-right select-none bg-[#20232a] text-gray-500 border-r border-gray-700">
+            <div className="mb-1 text-xs text-[#666666]">{error.fileName} (第{error.lineNumber}行)</div>
+            <div className="flex overflow-auto rounded-md bg-[#171717] shadow-[0_0_0_1px_rgba(0,0,0,0.08)]">
+              <div className="select-none border-r border-white/10 bg-black px-2 py-2 text-right text-[#808080]">
                 {codeLines.map((_, i) => (
-                  <div key={i} className={`leading-6 h-6 ${i === errorLine ? 'text-red-400 font-bold' : ''}`}>{(error.lineNumber ?? 0) - (errorLine ?? 0) + i}</div>
+                  <div key={i} className={`h-6 leading-6 ${i === errorLine ? 'font-semibold text-[#ff5b4f]' : ''}`}>{(error.lineNumber ?? 0) - (errorLine ?? 0) + i}</div>
                 ))}
               </div>
-              <pre className="py-2 px-3 m-0 whitespace-pre leading-6 text-xs bg-transparent font-mono min-w-[60px]">
+              <pre className="m-0 min-w-[60px] bg-transparent px-3 py-2 font-mono text-xs leading-6 whitespace-pre text-[#fafafa]">
                 {codeLines.map((line, i) => (
-                  <div key={i} className={i === errorLine ? 'bg-red-900/40 text-red-200 rounded' : ''}>{line}</div>
+                  <div key={i} className={i === errorLine ? 'rounded bg-[#ff5b4f]/20 text-[#ffd4d1]' : ''}>{line}</div>
                 ))}
               </pre>
             </div>
@@ -78,13 +78,13 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ error, files }) => {
         
         {error.fileName && (
           <div className="flex items-center text-sm">
-            <svg className="w-4 h-4 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="mr-2 h-4 w-4 text-[#666666]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            <span className="text-gray-700">
+            <span className="text-[#4d4d4d]">
               <span className="font-medium">文件:</span> {error.fileName}
               {error.lineNumber && (
-                <span className="text-gray-500 ml-2">
+                <span className="ml-2 text-[#666666]">
                   行: {error.lineNumber}, 列: {error.columnNumber}
                 </span>
               )}
@@ -96,7 +96,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ error, files }) => {
           <div>
             <button
               onClick={() => setIsStackExpanded(!isStackExpanded)}
-              className="flex items-center text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
+              className="flex items-center text-sm font-medium text-[#4d4d4d] transition-colors hover:text-[#171717]"
             >
               <svg 
                 className={`w-4 h-4 mr-2 transition-transform ${isStackExpanded ? 'rotate-90' : ''}`}
@@ -110,8 +110,8 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ error, files }) => {
             </button>
             
             {isStackExpanded && (
-              <div className="mt-2 bg-gray-900 border border-gray-300 rounded-md p-3 max-h-64 overflow-auto">
-                <pre className="text-xs text-green-400 font-mono leading-relaxed whitespace-pre-wrap">
+              <div className="mt-2 max-h-64 overflow-auto rounded-md bg-[#171717] p-3 shadow-[0_0_0_1px_rgba(0,0,0,0.08)]">
+                <pre className="font-mono text-xs leading-relaxed whitespace-pre-wrap text-[#fafafa]">
                   {error.stack}
                 </pre>
               </div>
