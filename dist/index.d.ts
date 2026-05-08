@@ -1,5 +1,5 @@
 export { ReactPreviewer } from './preview/ReactPreviewer';
-export type { ReactPreviewerProps, PreviewStatus, PreviewPhase, PreviewViewport, ErrorInfo, SourceInfo, MessageData, TransformedFile } from './preview/types';
+export type { ReactPreviewerProps, PreviewStatus, PreviewPhase, PreviewViewport, PreviewRouteState, ErrorInfo, SourceInfo, MessageData, TransformedFile } from './preview/types';
 export type { TransformOptions, FileSystem, DependencyNode, FileProcessor, ASTProcessor, DependencyAnalyzer } from './compiler/types';
 export { logger, createModuleLogger } from './preview/utils/Logger';
 export type { LoggerConfig } from './preview/utils/Logger';
