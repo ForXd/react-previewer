@@ -200,7 +200,7 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
     const html = htmlGenerator.current.generatePreviewHTML(entryUrl, depsInfo, dependencyStyles, previewPathRef.current);
     pendingHtmlRef.current = html;
 
-    const previewUrl = createPreviewDocumentUrl(previewPathRef.current);
+    const previewUrl = createPreviewDocumentUrl();
     if (iframeRef.current.src !== previewUrl) {
       iframeRef.current.src = previewUrl;
       return;
@@ -473,12 +473,4 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
   return false; // false 表示 props 不相等，需要重新渲染
 }); 
 
-const createPreviewDocumentUrl = (path: string): string => {
-  const routePath = normalizePreviewPath(path);
-
-  try {
-    return new URL(routePath, window.location.origin).href;
-  } catch {
-    return routePath;
-  }
-};
+const createPreviewDocumentUrl = (): string => 'about:blank';
