@@ -845,6 +845,138 @@ export default SimpleReactDemo;`,
   "deps.json": "{}"
 };
 
+export const routingDemo = {
+  "App.tsx": `import React from 'react';
+import {
+  BrowserRouter,
+  Link,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams
+} from 'react-router-dom';
+
+const products = [
+  { id: 'alpha', name: 'Alpha Console', status: 'In review' },
+  { id: 'bravo', name: 'Bravo Studio', status: 'Live' },
+  { id: 'charlie', name: 'Charlie Desk', status: 'Draft' }
+];
+
+function Shell() {
+  const location = useLocation();
+
+  return (
+    <div style={{ minHeight: '100%', background: '#f7f8fb', color: '#171717', fontFamily: 'Inter, system-ui, sans-serif' }}>
+      <nav style={{ display: 'flex', gap: 8, padding: 16, borderBottom: '1px solid #e5e7eb', background: '#fff' }}>
+        <Link to="/products?tab=list" style={linkStyle}>Products</Link>
+        <Link to="/products/alpha?tab=activity" style={linkStyle}>Alpha</Link>
+        <Link to="/products/bravo?tab=settings" style={linkStyle}>Bravo</Link>
+      </nav>
+      <main style={{ padding: 24 }}>
+        <div style={{ marginBottom: 16, borderRadius: 6, background: '#111827', color: '#fff', padding: '10px 12px', fontFamily: 'monospace' }}>
+          {location.pathname}{location.search}{location.hash}
+        </div>
+        <Routes>
+          <Route path="/" element={<Navigate to="/products?tab=list" replace />} />
+          <Route path="/products" element={<ProductList />} />
+          <Route path="/products/:id" element={<ProductDetail />} />
+        </Routes>
+      </main>
+    </div>
+  );
+}
+
+function ProductList() {
+  return (
+    <section>
+      <h1 style={{ margin: '0 0 12px', fontSize: 24 }}>Products</h1>
+      <div style={{ display: 'grid', gap: 12 }}>
+        {products.map((item) => (
+          <Link key={item.id} to={\`/products/\${item.id}?tab=activity#summary\`} style={cardStyle}>
+            <strong>{item.name}</strong>
+            <span style={{ color: '#64748b' }}>{item.status}</span>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ProductDetail() {
+  const { id } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const product = products.find((item) => item.id === id);
+  const tab = searchParams.get('tab') || 'activity';
+
+  if (!product) {
+    return <Navigate to="/products?tab=list" replace />;
+  }
+
+  return (
+    <section>
+      <button onClick={() => navigate('/products?tab=list')} style={buttonStyle}>Back</button>
+      <h1 style={{ margin: '16px 0 6px', fontSize: 24 }}>{product.name}</h1>
+      <p style={{ marginTop: 0, color: '#64748b' }}>Route param: <strong>{id}</strong></p>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        {['activity', 'settings', 'metrics'].map((nextTab) => (
+          <button
+            key={nextTab}
+            onClick={() => setSearchParams({ tab: nextTab })}
+            style={{ ...buttonStyle, background: tab === nextTab ? '#111827' : '#fff', color: tab === nextTab ? '#fff' : '#111827' }}
+          >
+            {nextTab}
+          </button>
+        ))}
+      </div>
+      <div style={{ borderRadius: 6, background: '#fff', padding: 20, boxShadow: '0 0 0 1px #e5e7eb' }}>
+        Current query tab: <strong>{tab}</strong>
+      </div>
+    </section>
+  );
+}
+
+const linkStyle = {
+  borderRadius: 6,
+  padding: '8px 10px',
+  textDecoration: 'none',
+  color: '#111827',
+  boxShadow: '0 0 0 1px #e5e7eb'
+};
+
+const cardStyle = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  borderRadius: 6,
+  background: '#fff',
+  padding: 16,
+  textDecoration: 'none',
+  color: '#111827',
+  boxShadow: '0 0 0 1px #e5e7eb'
+};
+
+const buttonStyle = {
+  border: '1px solid #d1d5db',
+  borderRadius: 6,
+  background: '#fff',
+  color: '#111827',
+  padding: '8px 10px',
+  cursor: 'pointer'
+};
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Shell />
+    </BrowserRouter>
+  );
+}`,
+  "deps.json": "{\"react-router-dom\":\"6.30.1\"}"
+};
+
 // 统一的 demo 配置 map
 export const demoMap = {
   demo1: {
@@ -905,6 +1037,12 @@ export const demoMap = {
     name: '简单 React 组件测试',
     description: '测试简单 React 组件的功能',
     files: simpleReactDemo,
+    entryFile: 'App.tsx'
+  },
+  routingDemo: {
+    name: '路由同步测试',
+    description: '测试 BrowserRouter 路径、参数、查询和 hash 的同步显示',
+    files: routingDemo,
     entryFile: 'App.tsx'
   }
 };
