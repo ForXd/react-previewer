@@ -1,4 +1,3 @@
-// ReactPreviewer.tsx (重构后的版本)
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import type { PreviewStatus, PreviewViewport, ReactPreviewerProps } from './types';
 import { PreviewFrame } from './components/PreviewFrame';
@@ -54,15 +53,18 @@ export const ReactPreviewer: React.FC<ReactPreviewerProps> = ({
   }, [loggerConfig]);
 
   const handleToggleInspect = useCallback(() => {
-    setIsInspecting(prev => !prev);
-    logger.debug('Inspect mode toggled:', !isInspecting);
-  }, [isInspecting]);
+    setIsInspecting((prev) => {
+      logger.debug('Inspect mode toggled:', !prev);
+      return !prev;
+    });
+  }, []);
 
   const handleRecompile = useCallback(() => {
-    // 通过改变 key 来强制 PreviewFrame 重新渲染
-    setRecompileKey(prev => prev + 1);
-    logger.info('Forcing recompile with new key:', recompileKey + 1);
-  }, [recompileKey]);
+    setRecompileKey((prev) => {
+      logger.info('Forcing recompile with new key:', prev + 1);
+      return prev + 1;
+    });
+  }, []);
 
   const handleStatusChange = useCallback((nextStatus: PreviewStatus) => {
     setStatus(nextStatus);
@@ -123,7 +125,7 @@ export const ReactPreviewer: React.FC<ReactPreviewerProps> = ({
             </div>
             <div className="min-h-0 flex-1 bg-white">
               <PreviewFrame
-                key={recompileKey} // 使用 key 来强制重新渲染
+                key={recompileKey}
                 files={files}
                 entryFile={entryFile}
                 depsInfo={depsInfo}

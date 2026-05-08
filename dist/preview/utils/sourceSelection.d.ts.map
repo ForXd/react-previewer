@@ -1,0 +1,1 @@
+{"version":3,"file":"sourceSelection.d.ts","sourceRoot":"","sources":["../../../src/lib/ReactPreview/preview/utils/sourceSelection.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,UAAU,EAAE,MAAM,UAAU,CAAC;AAC3C,OAAO,KAAK,EAAE,gBAAgB,EAAE,MAAM,kBAAkB,CAAC;AAoCzD,eAAO,MAAM,gBAAgB,GAC3B,MAAM,gBAAgB,EACtB,OAAO,MAAM,CAAC,MAAM,EAAE,MAAM,CAAC,KAC5B,UAAU,GAAG,IAwBf,CAAC"}

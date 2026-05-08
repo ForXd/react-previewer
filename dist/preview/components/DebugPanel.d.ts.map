@@ -1,0 +1,1 @@
+{"version":3,"file":"DebugPanel.d.ts","sourceRoot":"","sources":["../../../src/lib/ReactPreview/preview/components/DebugPanel.tsx"],"names":[],"mappings":"AACA,OAAO,KAAK,MAAM,OAAO,CAAC;AAC1B,OAAO,KAAK,EAAE,UAAU,EAAE,MAAM,UAAU,CAAC;AAE3C,UAAU,eAAe;IACvB,UAAU,EAAE,UAAU,GAAG,IAAI,CAAC;IAC9B,YAAY,EAAE,OAAO,CAAC;CACvB;AAED,eAAO,MAAM,UAAU,EAAE,KAAK,CAAC,EAAE,CAAC,eAAe,CAYhD,CAAC"}

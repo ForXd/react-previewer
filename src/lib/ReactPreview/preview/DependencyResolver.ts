@@ -144,47 +144,6 @@ function transformDepsToEsmLinks(
 }
 
 /**
- * 生成 React 项目的 ESM 依赖配置
- * @param depsInfo 依赖信息
- * @returns 转换结果
- */
-function generateReactEsmConfig(depsInfo: DepsInfo): TransformResult {
-  // React 项目的特殊处理
-  const reactExternal = ['react', 'react-dom'];
-  
-  return transformDepsToEsmLinks(depsInfo, {
-    target: 'es2022',
-    dev: true, // 开启 dev 模式
-    external: reactExternal
-  });
-}
-
-/**
- * 批量处理多个依赖配置
- * @param configs 多个依赖配置
- * @returns 合并后的转换结果
- */
-function batchTransformDeps(
-  configs: Array<{ deps: DepsInfo; options?: EsmOptions }>
-): TransformResult {
-  const allDependencies: Record<string, string> = {};
-  const allImports: Record<string, string> = {};
-
-  configs.forEach(({ deps, options }) => {
-    const result = transformDepsToEsmLinks(deps, options);
-    Object.assign(allDependencies, result.dependencies);
-    Object.assign(allImports, result.importMap.imports);
-  });
-
-  return {
-    dependencies: allDependencies,
-    importMap: {
-      imports: allImports
-    }
-  };
-}
-
-/**
  * 生成 HTML 中的 import map 脚本标签
  * @param importMap 导入映射
  * @returns HTML 脚本标签字符串
@@ -320,10 +279,8 @@ function generateDynamicDependencyLoader(
         
         if (loadTime < cacheThreshold) {
           dynamicDependencyLoader.setDependencyStatus(name, 'cached');
-          console.log(\`✅ 依赖 \${name} 命中缓存 (\${loadTime}ms)\`);
         } else {
           dynamicDependencyLoader.setDependencyStatus(name, 'loaded');
-          console.log(\`✅ 依赖 \${name} 加载成功 (\${loadTime}ms)\`);
         }
         
       } catch (error) {
@@ -460,7 +417,6 @@ function generateDynamicDependencyLoader(
         preloadTailwind()
       ]
     ).then(() => {
-      console.log('所有依赖加载完成');
       window.dispatchEvent(new CustomEvent('dependencies-ready'));
     }).catch(error => {
       console.error('依赖加载过程中出现错误:', error);
@@ -472,8 +428,6 @@ function generateDynamicDependencyLoader(
 // 导出主要函数
 export {
   transformDepsToEsmLinks,
-  generateReactEsmConfig,
-  batchTransformDeps,
   generateImportMapScript,
   generateDynamicDependencyLoader,
   parsePackagePath,

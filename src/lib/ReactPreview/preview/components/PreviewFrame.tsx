@@ -1,4 +1,3 @@
-// components/PreviewFrame.tsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { ErrorInfo, PreviewStatus, SourceInfo } from '../types';
 import { FileProcessor } from '../utils/FileProcessor';
@@ -6,7 +5,11 @@ import { ErrorHandler } from '../utils/ErrorHandler';
 import { HTMLGenerator } from '../utils/HTMLGenerator';
 import { MessageHandler } from '../utils/MessageHandler';
 import { LoadingOverlay } from './LoadingOverlay';
+import { ErrorDisplay } from './ErrorDisplay';
 import { createModuleLogger } from '../utils/Logger';
+import { createDepsHash, createFilesHash, createStylesHash } from '../utils/contentHash';
+import { createSourceInfo } from '../utils/sourceSelection';
+import type { ElementClickData } from '../utils/MessageHandler';
 
 const logger = createModuleLogger('PreviewFrame');
 
@@ -18,48 +21,9 @@ export interface PreviewFrameProps {
   onError?: (error: Error) => void;
   onElementClick?: (sourceInfo: SourceInfo) => void;
   isInspecting?: boolean;
-  onInspectToggle?: (enabled: boolean) => void;
   onStatusChange?: (status: PreviewStatus) => void;
   compileDelay?: number;
-  key?: string | number;
 }
-
-// 创建文件内容的哈希值用于比较
-const createFilesHash = (files: Record<string, string>) => {
-  let hash = 2166136261;
-  const update = (value: string) => {
-    for (let i = 0; i < value.length; i += 1) {
-      hash ^= value.charCodeAt(i);
-      hash = Math.imul(hash, 16777619);
-    }
-  };
-
-  Object.keys(files).sort().forEach((fileName) => {
-    update(fileName);
-    update('\0');
-    update(files[fileName] ?? '');
-    update('\0');
-  });
-
-  return hash.toString(36);
-};
-
-const createDepsHash = (depsInfo: Record<string, string> = {}) =>
-  Object.keys(depsInfo)
-    .sort()
-    .map((key) => `${key}@${depsInfo[key]}`)
-    .join('|');
-
-const createStylesHash = (dependencyStyles: Record<string, string | string[]> = {}) =>
-  Object.keys(dependencyStyles)
-    .sort()
-    .map((key) => {
-      const value = dependencyStyles[key];
-      return `${key}:${Array.isArray(value) ? value.join(',') : value}`;
-    })
-    .join('|');
-
-const createErrorInfo = (error: ErrorInfo | null): PreviewStatus['error'] => error;
 
 const createInitialStatus = (): PreviewStatus => ({
   isLoading: true,
@@ -81,18 +45,11 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
   onError,
   onElementClick,
   isInspecting = false,
-  onInspectToggle,
   onStatusChange,
   compileDelay = 120
 }) => {
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [errorDetails, setErrorDetails] = useState<{
-    fileName?: string;
-    lineNumber?: number;
-    columnNumber?: number;
-    codeFrame?: string;
-  } | null>(null);
+  const [errorInfo, setErrorInfo] = useState<ErrorInfo | null>(null);
   const [frameStatus, setFrameStatus] = useState<PreviewStatus>(() => createInitialStatus());
   
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -110,7 +67,6 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
   // 使用 useRef 稳定回调函数的引用
   const onElementClickRef = useRef(onElementClick);
   const onErrorRef = useRef(onError);
-  const onInspectToggleRef = useRef(onInspectToggle);
   const onStatusChangeRef = useRef(onStatusChange);
   const compileRunRef = useRef(0);
   const htmlUrlRef = useRef<string | null>(null);
@@ -119,14 +75,13 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
   
   onElementClickRef.current = onElementClick;
   onErrorRef.current = onError;
-  onInspectToggleRef.current = onInspectToggle;
   onStatusChangeRef.current = onStatusChange;
 
   const publishStatus = useCallback((next: Partial<PreviewStatus> = {}) => {
     const nextStatus: PreviewStatus = {
       isLoading,
       phase: isLoading ? 'compiling' : 'idle',
-      error: createErrorInfo(error ? { type: 'compile', message: error, ...errorDetails } : null),
+      error: errorInfo,
       compileDuration: compileDurationRef.current,
       transformedFiles: transformedCountRef.current,
       resourceTotal: 0,
@@ -137,17 +92,9 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
 
     setFrameStatus(nextStatus);
     onStatusChangeRef.current?.(nextStatus);
-  }, [error, errorDetails, isLoading]);
+  }, [errorInfo, isLoading]);
 
-  const handleElementClick = useCallback((data: { 
-    file: string; 
-    startLine: number;  
-    endLine: number; 
-    startColumn: number; 
-    endColumn: number; 
-    x: number; 
-    y: number 
-  }) => {
+  const handleElementClick = useCallback((data: ElementClickData) => {
     try {
       logger.debug('Element clicked:', data, 'isInspecting:', isInspecting);
       
@@ -161,73 +108,15 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
         return;
       }
 
-      const fileContent = files[data.file];
-      if (!fileContent) {
+      const sourceInfo = createSourceInfo(data, files);
+      if (!sourceInfo) {
         logger.warn('File content not found for:', data.file);
         return;
       }
 
-      logger.debug('Processing file content for:', data.file);
-      const lines = fileContent.split('\n');
+      logger.debug('Resolved source info:', sourceInfo);
       
-      // 边界检查：确保行号在有效范围内
-      const maxLine = lines.length;
-      const startLine = Math.max(1, Math.min(data.startLine, maxLine));
-      const endLine = Math.max(1, Math.min(data.endLine, maxLine));
-      
-      logger.debug(`Line range: ${startLine}-${endLine}, max lines: ${maxLine}`);
-      
-      let textStr = '';
-      if (startLine === endLine) {
-        // 单行
-        const line = lines[startLine - 1];
-        if (line) {
-          const maxColumn = line.length;
-          const startColumn = Math.max(0, Math.min(data.startColumn, maxColumn));
-          const endColumn = Math.max(startColumn, Math.min(data.endColumn, maxColumn));
-          textStr = line.slice(startColumn, endColumn);
-        }
-      } else {
-        // 多行
-        for (let i = startLine - 1; i < endLine; i++) {
-          const line = lines[i];
-          if (line) {
-            if (i === startLine - 1) {
-              // 第一行：从 startColumn 开始
-              const maxColumn = line.length;
-              const startColumn = Math.max(0, Math.min(data.startColumn, maxColumn));
-              textStr += line.slice(startColumn) + '\n';
-            } else if (i === endLine - 1) {
-              // 最后一行：到 endColumn 结束
-              const maxColumn = line.length;
-              const endColumn = Math.max(0, Math.min(data.endColumn, maxColumn));
-              textStr += line.slice(0, endColumn);
-            } else {
-              // 中间行：完整行
-              textStr += line + '\n';
-            }
-          }
-        }
-      }
-
-      logger.debug("text Str is: ", textStr);
-
-      const newSourceInfo: SourceInfo = {
-        file: data.file,
-        startLine: startLine,
-        endLine: endLine,
-        startColumn: data.startColumn,
-        endColumn: data.endColumn,
-        content: textStr,
-        position: { x: data.x, y: data.y }
-      };
-
-      logger.debug('Setting source info:', newSourceInfo);
-      
-      // 调用外部回调函数，透传源代码位置信息
-      if (onElementClickRef.current) {
-        onElementClickRef.current(newSourceInfo);
-      }
+      onElementClickRef.current?.(sourceInfo);
     } catch (error) {
       logger.error('Error in handleElementClick:', error);
     }
@@ -237,16 +126,8 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
   useEffect(() => {
     messageHandler.current = new MessageHandler(errorHandler.current, {
       onError: (errorInfo) => {
-        setError(errorInfo.message);
-        setErrorDetails({
-          fileName: errorInfo.fileName,
-          lineNumber: errorInfo.lineNumber,
-          columnNumber: errorInfo.columnNumber,
-          codeFrame: errorInfo.codeFrame
-        });
-        if (onErrorRef.current) {
-          onErrorRef.current(new Error(errorInfo.message));
-        }
+        setErrorInfo(errorInfo);
+        onErrorRef.current?.(new Error(errorInfo.message));
         publishStatus({
           isLoading: false,
           error: errorInfo
@@ -288,8 +169,7 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
 
     try {
       setIsLoading(true);
-      setError(null);
-      setErrorDetails(null);
+      setErrorInfo(null);
       publishStatus({
         isLoading: true,
         phase: 'compiling',
@@ -299,7 +179,6 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
       await fileProcessor.current.initialize();
       const fileUrls = await fileProcessor.current.processFiles(files, depsInfo);
       if (compileId !== compileRunRef.current) return;
-      logger.debug('processFiles=======')
       // fileUrls: Map<fileName, blobUrl>
       errorHandler.current.setBlobToFileMap(fileUrls);
       transformedCountRef.current = fileUrls.size;
@@ -317,16 +196,8 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
       const compileError = errorHandler.current.processCompileError(
         err instanceof Error ? err : new Error('Unknown error')
       );
-      setError(compileError.message);
-      setErrorDetails({
-        fileName: compileError.fileName,
-        lineNumber: compileError.lineNumber,
-        columnNumber: compileError.columnNumber,
-        codeFrame: compileError.codeFrame
-      });
-      if (onErrorRef.current) {
-        onErrorRef.current(err instanceof Error ? err : new Error('Unknown error'));
-      }
+      setErrorInfo(compileError);
+      onErrorRef.current?.(err instanceof Error ? err : new Error('Unknown error'));
       setIsLoading(false);
       publishStatus({
         isLoading: false,
@@ -462,36 +333,9 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
     <div className="relative w-full h-full">
       {isLoading && <LoadingOverlay status={frameStatus} />}
       
-      {error && (
-        <div className="absolute inset-0 bg-red-50 border border-red-200 rounded-lg p-4 overflow-auto">
-          <div className="text-red-800 font-medium mb-2">编译错误:</div>
-          
-          {/* 错误位置信息 */}
-          {errorDetails?.fileName && (
-            <div className="text-red-700 text-sm mb-2">
-              <span className="font-medium">文件:</span> {errorDetails.fileName}
-              {errorDetails.lineNumber && (
-                <span className="ml-4">
-                  <span className="font-medium">行:</span> {errorDetails.lineNumber}
-                  {errorDetails.columnNumber && (
-                    <span className="ml-2">
-                      <span className="font-medium">列:</span> {errorDetails.columnNumber}
-                    </span>
-                  )}
-                </span>
-              )}
-            </div>
-          )}
-          
-          {/* 错误消息 */}
-          <div className="text-red-600 text-sm whitespace-pre-wrap mb-3">{error}</div>
-          
-          {/* 代码框架 */}
-          {errorDetails?.codeFrame && (
-            <div className="bg-gray-100 p-3 rounded border text-xs font-mono overflow-x-auto">
-              <pre className="text-gray-800 whitespace-pre">{errorDetails.codeFrame}</pre>
-            </div>
-          )}
+      {errorInfo && (
+        <div className="absolute inset-0 z-10 overflow-auto bg-white">
+          <ErrorDisplay error={errorInfo} files={files} />
         </div>
       )}
 
@@ -515,7 +359,6 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
   if (
     prevProps.onError !== nextProps.onError ||
     prevProps.onElementClick !== nextProps.onElementClick ||
-    prevProps.onInspectToggle !== nextProps.onInspectToggle ||
     prevProps.onStatusChange !== nextProps.onStatusChange
   ) {
     return false;
