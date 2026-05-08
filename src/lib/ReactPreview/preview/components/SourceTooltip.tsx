@@ -90,13 +90,13 @@ export const SourceTooltip: React.FC<SourceTooltipProps> = ({ sourceInfo, contai
       {/* 源码浮窗 */}
       <div
         ref={tooltipRef}
-        className="fixed bg-gray-800 text-gray-200 p-4 rounded-lg text-xs font-mono shadow-2xl z-[10001] max-w-[500px] max-h-[300px] border border-gray-600 overflow-auto pointer-events-auto"
+        className="pointer-events-auto fixed z-[10001] max-h-[300px] max-w-[500px] overflow-auto rounded-lg bg-white p-4 font-mono text-xs text-[#171717] shadow-[0_0_0_1px_rgba(0,0,0,0.08),0_2px_2px_rgba(0,0,0,0.04),0_8px_8px_-8px_rgba(0,0,0,0.04)]"
         style={{ left: `${left}px`, top: `${top}px` }}
         onClick={handleTooltipClick}
       >
         {/* 头部 */}
-        <div className="flex justify-between items-center mb-3 pb-2 border-b border-gray-600">
-          <div className="font-bold text-blue-300 text-sm">
+        <div className="mb-3 flex items-center justify-between border-b border-[#ebebeb] pb-2">
+          <div className="text-sm font-semibold text-[#0070f3]">
             {sourceInfo.file}:{sourceInfo.startLine}-{sourceInfo.endLine}
           </div>
           <button
@@ -104,7 +104,7 @@ export const SourceTooltip: React.FC<SourceTooltipProps> = ({ sourceInfo, contai
               e.stopPropagation();
               onClose();
             }}
-            className="bg-transparent border-none text-gray-400 cursor-pointer text-base p-0 w-5 h-5 flex items-center justify-center hover:text-white transition-colors"
+            className="flex h-5 w-5 cursor-pointer items-center justify-center rounded bg-transparent p-0 text-base text-[#666666] transition-colors hover:bg-[#fafafa] hover:text-[#171717]"
             title="关闭"
           >
             ×
@@ -112,15 +112,15 @@ export const SourceTooltip: React.FC<SourceTooltipProps> = ({ sourceInfo, contai
         </div>
         
         {/* 代码内容 */}
-        <div className="flex bg-[#23272e] rounded-md overflow-auto border border-gray-700">
+        <div className="flex overflow-auto rounded-md bg-[#171717] shadow-[0_0_0_1px_rgba(0,0,0,0.08)]">
           {/* 行号列 */}
-          <div className="py-2 px-2 text-right select-none bg-[#20232a] text-gray-500 border-r border-gray-700">
+          <div className="select-none border-r border-white/10 bg-black px-2 py-2 text-right text-[#808080]">
             {Array.from({ length: sourceInfo.endLine - sourceInfo.startLine + 1 }, (_, i) => (
               <div key={i} className="leading-6 h-6">{sourceInfo.startLine + i}</div>
             ))}
           </div>
           {/* 代码内容列 */}
-          <pre className="py-2 px-3 m-0 whitespace-pre leading-6 text-xs text-gray-100 bg-transparent font-mono min-w-[60px]">
+          <pre className="m-0 min-w-[60px] bg-transparent px-3 py-2 font-mono text-xs leading-6 whitespace-pre text-[#fafafa]">
             {sourceInfo.content}
           </pre>
         </div>

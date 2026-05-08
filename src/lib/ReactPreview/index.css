@@ -1,1 +1,18 @@
 @import "tailwindcss";
+
+.react-previewer,
+.react-previewer button,
+.react-previewer input,
+.react-previewer select,
+.react-previewer textarea {
+  font-family: Geist, Arial, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+  font-feature-settings: "liga";
+}
+
+.react-previewer button:focus-visible,
+.react-previewer input:focus-visible,
+.react-previewer select:focus-visible,
+.react-previewer textarea:focus-visible {
+  outline: 2px solid hsl(212 100% 48%);
+  outline-offset: 2px;
+}
