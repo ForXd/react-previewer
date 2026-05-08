@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import type { ErrorInfo, PreviewRouteState, PreviewStatus, SourceInfo } from '../types';
 import { FileProcessor } from '../utils/FileProcessor';
 import { ErrorHandler } from '../utils/ErrorHandler';
@@ -191,8 +191,6 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
   }, []);
 
   const renderPreview = useCallback((fileUrls: Map<string, string>, entry: string) => {
-    if (!iframeRef.current) return;
-
     const entryUrl = fileUrls.get(entry);
     if (!entryUrl) {
       throw new Error(`Entry file ${entry} not found`);
@@ -202,6 +200,10 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
     pendingHtmlRef.current = html;
     setFrameVersion((version) => version + 1);
   }, [depsInfo, dependencyStyles]);
+
+  useLayoutEffect(() => {
+    writePendingPreviewHtml();
+  }, [frameVersion, writePendingPreviewHtml]);
 
   // 创建一个内部函数来处理文件，可以访问最新的 props
   const processFilesInternal = useCallback(async (runId?: number) => {
@@ -401,7 +403,6 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
         key={frameVersion}
         ref={iframeRef}
         title="React preview"
-        onLoad={writePendingPreviewHtml}
         className={`w-full h-full border-none transition-opacity duration-200 ${
           isLoading ? 'opacity-50' : 'opacity-100'
         }`}
