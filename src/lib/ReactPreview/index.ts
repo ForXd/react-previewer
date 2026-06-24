@@ -14,6 +14,16 @@ export type {
   TransformedFile
 } from './preview/types';
 
+export type {
+  PreviewCompiler,
+  PreviewCompilerConfig,
+  PreviewCompilerLike,
+  PreviewCompilerType,
+  PreviewCompileInput,
+  PreviewCompileResult,
+  RspackBrowserCompileOptions
+} from './preview/compilers';
+
 // 编译器相关导出
 export type {
   TransformOptions,
@@ -65,3 +75,4 @@ export * from './preview/utils/ErrorHandler';
 export * from './preview/utils/FileProcessor';
 export * from './preview/utils/HTMLGenerator';
 export * from './preview/utils/MessageHandler'; 
+export { createPreviewCompiler } from './preview/compilers';

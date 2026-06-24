@@ -1,4 +1,5 @@
 import { LoggerConfig } from './utils/Logger';
+import { PreviewCompilerLike } from './compilers/types';
 export interface ReactPreviewerProps {
     files: Record<string, string>;
     depsInfo?: Record<string, string>;
@@ -15,6 +16,7 @@ export interface ReactPreviewerProps {
     defaultViewport?: PreviewViewport;
     defaultZoom?: number;
     onStatusChange?: (status: PreviewStatus) => void;
+    compiler?: PreviewCompilerLike;
 }
 export interface PreviewViewport {
     label: string;

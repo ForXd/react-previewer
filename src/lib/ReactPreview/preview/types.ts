@@ -1,5 +1,6 @@
 // types.ts
 import type { LoggerConfig } from './utils/Logger';
+import type { PreviewCompilerLike } from './compilers/types';
 
 export interface ReactPreviewerProps {
   files: Record<string, string>;
@@ -17,6 +18,7 @@ export interface ReactPreviewerProps {
   defaultViewport?: PreviewViewport;
   defaultZoom?: number;
   onStatusChange?: (status: PreviewStatus) => void;
+  compiler?: PreviewCompilerLike;
 }
 
 export interface PreviewViewport {

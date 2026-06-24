@@ -10,6 +10,7 @@ import { createModuleLogger } from '../utils/Logger';
 import { createDepsHash, createFilesHash, createStylesHash } from '../utils/contentHash';
 import { createSourceInfo } from '../utils/sourceSelection';
 import type { ElementClickData } from '../utils/MessageHandler';
+import { getPreviewCompilerConfigKey, type PreviewCompilerLike } from '../compilers/types';
 
 const logger = createModuleLogger('PreviewFrame');
 
@@ -25,6 +26,7 @@ export interface PreviewFrameProps {
   isInspecting?: boolean;
   onStatusChange?: (status: PreviewStatus) => void;
   compileDelay?: number;
+  compiler?: PreviewCompilerLike;
 }
 
 const createInitialStatus = (): PreviewStatus => ({
@@ -75,7 +77,8 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
   onRouteChange,
   isInspecting = false,
   onStatusChange,
-  compileDelay = 120
+  compileDelay = 120,
+  compiler
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [errorInfo, setErrorInfo] = useState<ErrorInfo | null>(null);
@@ -93,6 +96,7 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
   const currentEntryFileRef = useRef<string>('');
   const currentDepsInfoRef = useRef<string>('');
   const currentDependencyStylesRef = useRef<string>('');
+  const currentCompilerRef = useRef<string>('');
   const previewPathRef = useRef(normalizePreviewPath(previewPath));
   
   // 使用 useRef 稳定回调函数的引用
@@ -220,13 +224,15 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
         error: null
       });
 
+      await fileProcessor.current.configure(compiler);
       await fileProcessor.current.initialize();
-      const fileUrls = await fileProcessor.current.processFiles(files, depsInfo);
+      const result = await fileProcessor.current.processFiles(files, depsInfo, entryFile);
       if (compileId !== compileRunRef.current) return;
+      const fileUrls = result.fileUrls;
       // fileUrls: Map<fileName, blobUrl>
       errorHandler.current.setBlobToFileMap(fileUrls);
-      transformedCountRef.current = fileUrls.size;
-      renderPreview(fileUrls, entryFile);
+      transformedCountRef.current = result.transformedFiles;
+      renderPreview(fileUrls, result.entryFile);
       compileDurationRef.current = Math.round(performance.now() - startedAt);
       publishStatus({
         isLoading: true,
@@ -249,25 +255,28 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
         error: compileError
       });
     }
-  }, [files, depsInfo, entryFile, publishStatus, renderPreview]);
+  }, [files, depsInfo, entryFile, compiler, publishStatus, renderPreview]);
 
   // 检查文件内容是否真正改变
   useEffect(() => {
     const filesHash = createFilesHash(files);
     const depsInfoKey = createDepsHash(depsInfo);
     const dependencyStylesKey = createStylesHash(dependencyStyles);
+    const compilerKey = getPreviewCompilerConfigKey(compiler);
     
     const newFilesHash = filesHash;
     const newEntryFile = entryFile;
     const newDepsInfoKey = depsInfoKey;
     const newDependencyStylesKey = dependencyStylesKey;
+    const newCompilerKey = compilerKey;
     
     // 只有当文件内容真正改变时才重新处理
     if (
       currentFilesRef.current !== newFilesHash ||
       currentEntryFileRef.current !== newEntryFile ||
       currentDepsInfoRef.current !== newDepsInfoKey ||
-      currentDependencyStylesRef.current !== newDependencyStylesKey
+      currentDependencyStylesRef.current !== newDependencyStylesKey ||
+      currentCompilerRef.current !== newCompilerKey
     ) {
       logger.debug('PreviewFrame: File content changed, reprocessing files');
       logger.debug('Files hash changed:', {
@@ -282,12 +291,13 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
         currentEntryFileRef.current = newEntryFile;
         currentDepsInfoRef.current = newDepsInfoKey;
         currentDependencyStylesRef.current = newDependencyStylesKey;
+        currentCompilerRef.current = newCompilerKey;
         processFilesInternal(scheduledRun);
       }, Math.max(0, compileDelay));
 
       return () => window.clearTimeout(timer);
     }
-  }, [files, entryFile, depsInfo, dependencyStyles, processFilesInternal, compileDelay]);
+  }, [files, entryFile, depsInfo, dependencyStyles, compiler, processFilesInternal, compileDelay]);
 
   // 监听iframe内的消息
   useEffect(() => {
@@ -385,7 +395,7 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
     return () => {
       compileRunRef.current += 1;
       pendingHtmlRef.current = null;
-      processor.cleanup();
+      processor.dispose();
     };
   }, []);
 
@@ -421,7 +431,8 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
     prevProps.onError !== nextProps.onError ||
     prevProps.onElementClick !== nextProps.onElementClick ||
     prevProps.onRouteChange !== nextProps.onRouteChange ||
-    prevProps.onStatusChange !== nextProps.onStatusChange
+    prevProps.onStatusChange !== nextProps.onStatusChange ||
+    prevProps.compiler !== nextProps.compiler
   ) {
     return false;
   }
@@ -433,7 +444,8 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
     depsInfo: createDepsHash(prevProps.depsInfo || {}),
     dependencyStyles: createStylesHash(prevProps.dependencyStyles || {}),
     previewPath: normalizePreviewPath(prevProps.previewPath),
-    compileDelay: prevProps.compileDelay
+    compileDelay: prevProps.compileDelay,
+    compiler: getPreviewCompilerConfigKey(prevProps.compiler)
   });
   
   const nextKey = JSON.stringify({
@@ -442,7 +454,8 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
     depsInfo: createDepsHash(nextProps.depsInfo || {}),
     dependencyStyles: createStylesHash(nextProps.dependencyStyles || {}),
     previewPath: normalizePreviewPath(nextProps.previewPath),
-    compileDelay: nextProps.compileDelay
+    compileDelay: nextProps.compileDelay,
+    compiler: getPreviewCompilerConfigKey(nextProps.compiler)
   });
   
   // 如果关键 props 没有改变，返回 true 表示不需要重新渲染

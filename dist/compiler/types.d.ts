@@ -4,6 +4,7 @@ export interface TransformOptions {
     files?: Record<string, string>;
     depsInfo?: Record<string, string>;
     fileUrls?: Map<string, string>;
+    importResolution?: 'blob-url' | 'preserve';
 }
 export type FileSystem = Record<string, string>;
 export interface DependencyNode {

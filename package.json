@@ -13,6 +13,9 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
+    "./rspack-browser-worker": {
+      "import": "./dist/rspack-browser-worker.js"
+    },
     "./styles.css": "./dist/styles.css"
   },
   "files": [
@@ -24,6 +27,7 @@
     "build": "npm run build:lib",
     "build:page": "tsc -b && vite build",
     "build:lib": "vite build --config vite.lib.config.ts && npx @tailwindcss/cli -i src/lib/ReactPreview/index.css -o dist/styles.css --config tailwind.config.js",
+    "test": "vitest run",
     "lint": "eslint .",
     "preview": "vite preview",
     "prepublishOnly": "npm run build:lib"
@@ -50,7 +54,9 @@
   "dependencies": {
     "@babel/parser": "^7.27.5",
     "@babel/standalone": "^7.27.6",
-    "@babel/types": "^7.27.5"
+    "@babel/types": "^7.27.5",
+    "@rspack/browser": "^2.0.8",
+    "@swc/helpers": "^0.5.23"
   },
   "peerDependencies": {
     "react": "^18.2.0",
@@ -58,6 +64,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",
+    "@tailwindcss/cli": "^4.3.1",
     "@tailwindcss/postcss": "^4.1.10",
     "@tailwindcss/vite": "^4.2.4",
     "@types/babel__standalone": "^7.1.9",
@@ -74,6 +81,7 @@
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.30.1",
     "vite": "^8.0.10",
-    "vite-plugin-dts": "^4.5.4"
+    "vite-plugin-dts": "^4.5.4",
+    "vitest": "^4.1.9"
   }
 }

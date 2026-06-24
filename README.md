@@ -130,6 +130,7 @@ interface ReactPreviewerProps {
   defaultViewport?: PreviewViewport;
   defaultZoom?: number;
   onStatusChange?: (status: PreviewStatus) => void;
+  compiler?: PreviewCompilerConfig | 'babel' | 'rspack-browser';
 }
 ```
 
@@ -145,8 +146,31 @@ interface ReactPreviewerProps {
 | `defaultViewport` | Auto | 初始预览尺寸 |
 | `defaultZoom` | `1` | 初始缩放比例 |
 | `onStatusChange` | - | 编译和资源加载状态回调 |
+| `compiler` | `'babel'` | 编译后端。传入 `'rspack-browser'` 或 `{ type: 'rspack-browser' }` 后使用 `@rspack/browser` 在 Web Worker 中编译预览。 |
 | `onElementClick` | - | 检查模式下点击元素后的源码位置信息 |
 | `onRouteChange` | - | iframe 内路由变化回调，包含 pathname、search、hash 和 href |
+
+### Rspack Browser 编译
+
+```tsx
+<ReactPreviewer
+  files={files}
+  entryFile="App.tsx"
+  compiler={{
+    type: 'rspack-browser',
+    rspack: {
+      cdnDomain: 'https://esm.sh'
+    }
+  }}
+/>
+```
+
+`@rspack/browser` 使用 `SharedArrayBuffer`，预览页面所在服务需要设置跨域隔离响应头：
+
+```text
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Embedder-Policy: require-corp
+```
 
 ```ts
 interface PreviewRouteState {

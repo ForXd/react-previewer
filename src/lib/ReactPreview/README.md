@@ -5,6 +5,7 @@
 - `ReactPreviewer`：管理工具栏、可编辑预览地址、视口、缩放、检查模式和整体状态。
 - `PreviewFrame`：管理 iframe、编译调度、路由状态同步、资源状态消息和错误展示。
 - `CodeTransformer`：构建依赖图，转换 TSX/JSX，并注入源码定位属性。
+- `preview/compilers`：封装默认 Babel 编译后端和可选 `@rspack/browser` Web Worker 编译后端。
 - `HTMLGenerator`：生成 iframe HTML、import map、资源加载 runtime 和预览启动脚本。
 - `DependencyResolver`：把 `depsInfo` 转为 ESM CDN URL，并生成 JS/CSS/Tailwind 资源队列。
 
@@ -21,6 +22,7 @@
 
 ```bash
 npm run lint
+npm test
 npm run build:lib
 npm run dev
 ```
