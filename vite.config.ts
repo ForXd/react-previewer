@@ -16,6 +16,9 @@ export default defineConfig(({ command }) => ({
   preview: {
     headers: crossOriginIsolationHeaders,
   },
+  worker: {
+    format: 'es',
+  },
   build: {
     outDir: 'page',
   },

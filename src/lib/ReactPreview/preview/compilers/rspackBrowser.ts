@@ -1,4 +1,3 @@
-import { CodeTransformer } from '../../compiler/CodeTransformer';
 import { DEFAULT_DEPENDENCIES, TRANSFORM_OPTIONS } from '../constant';
 import { transformDepsToEsmLinks } from '../DependencyResolver';
 import type {
@@ -47,6 +46,10 @@ export interface RspackBrowserProjectResult {
   outputFileName: string;
   output: string;
   transformedFiles: number;
+}
+
+interface RspackAssetInfo {
+  name: string;
 }
 
 type RspackWorkerResponse =
@@ -174,23 +177,17 @@ export async function compileRspackBrowserProject(
 ): Promise<RspackBrowserProjectResult> {
   const rspackModule = rspackBrowserModule ?? await loadRspackBrowserModule();
   const outputFileName = options.outputFileName ?? DEFAULT_OUTPUT_FILE;
-  const transformer = new CodeTransformer();
-  await transformer.initialize();
-
-  const transformedFiles = await transformer.transformFileContents(
-    input.files,
-    input.depsInfo,
-    { importResolution: 'preserve' }
-  );
-  const projectFiles = createProjectFiles(input.files, transformedFiles);
+  const projectFiles = createProjectFiles(input.files);
   const volume = rspackModule.builtinMemFs.volume;
   volume.reset?.();
   volume.fromJSON(projectFiles, '/');
 
   const config = createRspackBrowserConfig(input, options, rspackModule);
+  let compilationStats: RspackStats | undefined;
 
   await new Promise<void>((resolve, reject) => {
     rspackModule.rspack(config, (error, stats) => {
+      compilationStats = stats;
       if (error) {
         reject(error);
         return;
@@ -207,11 +204,12 @@ export async function compileRspackBrowserProject(
 
   const output = volume.readFileSync(`/dist/${outputFileName}`, 'utf-8');
   const outputText = typeof output === 'string' ? output : new TextDecoder().decode(output);
+  const cssRuntime = createCssInjectionRuntime(volume, compilationStats);
 
   return {
     outputFileName,
-    output: outputText,
-    transformedFiles: transformedFiles.size
+    output: `${cssRuntime}${outputText}`,
+    transformedFiles: Object.keys(input.files).length
   };
 }
 
@@ -221,7 +219,7 @@ export function createRspackBrowserConfig(
   rspackBrowserModule?: Pick<RspackBrowserModule, 'BrowserHttpImportEsmPlugin'>
 ): RspackConfig {
   const outputFileName = options.outputFileName ?? DEFAULT_OUTPUT_FILE;
-  const allDeps = { ...DEFAULT_DEPENDENCIES, ...input.depsInfo };
+  const allDeps = getRspackDependencies(input.depsInfo);
   const externalRequests = new Set(Object.keys(allDeps));
   const dependencyLinks = transformDepsToEsmLinks(allDeps, TRANSFORM_OPTIONS).dependencies;
 
@@ -265,6 +263,36 @@ export function createRspackBrowserConfig(
     resolve: {
       extensions: ['.tsx', '.ts', '.jsx', '.js', '.json', '.css']
     },
+    module: {
+      rules: [
+        {
+          test: /\.[cm]?[jt]sx?$/,
+          use: [
+            {
+              loader: 'builtin:swc-loader',
+              options: {
+                jsc: {
+                  parser: {
+                    syntax: 'typescript',
+                    tsx: true
+                  },
+                  transform: {
+                    react: {
+                      runtime: 'automatic',
+                      development: false
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          test: /\.css$/,
+          type: 'css/auto'
+        }
+      ]
+    },
     externalsType: 'module',
     externals: [externalizeKnownDependencies],
     optimization: {
@@ -282,18 +310,55 @@ export function createRspackBrowserConfig(
 }
 
 function createProjectFiles(
-  files: Record<string, string>,
-  transformedFiles: Map<string, string>
+  files: Record<string, string>
 ): Record<string, string> {
   const projectFiles: Record<string, string> = {
     '/package.json': JSON.stringify({ type: 'module' })
   };
 
   for (const [fileName, content] of Object.entries(files)) {
-    projectFiles[toProjectPath(fileName)] = transformedFiles.get(fileName) ?? content;
+    projectFiles[toProjectPath(fileName)] = content;
   }
 
   return projectFiles;
+}
+
+function getRspackDependencies(depsInfo: Record<string, string>): Record<string, string> {
+  return {
+    ...DEFAULT_DEPENDENCIES,
+    'react-dom/client': DEFAULT_DEPENDENCIES['react-dom'],
+    'react/jsx-runtime': DEFAULT_DEPENDENCIES.react,
+    'react/jsx-dev-runtime': DEFAULT_DEPENDENCIES.react,
+    ...depsInfo
+  };
+}
+
+function createCssInjectionRuntime(volume: RspackBrowserVolume, stats?: RspackStats): string {
+  const cssAssets = getRspackAssetNames(stats)
+    .filter((assetName) => assetName.endsWith('.css'));
+
+  if (cssAssets.length === 0) {
+    return '';
+  }
+
+  const injections = cssAssets.map((assetName) => {
+    const content = volume.readFileSync(`/dist/${assetName}`, 'utf-8');
+    const cssText = typeof content === 'string' ? content : new TextDecoder().decode(content);
+    return `await window.__reactPreviewInjectStyle(${JSON.stringify(assetName)}, ${JSON.stringify(cssText)});`;
+  });
+
+  return `${injections.join('\n')}\n`;
+}
+
+function getRspackAssetNames(stats?: RspackStats): string[] {
+  const json = stats?.toJson?.({ assets: true });
+  if (!isStatsJsonWithAssets(json)) {
+    return [];
+  }
+
+  return json.assets
+    .map((asset) => asset.name)
+    .filter((name): name is string => typeof name === 'string');
 }
 
 function createRspackBrowserPlugins(
@@ -360,6 +425,14 @@ function isStatsJsonWithErrors(value: unknown): value is { errors: Array<{ messa
     typeof value === 'object' &&
     value !== null &&
     Array.isArray((value as { errors?: unknown }).errors)
+  );
+}
+
+function isStatsJsonWithAssets(value: unknown): value is { assets: RspackAssetInfo[] } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    Array.isArray((value as { assets?: unknown }).assets)
   );
 }
 

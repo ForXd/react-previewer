@@ -43,45 +43,6 @@ export class CodeTransformer {
     return await this.processFilesInOrder(files, processingOrder, depsInfo);
   }
 
-  async transformFileContents(
-    files: FileSystem,
-    depsInfo: Record<string, string>,
-    options: Pick<TransformOptions, 'importResolution'> = {}
-  ): Promise<Map<string, string>> {
-    if (!this.initialized) {
-      throw new Error('CodeTransformer not initialized');
-    }
-
-    const dependencyGraph = await this.dependencyGraphBuilder.build(files);
-    const processingOrder = dependencyGraph.getProcessingOrder();
-    const transformedFiles = new Map<string, string>();
-
-    for (const fileName of processingOrder) {
-      const fileContent = files[fileName];
-      if (!fileContent) {
-        logger.warn(`File not found: ${fileName}`);
-        continue;
-      }
-
-      const transformOptions: TransformOptions = {
-        filename: fileName,
-        files,
-        depsInfo,
-        fileUrls: new Map(),
-        importResolution: options.importResolution
-      };
-
-      const processedContent = await this.fileProcessorManager.processFile(
-        fileContent,
-        fileName,
-        transformOptions
-      );
-      transformedFiles.set(fileName, processedContent);
-    }
-
-    return transformedFiles;
-  }
-
   private async processFilesInOrder(
     files: FileSystem,
     processingOrder: string[],

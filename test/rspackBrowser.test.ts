@@ -61,6 +61,30 @@ describe('rspack browser compiler support', () => {
       outputModule: true,
       buildHttp: { allowedUris: ['https://'] }
     });
+    expect(config.module).toMatchObject({
+      rules: [
+        expect.objectContaining({
+          use: [
+            expect.objectContaining({
+              loader: 'builtin:swc-loader',
+              options: expect.objectContaining({
+                jsc: expect.objectContaining({
+                  transform: expect.objectContaining({
+                    react: expect.objectContaining({
+                      runtime: 'automatic',
+                      development: false
+                    })
+                  })
+                })
+              })
+            })
+          ]
+        }),
+        expect.objectContaining({
+          type: 'css/auto'
+        })
+      ]
+    });
 
     const externals = config.externals as Array<(
       context: { request?: string },
@@ -72,10 +96,15 @@ describe('rspack browser compiler support', () => {
     });
 
     expect(callbackArgs).toEqual([null, 'antd', 'module']);
+    externals[0]?.({ request: 'react/jsx-dev-runtime' }, (error, result, type) => {
+      callbackArgs = [error, result, type];
+    });
+
+    expect(callbackArgs).toEqual([null, 'react/jsx-dev-runtime', 'module']);
     expect(config.plugins).toHaveLength(1);
   });
 
-  it('preserves local imports, converts CSS imports, and returns rspack output', async () => {
+  it('passes raw files to rspack and inlines emitted css assets for preview', async () => {
     const volume = new FakeVolume();
     const captured: { config?: Record<string, unknown> } = {};
     const fakeRspack: RspackBrowserModule = {
@@ -84,9 +113,20 @@ describe('rspack browser compiler support', () => {
       rspack(config, callback) {
         captured.config = config;
         expect(volume.files['/src/App.tsx']).toContain("from './Button'");
-        expect(volume.files['/src/App.tsx']).toContain('__reactPreviewInjectStyle');
+        expect(volume.files['/src/App.tsx']).toContain("import './style.css'");
+        expect(volume.files['/src/App.tsx']).not.toContain('__reactPreviewInjectStyle');
+        expect(volume.files['/src/Button.tsx']).toContain('<button>Save</button>');
         volume.files['/dist/preview.js'] = 'export default function App() { return null; }';
-        callback(null, { hasErrors: () => false });
+        volume.files['/dist/preview.css'] = 'button { color: red; }';
+        callback(null, {
+          hasErrors: () => false,
+          toJson: () => ({
+            assets: [
+              { name: 'preview.js' },
+              { name: 'preview.css' }
+            ]
+          })
+        });
         return null;
       }
     };
@@ -119,7 +159,7 @@ export default function Button() {
     expect(captured.config?.entry).toBe('/src/App.tsx');
     expect(result).toEqual({
       outputFileName: 'preview.js',
-      output: 'export default function App() { return null; }',
+      output: 'await window.__reactPreviewInjectStyle("preview.css", "button { color: red; }");\nexport default function App() { return null; }',
       transformedFiles: 3
     });
   });

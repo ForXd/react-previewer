@@ -18,6 +18,8 @@ export class HTMLGenerator {
       'react': '18.2.0',
       'react-dom': '18.2.0',
       'react-dom/client': '18.2.0',
+      'react/jsx-runtime': '18.2.0',
+      'react/jsx-dev-runtime': '18.2.0',
       ...depsInfo
     };
     const styleResources = this.resolveStyleResources(allDeps, dependencyStyles);

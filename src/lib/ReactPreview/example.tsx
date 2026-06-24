@@ -113,7 +113,14 @@ const ExampleUsage: React.FC = () => {
       return {
         type: 'rspack-browser',
         rspack: {
-          cdnDomain: 'https://esm.sh'
+          cdnDomain: 'https://esm.sh',
+          workerFactory: () => new Worker(
+            new URL('./preview/compilers/rspackBrowser.worker.ts', import.meta.url),
+            {
+              type: 'module',
+              name: 'react-previewer-demo-rspack-browser'
+            }
+          )
         }
       };
     }

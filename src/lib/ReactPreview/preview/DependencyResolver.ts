@@ -243,7 +243,7 @@ function generateDynamicDependencyLoader(
     // 添加依赖列表
     const dependencyList = ${JSON.stringify(dependencyList)};
     const styleResourceList = ${JSON.stringify(styleResources)};
-    const tailwindResource = { name: 'tailwindcss', url: 'https://cdn.tailwindcss.com' };
+    const tailwindResource = { name: 'tailwindcss', url: 'https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.10' };
     const resourceList = [
       ...dependencyList,
       ...styleResourceList.map((resource) => ({
@@ -306,6 +306,17 @@ function generateDynamicDependencyLoader(
       return promise;
     };
 
+    function applyCrossOrigin(element, url) {
+      try {
+        const resourceUrl = new URL(url, window.location.href);
+        if (resourceUrl.origin !== window.location.origin) {
+          element.crossOrigin = 'anonymous';
+        }
+      } catch (error) {
+        element.crossOrigin = 'anonymous';
+      }
+    }
+
     dynamicDependencyLoader.loadStyle = async function(name, url) {
       this.ensureResource(name, url);
       if (this.styleCache.has(url)) return this.styleCache.get(url);
@@ -328,6 +339,7 @@ function generateDynamicDependencyLoader(
         }, 8000);
 
         link.rel = 'stylesheet';
+        applyCrossOrigin(link, url);
         link.href = url;
         link.setAttribute('data-react-preview-style', url);
         link.onload = () => {
@@ -388,6 +400,7 @@ function generateDynamicDependencyLoader(
           }
           const script = document.createElement('script');
           const timeout = window.setTimeout(resolve, 8000);
+          applyCrossOrigin(script, tailwindResource.url);
           script.src = tailwindResource.url;
           script.onload = () => {
             window.clearTimeout(timeout);

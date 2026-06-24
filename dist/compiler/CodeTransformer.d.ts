@@ -1,4 +1,4 @@
-import { FileSystem, TransformOptions } from './types';
+import { FileSystem } from './types';
 export declare class CodeTransformer {
     private initialized;
     private fileProcessorManager;
@@ -7,7 +7,6 @@ export declare class CodeTransformer {
     private setupProcessors;
     initialize(): Promise<void>;
     transformFiles(files: FileSystem, depsInfo: Record<string, string>): Promise<Map<string, string>>;
-    transformFileContents(files: FileSystem, depsInfo: Record<string, string>, options?: Pick<TransformOptions, 'importResolution'>): Promise<Map<string, string>>;
     private processFilesInOrder;
     private createBlobURL;
     /**

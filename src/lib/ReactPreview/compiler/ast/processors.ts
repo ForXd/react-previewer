@@ -93,10 +93,6 @@ export class ImportProcessor implements ASTProcessor {
       return;
     }
 
-    if (options.importResolution === 'preserve') {
-      return;
-    }
-
     if (moduleName.startsWith('.')) {
       // 处理相对路径导入
       const resolvedPath = resolveRelativePath(filename, moduleName);
