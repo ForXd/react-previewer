@@ -451,6 +451,9 @@
   .min-w-0 {
     min-width: 0;
   }
+  .min-w-20 {
+    min-width: calc(var(--spacing) * 20);
+  }
   .min-w-\[60px\] {
     min-width: 60px;
   }

@@ -2,13 +2,22 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
+const crossOriginIsolationHeaders = {
+  'Cross-Origin-Opener-Policy': 'same-origin',
+  'Cross-Origin-Embedder-Policy': 'require-corp',
+}
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [react(), tailwindcss()],
+  server: {
+    headers: crossOriginIsolationHeaders,
+  },
+  preview: {
+    headers: crossOriginIsolationHeaders,
+  },
   build: {
     outDir: 'page',
   },
-  // @ts-expect-error Vite config runs in Node, but this app tsconfig does not include node types.
-  base: process.env.IS_DEV ? '/' : 'https://fastly.jsdelivr.net/gh/ForXd/react-previewer@main/page'
-})
+  base: command === 'serve' ? '/' : 'https://fastly.jsdelivr.net/gh/ForXd/react-previewer@main/page'
+}))
