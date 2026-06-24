@@ -18,7 +18,8 @@ export class BabelPreviewCompiler implements PreviewCompiler {
 
     const fileUrls = await this.codeTransformer.transformFiles(
       input.files,
-      advancedResult.dependencies
+      advancedResult.dependencies,
+      { sourceAttributeNames: input.sourceAttributeNames }
     );
 
     return {

@@ -28,7 +28,11 @@ export class CodeTransformer {
     this.initialized = true;
   }
 
-  async transformFiles(files: FileSystem, depsInfo: Record<string, string>): Promise<Map<string, string>> {
+  async transformFiles(
+    files: FileSystem,
+    depsInfo: Record<string, string>,
+    options: Pick<TransformOptions, 'sourceAttributeNames'> = {}
+  ): Promise<Map<string, string>> {
     if (!this.initialized) {
       throw new Error('CodeTransformer not initialized');
     }
@@ -40,52 +44,14 @@ export class CodeTransformer {
     logger.debug('Processing order:', processingOrder);
 
     // 按依赖顺序处理文件，返回 Map<fileName, blobUrl>
-    return await this.processFilesInOrder(files, processingOrder, depsInfo);
-  }
-
-  async transformFileContents(
-    files: FileSystem,
-    depsInfo: Record<string, string>,
-    options: Pick<TransformOptions, 'importResolution'> = {}
-  ): Promise<Map<string, string>> {
-    if (!this.initialized) {
-      throw new Error('CodeTransformer not initialized');
-    }
-
-    const dependencyGraph = await this.dependencyGraphBuilder.build(files);
-    const processingOrder = dependencyGraph.getProcessingOrder();
-    const transformedFiles = new Map<string, string>();
-
-    for (const fileName of processingOrder) {
-      const fileContent = files[fileName];
-      if (!fileContent) {
-        logger.warn(`File not found: ${fileName}`);
-        continue;
-      }
-
-      const transformOptions: TransformOptions = {
-        filename: fileName,
-        files,
-        depsInfo,
-        fileUrls: new Map(),
-        importResolution: options.importResolution
-      };
-
-      const processedContent = await this.fileProcessorManager.processFile(
-        fileContent,
-        fileName,
-        transformOptions
-      );
-      transformedFiles.set(fileName, processedContent);
-    }
-
-    return transformedFiles;
+    return await this.processFilesInOrder(files, processingOrder, depsInfo, options);
   }
 
   private async processFilesInOrder(
     files: FileSystem,
     processingOrder: string[],
-    depsInfo: Record<string, string>
+    depsInfo: Record<string, string>,
+    options: Pick<TransformOptions, 'sourceAttributeNames'>
   ): Promise<Map<string, string>> {
     const fileUrls = new Map<string, string>();
 
@@ -101,7 +67,8 @@ export class CodeTransformer {
         filename: fileName,
         files: files,
         fileUrls,
-        depsInfo
+        depsInfo,
+        sourceAttributeNames: options.sourceAttributeNames
       };
 
       let processedContent: string;

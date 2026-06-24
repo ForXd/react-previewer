@@ -3,15 +3,27 @@ import { ReactPreviewer } from './preview/ReactPreviewer';
 import { SourceTooltip } from './preview/components/SourceTooltip';
 import { demoList } from './test/demo';
 import type { SourceInfo } from './preview/types';
+import type { PreviewCompilerLike } from './preview/compilers/types';
 import { createModuleLogger, type LoggerConfig } from './preview/utils/Logger';
 
 const logger = createModuleLogger('Example');
+
+type DemoCompilerMode = 'babel' | 'rspack-browser';
+
+const compilerModes: Array<{
+  value: DemoCompilerMode;
+  label: string;
+}> = [
+  { value: 'babel', label: 'Babel' },
+  { value: 'rspack-browser', label: 'Rspack' }
+];
 
 const ExampleUsage: React.FC = () => {
   const [selectedDemo, setSelectedDemo] = useState(demoList[0]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sourceInfo, setSourceInfo] = useState<SourceInfo | null>(null);
   const [editingMode, setEditingMode] = useState(false);
+  const [compilerMode, setCompilerMode] = useState<DemoCompilerMode>('babel');
   const [editedFiles, setEditedFiles] = useState<Record<string, string>>({});
   const [loggerConfig, setLoggerConfig] = useState({
     enabled: true,
@@ -95,6 +107,26 @@ const ExampleUsage: React.FC = () => {
     });
     return files;
   }, [editingMode, editedFiles, getFiles, selectedDemo.key]);
+
+  const previewCompiler = useMemo<PreviewCompilerLike>(() => {
+    if (compilerMode === 'rspack-browser') {
+      return {
+        type: 'rspack-browser',
+        rspack: {
+          cdnDomain: 'https://esm.sh',
+          workerFactory: () => new Worker(
+            new URL('./preview/compilers/rspackBrowser.worker.ts', import.meta.url),
+            {
+              type: 'module',
+              name: 'react-previewer-demo-rspack-browser'
+            }
+          )
+        }
+      };
+    }
+
+    return 'babel';
+  }, [compilerMode]);
 
   return (
     <div ref={containerRef} className="flex h-screen w-full bg-white text-[#171717]">
@@ -228,6 +260,25 @@ const ExampleUsage: React.FC = () => {
               <p className="mt-1 text-sm text-[#666666]">{selectedDemo.description}</p>
             </div>
             <div className="flex items-center gap-3">
+              <div className="flex h-9 items-center rounded-md bg-[#fafafa] p-0.5 shadow-[0_0_0_1px_#ebebeb]">
+                {compilerModes.map((mode) => (
+                  <button
+                    key={mode.value}
+                    type="button"
+                    onClick={() => setCompilerMode(mode.value)}
+                    title={`${mode.label} 编译预览`}
+                    className={`
+                      h-8 min-w-20 rounded px-3 text-xs font-medium transition-colors
+                      ${compilerMode === mode.value
+                        ? 'bg-white text-[#171717] shadow-[0_0_0_1px_rgba(0,0,0,0.08)]'
+                        : 'text-[#666666] hover:text-[#171717]'
+                      }
+                    `}
+                  >
+                    {mode.label}
+                  </button>
+                ))}
+              </div>
               <button
                 onClick={() => setEditingMode(!editingMode)}
                 className={`
@@ -291,6 +342,7 @@ const ExampleUsage: React.FC = () => {
                     entryFile={selectedDemo.entryFile}
                     onElementClick={handleElementClick}
                     loggerConfig={loggerConfig as Partial<LoggerConfig>}
+                    compiler={previewCompiler}
                   />
                 );
               })()}

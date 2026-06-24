@@ -6,8 +6,7 @@ export declare class CodeTransformer {
     constructor();
     private setupProcessors;
     initialize(): Promise<void>;
-    transformFiles(files: FileSystem, depsInfo: Record<string, string>): Promise<Map<string, string>>;
-    transformFileContents(files: FileSystem, depsInfo: Record<string, string>, options?: Pick<TransformOptions, 'importResolution'>): Promise<Map<string, string>>;
+    transformFiles(files: FileSystem, depsInfo: Record<string, string>, options?: Pick<TransformOptions, 'sourceAttributeNames'>): Promise<Map<string, string>>;
     private processFilesInOrder;
     private createBlobURL;
     /**

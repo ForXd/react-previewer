@@ -7,6 +7,7 @@ import {
   type PreviewCompileResult
 } from '../compilers';
 import { createModuleLogger } from './Logger';
+import type { SourceAttributeNameOverrides } from '../sourceAttributes';
 
 const logger = createModuleLogger('FileProcessor');
 
@@ -39,7 +40,8 @@ export class FileProcessor {
   async processFiles(
     files: Record<string, string>,
     depsInfo: Record<string, string>,
-    entryFile: string
+    entryFile: string,
+    sourceAttributeNames?: SourceAttributeNameOverrides
   ): Promise<PreviewCompileResult> {
     try {
       // 清理之前的 blob URLs
@@ -48,7 +50,8 @@ export class FileProcessor {
       const result = await this.compiler.compile({
         files,
         depsInfo,
-        entryFile
+        entryFile,
+        sourceAttributeNames
       });
 
       logger.debug('transformed', result.fileUrls);

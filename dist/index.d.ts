@@ -4,6 +4,8 @@ export type { PreviewCompiler, PreviewCompilerConfig, PreviewCompilerLike, Previ
 export type { TransformOptions, FileSystem, DependencyNode, FileProcessor, ASTProcessor, DependencyAnalyzer } from './compiler/types';
 export { logger, createModuleLogger } from './preview/utils/Logger';
 export type { LoggerConfig } from './preview/utils/Logger';
+export { DEFAULT_SOURCE_ATTRIBUTE_NAMES, createSourceAttributeKey, createSourceAttributeSelector, resolveSourceAttributeNames } from './preview/sourceAttributes';
+export type { SourceAttributeNames, SourceAttributeNameOverrides } from './preview/sourceAttributes';
 export { COMPONENT_LIBRARY_STYLE, DEFAULT_DEPENDENCIES, TRANSFORM_OPTIONS } from './preview/constant';
 export { ErrorBoundary } from './preview/components/ErrorBoundary';
 export { ErrorDisplay } from './preview/components/ErrorDisplay';

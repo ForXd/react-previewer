@@ -2,6 +2,7 @@ import type { ASTProcessor, TransformOptions } from '../types';
 import { transform } from '@babel/standalone';
 import { createJSXAttribute, hasAttribute, resolveRelativePath, getResolvedFilename } from '../utils';
 import { createModuleLogger } from '../../preview/utils/Logger';
+import { resolveSourceAttributeNames } from '../../preview/sourceAttributes';
 import type { Node } from '@babel/types';
 
 const logger = createModuleLogger('ASTProcessors');
@@ -25,51 +26,9 @@ type ExtendedNode = Node & {
 };
 
 export class JSXDebugProcessor implements ASTProcessor {
-  process(node: Node, source: string, options: TransformOptions): void {
+  process(node: Node, _: string, options: TransformOptions): void {
     if (node.type === 'JSXOpeningElement') {
-      this.processJSXOpeningElement(node as ExtendedNode, source, options);
-    }
-  }
-
-  private processJSXOpeningElement(node: ExtendedNode, _: string, options: TransformOptions): void {
-    const { filename, files } = options;
-
-    if (!node.loc) return;
-
-    const line = node.loc.start.line;
-    const column = node.loc.start.column;
-
-    if (!node.attributes) {
-      node.attributes = [];
-    }
-
-    // 添加行号
-    if (!hasAttribute(node.attributes, 'data-pipo-line')) {
-      const lineAttr = createJSXAttribute('data-pipo-line', line.toString());
-      node.attributes.push(lineAttr);
-    }
-
-    // 添加列号
-    if (!hasAttribute(node.attributes, 'data-pipo-column')) {
-      const columnAttr = createJSXAttribute('data-pipo-column', column.toString());
-      node.attributes.push(columnAttr);
-    }
-
-    if (!hasAttribute(node.attributes, 'data-pipo-end-line')) {
-      const endLineAttr = createJSXAttribute('data-pipo-end-line', node.loc.end.line.toString());
-      node.attributes.push(endLineAttr);
-    }
-
-    if (!hasAttribute(node.attributes, 'data-pipo-end-column')) {
-      const endColumnAttr = createJSXAttribute('data-pipo-end-column', node.loc.end.column.toString());
-      node.attributes.push(endColumnAttr);
-    }
-
-    // 添加文件位置
-    if (!hasAttribute(node.attributes, 'data-pipo-file') && filename) {
-      const resolvedFilename = getResolvedFilename(filename, files);
-      const fileAttr = createJSXAttribute('data-pipo-file', resolvedFilename);
-      node.attributes.push(fileAttr);
+      addJSXSourceInfoAttributes(node as ExtendedNode, options);
     }
   }
 }
@@ -90,10 +49,6 @@ export class ImportProcessor implements ASTProcessor {
     // 检查是否是 CSS 导入
     if (moduleName.endsWith('.css')) {
       this.processCSSImport(node, source, options);
-      return;
-    }
-
-    if (options.importResolution === 'preserve') {
       return;
     }
 
@@ -247,25 +202,7 @@ export class ASTProcessorManager {
               this.processNode(node, source, options);
             },
             JSXElement: (path: { node: Node }) => {
-              const node = path.node as ExtendedNode;
-              const openingElement = node.openingElement;
-              const closingElement = node.closingElement;
-              
-              if (openingElement && closingElement && openingElement.loc && closingElement.loc) {
-                if (!openingElement.attributes) {
-                  openingElement.attributes = [];
-                }
-
-                openingElement.attributes = openingElement.attributes.filter((attr) => {
-                  const attrName = attr.name?.type === 'JSXIdentifier' ? attr.name.name : '';
-                  return attrName !== 'data-pipo-end-line' && attrName !== 'data-pipo-end-column';
-                });
-
-                openingElement.attributes.push(
-                  createJSXAttribute('data-pipo-end-line', closingElement.loc.end.line.toString()),
-                  createJSXAttribute('data-pipo-end-column', closingElement.loc.end.column.toString())
-                );
-              }
+              updateJSXElementEndPosition(path.node as ExtendedNode, options.sourceAttributeNames);
             }
           }
         })
@@ -275,6 +212,104 @@ export class ASTProcessorManager {
     // 在位置信息注入后，再注入 React 导入
     const processedCode = result.code ?? '';
     return ensureReactImport(processedCode);
+  }
+}
+
+export function injectJSXSourceInfo(
+  code: string,
+  options: Pick<TransformOptions, 'filename' | 'files' | 'sourceAttributeNames'>
+): string {
+  const result = transform(code, {
+    ast: true,
+    filename: options.filename,
+    presets: [
+      ['typescript', {
+        allExtensions: true,
+        isTSX: true
+      }]
+    ],
+    plugins: [
+      () => ({
+        visitor: {
+          JSXOpeningElement: (path: { node: Node }) => {
+            addJSXSourceInfoAttributes(path.node as ExtendedNode, options);
+          },
+          JSXElement: (path: { node: Node }) => {
+            updateJSXElementEndPosition(path.node as ExtendedNode, options.sourceAttributeNames);
+          }
+        }
+      })
+    ]
+  });
+
+  return result.code ?? code;
+}
+
+function addJSXSourceInfoAttributes(
+  node: ExtendedNode,
+  options: Pick<TransformOptions, 'filename' | 'files' | 'sourceAttributeNames'>
+): void {
+  const { filename, files } = options;
+  const attributes = resolveSourceAttributeNames(options.sourceAttributeNames);
+
+  if (!node.loc) return;
+
+  const line = node.loc.start.line;
+  const column = node.loc.start.column;
+
+  if (!node.attributes) {
+    node.attributes = [];
+  }
+
+  // 添加行号
+  if (!hasAttribute(node.attributes, attributes.line)) {
+    const lineAttr = createJSXAttribute(attributes.line, line.toString());
+    node.attributes.push(lineAttr);
+  }
+
+  // 添加列号
+  if (!hasAttribute(node.attributes, attributes.column)) {
+    const columnAttr = createJSXAttribute(attributes.column, column.toString());
+    node.attributes.push(columnAttr);
+  }
+
+  if (!hasAttribute(node.attributes, attributes.endLine)) {
+    const endLineAttr = createJSXAttribute(attributes.endLine, node.loc.end.line.toString());
+    node.attributes.push(endLineAttr);
+  }
+
+  if (!hasAttribute(node.attributes, attributes.endColumn)) {
+    const endColumnAttr = createJSXAttribute(attributes.endColumn, node.loc.end.column.toString());
+    node.attributes.push(endColumnAttr);
+  }
+
+  // 添加文件位置
+  if (!hasAttribute(node.attributes, attributes.file) && filename) {
+    const resolvedFilename = getResolvedFilename(filename, files);
+    const fileAttr = createJSXAttribute(attributes.file, resolvedFilename);
+    node.attributes.push(fileAttr);
+  }
+}
+
+function updateJSXElementEndPosition(node: ExtendedNode, sourceAttributeNames?: TransformOptions['sourceAttributeNames']): void {
+  const openingElement = node.openingElement;
+  const closingElement = node.closingElement;
+  const attributes = resolveSourceAttributeNames(sourceAttributeNames);
+
+  if (openingElement && closingElement && openingElement.loc && closingElement.loc) {
+    if (!openingElement.attributes) {
+      openingElement.attributes = [];
+    }
+
+    openingElement.attributes = openingElement.attributes.filter((attr) => {
+      const attrName = attr.name?.type === 'JSXIdentifier' ? attr.name.name : '';
+      return attrName !== attributes.endLine && attrName !== attributes.endColumn;
+    });
+
+    openingElement.attributes.push(
+      createJSXAttribute(attributes.endLine, closingElement.loc.end.line.toString()),
+      createJSXAttribute(attributes.endColumn, closingElement.loc.end.column.toString())
+    );
   }
 }
 

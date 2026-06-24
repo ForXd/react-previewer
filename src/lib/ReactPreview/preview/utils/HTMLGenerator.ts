@@ -1,5 +1,10 @@
 import { COMPONENT_LIBRARY_STYLE, TRANSFORM_OPTIONS } from '../constant';
 import { generateDynamicDependencyLoader, transformDepsToEsmLinks, generateImportMapScript } from '../DependencyResolver';
+import {
+  createSourceAttributeSelector,
+  resolveSourceAttributeNames,
+  type SourceAttributeNameOverrides
+} from '../sourceAttributes';
 
 export class HTMLGenerator {
   private cache = new Map<string, {
@@ -11,13 +16,16 @@ export class HTMLGenerator {
     entryUrl: string,
     depsInfo: Record<string, string> = {},
     dependencyStyles: Record<string, string | string[]> = {},
-    initialPath = '/'
+    initialPath = '/',
+    sourceAttributeNames?: SourceAttributeNameOverrides
   ): string {
     // 合并默认依赖和传入的依赖
     const allDeps = {
       'react': '18.2.0',
       'react-dom': '18.2.0',
       'react-dom/client': '18.2.0',
+      'react/jsx-runtime': '18.2.0',
+      'react/jsx-dev-runtime': '18.2.0',
       ...depsInfo
     };
     const styleResources = this.resolveStyleResources(allDeps, dependencyStyles);
@@ -48,7 +56,7 @@ export class HTMLGenerator {
         <div id="root"></div>
         <script type="module">
           ${cached.dynamicLoaderScript}
-          ${this.getPreviewScript(entryUrl, initialPath)}
+          ${this.getPreviewScript(entryUrl, initialPath, sourceAttributeNames)}
         </script>
       </body>
       </html>
@@ -119,9 +127,18 @@ export class HTMLGenerator {
       });
   }
 
-  private getPreviewScript(entryUrl: string, initialPath: string): string {
+  private getPreviewScript(
+    entryUrl: string,
+    initialPath: string,
+    sourceAttributeNames?: SourceAttributeNameOverrides
+  ): string {
+    const sourceAttributes = resolveSourceAttributeNames(sourceAttributeNames);
+    const sourceAttributeSelector = createSourceAttributeSelector(sourceAttributeNames);
+
     return `
       const configuredInitialPath = ${JSON.stringify(initialPath || '/')};
+      const sourceAttributes = ${JSON.stringify(sourceAttributes)};
+      const sourceAttributeSelector = ${JSON.stringify(sourceAttributeSelector)};
 
       function normalizePreviewPath(value) {
         const fallback = window.location.pathname + window.location.search + window.location.hash;
@@ -340,7 +357,7 @@ export class HTMLGenerator {
       let currentHighlight = null;
 
       function addInspectStyles() {
-        const elements = document.querySelectorAll('[data-pipo-line][data-pipo-column][data-pipo-end-line][data-pipo-end-column][data-pipo-file]');
+        const elements = document.querySelectorAll(sourceAttributeSelector);
         elements.forEach(el => {
           if (isInspecting) {
             el.classList.add('inspect-clickable');
@@ -393,7 +410,7 @@ export class HTMLGenerator {
       document.addEventListener('mouseover', (event) => {
         if (!isInspecting) return;
         
-        const target = event.target.closest('[data-pipo-line][data-pipo-column][data-pipo-end-line][data-pipo-end-column][data-pipo-file]');
+        const target = event.target.closest(sourceAttributeSelector);
         if (!target) return;
         
         if (currentHighlight && currentHighlight !== target) {
@@ -407,7 +424,7 @@ export class HTMLGenerator {
       document.addEventListener('mouseout', (event) => {
         if (!isInspecting) return;
         
-        const target = event.target.closest('[data-pipo-line][data-pipo-column][data-pipo-end-line][data-pipo-end-column][data-pipo-file]');
+        const target = event.target.closest(sourceAttributeSelector);
         if (target && currentHighlight === target) {
           target.classList.remove('inspect-highlight');
           currentHighlight = null;
@@ -417,14 +434,14 @@ export class HTMLGenerator {
       // 捕获阶段，无条件拦截所有点击，并主动处理源码元素点击
       document.addEventListener('click', (event) => {
         if (isInspecting) {
-          const target = event.target.closest('[data-pipo-line][data-pipo-column][data-pipo-end-line][data-pipo-end-column][data-pipo-file]');
+          const target = event.target.closest(sourceAttributeSelector);
           if (target) {
             // 主动处理 element-click 逻辑
-            const startLine = target.getAttribute('data-pipo-line');
-            const endLine = target.getAttribute('data-pipo-end-line');
-            const startColumn = target.getAttribute('data-pipo-column');
-            const endColumn = target.getAttribute('data-pipo-end-column');
-            const file = target.getAttribute('data-pipo-file');
+            const startLine = target.getAttribute(sourceAttributes.line);
+            const endLine = target.getAttribute(sourceAttributes.endLine);
+            const startColumn = target.getAttribute(sourceAttributes.column);
+            const endColumn = target.getAttribute(sourceAttributes.endColumn);
+            const file = target.getAttribute(sourceAttributes.file);
             if (file && startLine && endLine && startColumn && endColumn) {
               const clickData = {
                 file: String(file),
