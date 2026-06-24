@@ -28,7 +28,11 @@ export class CodeTransformer {
     this.initialized = true;
   }
 
-  async transformFiles(files: FileSystem, depsInfo: Record<string, string>): Promise<Map<string, string>> {
+  async transformFiles(
+    files: FileSystem,
+    depsInfo: Record<string, string>,
+    options: Pick<TransformOptions, 'sourceAttributeNames'> = {}
+  ): Promise<Map<string, string>> {
     if (!this.initialized) {
       throw new Error('CodeTransformer not initialized');
     }
@@ -40,13 +44,14 @@ export class CodeTransformer {
     logger.debug('Processing order:', processingOrder);
 
     // 按依赖顺序处理文件，返回 Map<fileName, blobUrl>
-    return await this.processFilesInOrder(files, processingOrder, depsInfo);
+    return await this.processFilesInOrder(files, processingOrder, depsInfo, options);
   }
 
   private async processFilesInOrder(
     files: FileSystem,
     processingOrder: string[],
-    depsInfo: Record<string, string>
+    depsInfo: Record<string, string>,
+    options: Pick<TransformOptions, 'sourceAttributeNames'>
   ): Promise<Map<string, string>> {
     const fileUrls = new Map<string, string>();
 
@@ -62,7 +67,8 @@ export class CodeTransformer {
         filename: fileName,
         files: files,
         fileUrls,
-        depsInfo
+        depsInfo,
+        sourceAttributeNames: options.sourceAttributeNames
       };
 
       let processedContent: string;

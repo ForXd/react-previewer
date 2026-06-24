@@ -37,6 +37,16 @@ export type {
 // 工具函数导出
 export { logger, createModuleLogger } from './preview/utils/Logger';
 export type { LoggerConfig } from './preview/utils/Logger';
+export {
+  DEFAULT_SOURCE_ATTRIBUTE_NAMES,
+  createSourceAttributeKey,
+  createSourceAttributeSelector,
+  resolveSourceAttributeNames
+} from './preview/sourceAttributes';
+export type {
+  SourceAttributeNames,
+  SourceAttributeNameOverrides
+} from './preview/sourceAttributes';
 
 // 常量导出
 export { 

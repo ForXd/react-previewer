@@ -1,3 +1,4 @@
+import { injectJSXSourceInfo } from '../../compiler/ast/processors';
 import { DEFAULT_DEPENDENCIES, TRANSFORM_OPTIONS } from '../constant';
 import { transformDepsToEsmLinks } from '../DependencyResolver';
 import type {
@@ -177,7 +178,8 @@ export async function compileRspackBrowserProject(
 ): Promise<RspackBrowserProjectResult> {
   const rspackModule = rspackBrowserModule ?? await loadRspackBrowserModule();
   const outputFileName = options.outputFileName ?? DEFAULT_OUTPUT_FILE;
-  const projectFiles = createProjectFiles(input.files);
+  const sourceAttributeNames = input.sourceAttributeNames ?? options.sourceAttributeNames;
+  const projectFiles = createProjectFiles(input.files, sourceAttributeNames);
   const volume = rspackModule.builtinMemFs.volume;
   volume.reset?.();
   volume.fromJSON(projectFiles, '/');
@@ -310,17 +312,24 @@ export function createRspackBrowserConfig(
 }
 
 function createProjectFiles(
-  files: Record<string, string>
+  files: Record<string, string>,
+  sourceAttributeNames?: RspackBrowserCompileOptions['sourceAttributeNames']
 ): Record<string, string> {
   const projectFiles: Record<string, string> = {
     '/package.json': JSON.stringify({ type: 'module' })
   };
 
   for (const [fileName, content] of Object.entries(files)) {
-    projectFiles[toProjectPath(fileName)] = content;
+    projectFiles[toProjectPath(fileName)] = isJSXSourceFile(fileName)
+      ? injectJSXSourceInfo(content, { filename: fileName, files, sourceAttributeNames })
+      : content;
   }
 
   return projectFiles;
+}
+
+function isJSXSourceFile(fileName: string): boolean {
+  return /\.[jt]sx$/i.test(fileName);
 }
 
 function getRspackDependencies(depsInfo: Record<string, string>): Record<string, string> {
@@ -440,7 +449,8 @@ function serializeRspackOptions(options: RspackBrowserCompileOptions): RspackBro
   return {
     cdnDomain: options.cdnDomain,
     outputFileName: options.outputFileName,
-    useWorker: false
+    useWorker: false,
+    sourceAttributeNames: options.sourceAttributeNames
   };
 }
 

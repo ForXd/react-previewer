@@ -1,5 +1,6 @@
 import { LoggerConfig } from './utils/Logger';
 import { PreviewCompilerLike } from './compilers/types';
+import { SourceAttributeNameOverrides } from './sourceAttributes';
 export interface ReactPreviewerProps {
     files: Record<string, string>;
     depsInfo?: Record<string, string>;
@@ -17,6 +18,7 @@ export interface ReactPreviewerProps {
     defaultZoom?: number;
     onStatusChange?: (status: PreviewStatus) => void;
     compiler?: PreviewCompilerLike;
+    sourceAttributeNames?: SourceAttributeNameOverrides;
 }
 export interface PreviewViewport {
     label: string;

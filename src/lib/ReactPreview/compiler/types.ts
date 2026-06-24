@@ -1,10 +1,12 @@
 import type { Node } from '@babel/types';
+import type { SourceAttributeNameOverrides } from '../preview/sourceAttributes';
 
 export interface TransformOptions {
   filename?: string;
   files?: Record<string, string>;
   depsInfo?: Record<string, string>;
   fileUrls?: Map<string, string>;
+  sourceAttributeNames?: SourceAttributeNameOverrides;
 }
 
 export type FileSystem = Record<string, string>;

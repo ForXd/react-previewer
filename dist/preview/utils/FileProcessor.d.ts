@@ -1,4 +1,5 @@
 import { PreviewCompilerLike, PreviewCompileResult } from '../compilers';
+import { SourceAttributeNameOverrides } from '../sourceAttributes';
 export declare class FileProcessor {
     private compiler;
     private compilerKey;
@@ -6,7 +7,7 @@ export declare class FileProcessor {
     constructor(compiler?: PreviewCompilerLike);
     configure(compiler?: PreviewCompilerLike): Promise<void>;
     initialize(): Promise<void>;
-    processFiles(files: Record<string, string>, depsInfo: Record<string, string>, entryFile: string): Promise<PreviewCompileResult>;
+    processFiles(files: Record<string, string>, depsInfo: Record<string, string>, entryFile: string, sourceAttributeNames?: SourceAttributeNameOverrides): Promise<PreviewCompileResult>;
     cleanup(): Promise<void>;
     dispose(): Promise<void>;
 }

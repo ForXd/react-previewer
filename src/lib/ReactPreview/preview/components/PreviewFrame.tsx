@@ -11,6 +11,10 @@ import { createDepsHash, createFilesHash, createStylesHash } from '../utils/cont
 import { createSourceInfo } from '../utils/sourceSelection';
 import type { ElementClickData } from '../utils/MessageHandler';
 import { getPreviewCompilerConfigKey, type PreviewCompilerLike } from '../compilers/types';
+import {
+  createSourceAttributeKey,
+  type SourceAttributeNameOverrides
+} from '../sourceAttributes';
 
 const logger = createModuleLogger('PreviewFrame');
 
@@ -27,6 +31,7 @@ export interface PreviewFrameProps {
   onStatusChange?: (status: PreviewStatus) => void;
   compileDelay?: number;
   compiler?: PreviewCompilerLike;
+  sourceAttributeNames?: SourceAttributeNameOverrides;
 }
 
 const createInitialStatus = (): PreviewStatus => ({
@@ -78,7 +83,8 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
   isInspecting = false,
   onStatusChange,
   compileDelay = 120,
-  compiler
+  compiler,
+  sourceAttributeNames
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [errorInfo, setErrorInfo] = useState<ErrorInfo | null>(null);
@@ -97,6 +103,7 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
   const currentDepsInfoRef = useRef<string>('');
   const currentDependencyStylesRef = useRef<string>('');
   const currentCompilerRef = useRef<string>('');
+  const currentSourceAttributeNamesRef = useRef<string>('');
   const previewPathRef = useRef(normalizePreviewPath(previewPath));
   
   // 使用 useRef 稳定回调函数的引用
@@ -200,10 +207,16 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
       throw new Error(`Entry file ${entry} not found`);
     }
 
-    const html = htmlGenerator.current.generatePreviewHTML(entryUrl, depsInfo, dependencyStyles, previewPathRef.current);
+    const html = htmlGenerator.current.generatePreviewHTML(
+      entryUrl,
+      depsInfo,
+      dependencyStyles,
+      previewPathRef.current,
+      sourceAttributeNames
+    );
     pendingHtmlRef.current = html;
     setFrameVersion((version) => version + 1);
-  }, [depsInfo, dependencyStyles]);
+  }, [depsInfo, dependencyStyles, sourceAttributeNames]);
 
   useLayoutEffect(() => {
     writePendingPreviewHtml();
@@ -226,7 +239,12 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
 
       await fileProcessor.current.configure(compiler);
       await fileProcessor.current.initialize();
-      const result = await fileProcessor.current.processFiles(files, depsInfo, entryFile);
+      const result = await fileProcessor.current.processFiles(
+        files,
+        depsInfo,
+        entryFile,
+        sourceAttributeNames
+      );
       if (compileId !== compileRunRef.current) return;
       const fileUrls = result.fileUrls;
       // fileUrls: Map<fileName, blobUrl>
@@ -255,7 +273,7 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
         error: compileError
       });
     }
-  }, [files, depsInfo, entryFile, compiler, publishStatus, renderPreview]);
+  }, [files, depsInfo, entryFile, compiler, sourceAttributeNames, publishStatus, renderPreview]);
 
   // 检查文件内容是否真正改变
   useEffect(() => {
@@ -263,12 +281,14 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
     const depsInfoKey = createDepsHash(depsInfo);
     const dependencyStylesKey = createStylesHash(dependencyStyles);
     const compilerKey = getPreviewCompilerConfigKey(compiler);
+    const sourceAttributeNamesKey = createSourceAttributeKey(sourceAttributeNames);
     
     const newFilesHash = filesHash;
     const newEntryFile = entryFile;
     const newDepsInfoKey = depsInfoKey;
     const newDependencyStylesKey = dependencyStylesKey;
     const newCompilerKey = compilerKey;
+    const newSourceAttributeNamesKey = sourceAttributeNamesKey;
     
     // 只有当文件内容真正改变时才重新处理
     if (
@@ -276,7 +296,8 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
       currentEntryFileRef.current !== newEntryFile ||
       currentDepsInfoRef.current !== newDepsInfoKey ||
       currentDependencyStylesRef.current !== newDependencyStylesKey ||
-      currentCompilerRef.current !== newCompilerKey
+      currentCompilerRef.current !== newCompilerKey ||
+      currentSourceAttributeNamesRef.current !== newSourceAttributeNamesKey
     ) {
       logger.debug('PreviewFrame: File content changed, reprocessing files');
       logger.debug('Files hash changed:', {
@@ -292,12 +313,22 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
         currentDepsInfoRef.current = newDepsInfoKey;
         currentDependencyStylesRef.current = newDependencyStylesKey;
         currentCompilerRef.current = newCompilerKey;
+        currentSourceAttributeNamesRef.current = newSourceAttributeNamesKey;
         processFilesInternal(scheduledRun);
       }, Math.max(0, compileDelay));
 
       return () => window.clearTimeout(timer);
     }
-  }, [files, entryFile, depsInfo, dependencyStyles, compiler, processFilesInternal, compileDelay]);
+  }, [
+    files,
+    entryFile,
+    depsInfo,
+    dependencyStyles,
+    compiler,
+    sourceAttributeNames,
+    processFilesInternal,
+    compileDelay
+  ]);
 
   // 监听iframe内的消息
   useEffect(() => {
@@ -432,7 +463,8 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
     prevProps.onElementClick !== nextProps.onElementClick ||
     prevProps.onRouteChange !== nextProps.onRouteChange ||
     prevProps.onStatusChange !== nextProps.onStatusChange ||
-    prevProps.compiler !== nextProps.compiler
+    prevProps.compiler !== nextProps.compiler ||
+    createSourceAttributeKey(prevProps.sourceAttributeNames) !== createSourceAttributeKey(nextProps.sourceAttributeNames)
   ) {
     return false;
   }
@@ -445,7 +477,8 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
     dependencyStyles: createStylesHash(prevProps.dependencyStyles || {}),
     previewPath: normalizePreviewPath(prevProps.previewPath),
     compileDelay: prevProps.compileDelay,
-    compiler: getPreviewCompilerConfigKey(prevProps.compiler)
+    compiler: getPreviewCompilerConfigKey(prevProps.compiler),
+    sourceAttributeNames: createSourceAttributeKey(prevProps.sourceAttributeNames)
   });
   
   const nextKey = JSON.stringify({
@@ -455,7 +488,8 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
     dependencyStyles: createStylesHash(nextProps.dependencyStyles || {}),
     previewPath: normalizePreviewPath(nextProps.previewPath),
     compileDelay: nextProps.compileDelay,
-    compiler: getPreviewCompilerConfigKey(nextProps.compiler)
+    compiler: getPreviewCompilerConfigKey(nextProps.compiler),
+    sourceAttributeNames: createSourceAttributeKey(nextProps.sourceAttributeNames)
   });
   
   // 如果关键 props 没有改变，返回 true 表示不需要重新渲染

@@ -1,10 +1,12 @@
 import { FileSystem } from '../../compiler/types';
+import { SourceAttributeNameOverrides } from '../sourceAttributes';
 export type PreviewCompilerType = 'babel' | 'rspack-browser';
 export interface RspackBrowserCompileOptions {
     cdnDomain?: string;
     outputFileName?: string;
     useWorker?: boolean;
     workerFactory?: () => Worker;
+    sourceAttributeNames?: SourceAttributeNameOverrides;
 }
 export interface PreviewCompilerConfig {
     type?: PreviewCompilerType;
@@ -14,6 +16,7 @@ export interface PreviewCompileInput {
     files: FileSystem;
     entryFile: string;
     depsInfo: Record<string, string>;
+    sourceAttributeNames?: SourceAttributeNameOverrides;
 }
 export interface PreviewCompileResult {
     fileUrls: Map<string, string>;
