@@ -1,46 +1,60 @@
 // utils/FileProcessor.ts
-import { CodeTransformer } from '../../compiler/CodeTransformer';
-import { transformDepsToEsmLinks } from '../DependencyResolver';
-import { DEFAULT_DEPENDENCIES, TRANSFORM_OPTIONS } from '../constant';
+import {
+  createPreviewCompiler,
+  getPreviewCompilerConfigKey,
+  type PreviewCompiler,
+  type PreviewCompilerLike,
+  type PreviewCompileResult
+} from '../compilers';
 import { createModuleLogger } from './Logger';
 
 const logger = createModuleLogger('FileProcessor');
 
 export class FileProcessor {
-  private codeTransformer: CodeTransformer;
-  private blobUrls: Map<string, string> = new Map();
+  private compiler: PreviewCompiler;
+  private compilerKey: string;
+  private currentResult: PreviewCompileResult | null = null;
 
-  constructor() {
-    this.codeTransformer = new CodeTransformer();
+  constructor(compiler?: PreviewCompilerLike) {
+    this.compiler = createPreviewCompiler(compiler);
+    this.compilerKey = getPreviewCompilerConfigKey(compiler);
+  }
+
+  async configure(compiler?: PreviewCompilerLike): Promise<void> {
+    const nextKey = getPreviewCompilerConfigKey(compiler);
+    if (nextKey === this.compilerKey) {
+      return;
+    }
+
+    await this.cleanup();
+    await this.compiler.cleanup?.();
+    this.compiler = createPreviewCompiler(compiler);
+    this.compilerKey = nextKey;
   }
 
   async initialize(): Promise<void> {
-    await this.codeTransformer.initialize();
+    await this.compiler.initialize?.();
   }
 
   async processFiles(
     files: Record<string, string>,
-    depsInfo: Record<string, string>
-  ): Promise<Map<string, string>> {
+    depsInfo: Record<string, string>,
+    entryFile: string
+  ): Promise<PreviewCompileResult> {
     try {
       // 清理之前的 blob URLs
       await this.cleanup();
 
-      const advancedResult = transformDepsToEsmLinks(
-        { ...DEFAULT_DEPENDENCIES, ...depsInfo },
-        TRANSFORM_OPTIONS
-      );
-
-      const transformed = await this.codeTransformer.transformFiles(
+      const result = await this.compiler.compile({
         files,
-        advancedResult.dependencies
-      );
+        depsInfo,
+        entryFile
+      });
 
-      logger.debug('transformed', transformed);
-      this.blobUrls = transformed;
+      logger.debug('transformed', result.fileUrls);
+      this.currentResult = result;
 
-      // 直接返回 transform 阶段的 Map<fileName, blobUrl>
-      return transformed;
+      return result;
     } catch (error) {
       logger.error('Error processing files:', error);
       throw error;
@@ -48,10 +62,23 @@ export class FileProcessor {
   }
 
   async cleanup(): Promise<void> {
-    // 清理 CodeTransformer 的资源
-    if (this.blobUrls.size > 0) {
-      this.codeTransformer.cleanup(this.blobUrls);
-      this.blobUrls.clear();
+    if (this.currentResult) {
+      const result = this.currentResult;
+      if (result.cleanup) {
+        result.cleanup();
+      } else if (this.compiler.cleanup) {
+        await this.compiler.cleanup(result);
+      } else {
+        for (const url of result.fileUrls.values()) {
+          URL.revokeObjectURL(url);
+        }
+      }
+      this.currentResult = null;
     }
+  }
+
+  async dispose(): Promise<void> {
+    await this.cleanup();
+    await this.compiler.cleanup?.();
   }
 }

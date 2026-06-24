@@ -1,5 +1,6 @@
 export { ReactPreviewer } from './preview/ReactPreviewer';
 export type { ReactPreviewerProps, PreviewStatus, PreviewPhase, PreviewViewport, PreviewRouteState, ErrorInfo, SourceInfo, MessageData, TransformedFile } from './preview/types';
+export type { PreviewCompiler, PreviewCompilerConfig, PreviewCompilerLike, PreviewCompilerType, PreviewCompileInput, PreviewCompileResult, RspackBrowserCompileOptions } from './preview/compilers';
 export type { TransformOptions, FileSystem, DependencyNode, FileProcessor, ASTProcessor, DependencyAnalyzer } from './compiler/types';
 export { logger, createModuleLogger } from './preview/utils/Logger';
 export type { LoggerConfig } from './preview/utils/Logger';
@@ -20,4 +21,5 @@ export * from './preview/utils/ErrorHandler';
 export * from './preview/utils/FileProcessor';
 export * from './preview/utils/HTMLGenerator';
 export * from './preview/utils/MessageHandler';
+export { createPreviewCompiler } from './preview/compilers';
 //# sourceMappingURL=index.d.ts.map

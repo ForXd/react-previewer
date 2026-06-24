@@ -15,17 +15,25 @@ export default defineConfig({
   ],
   build: {
     lib: {
-      entry: 'src/lib/ReactPreview/index.ts',
+      entry: {
+        index: 'src/lib/ReactPreview/index.ts',
+        'rspack-browser-worker': 'src/lib/ReactPreview/preview/compilers/rspackBrowser.worker.ts',
+      },
       name: 'ReactPreviewer',
       formats: ['es', 'cjs'],
-      fileName: (format) => `index.${format === 'es' ? 'js' : 'cjs'}`,
+      fileName: (format, entryName) => {
+        const extension = format === 'es' ? 'js' : 'cjs';
+        return `${entryName}.${extension}`;
+      },
     },
     rollupOptions: {
-      external: ['react', 'react-dom'],
+      external: ['react', 'react-dom', 'react-dom/client', '@rspack/browser'],
       output: {
         globals: {
           react: 'React',
           'react-dom': 'ReactDOM',
+          'react-dom/client': 'ReactDOM',
+          '@rspack/browser': 'RspackBrowser',
         },
       },
     },

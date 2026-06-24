@@ -20,7 +20,8 @@ export const ReactPreviewer: React.FC<ReactPreviewerProps> = ({
   className = '',
   defaultViewport,
   defaultZoom = 1,
-  onStatusChange
+  onStatusChange,
+  compiler
 }) => {
   const [isInspecting, setIsInspecting] = useState(false);
   const [recompileKey, setRecompileKey] = useState(0);
@@ -179,6 +180,7 @@ export const ReactPreviewer: React.FC<ReactPreviewerProps> = ({
                 isInspecting={isInspecting}
                 onStatusChange={handleStatusChange}
                 compileDelay={compileDelay}
+                compiler={compiler}
               />
             </div>
           </div>

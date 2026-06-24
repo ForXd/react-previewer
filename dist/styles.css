@@ -1,4 +1,4 @@
-/*! tailwindcss v4.2.4 | MIT License | https://tailwindcss.com */
+/*! tailwindcss v4.3.1 | MIT License | https://tailwindcss.com */
 @layer properties;
 @layer theme, base, components, utilities;
 @layer theme {
@@ -215,19 +215,7 @@
     position: sticky;
   }
   .inset-0 {
-    inset: calc(var(--spacing) * 0);
-  }
-  .start {
-    inset-inline-start: var(--spacing);
-  }
-  .start\! {
-    inset-inline-start: var(--spacing) !important;
-  }
-  .end {
-    inset-inline-end: var(--spacing);
-  }
-  .end\! {
-    inset-inline-end: var(--spacing) !important;
+    inset: 0;
   }
   .right-4 {
     right: calc(var(--spacing) * 4);
@@ -284,7 +272,7 @@
     }
   }
   .m-0 {
-    margin: calc(var(--spacing) * 0);
+    margin: 0;
   }
   .mx-2 {
     margin-inline: calc(var(--spacing) * 2);
@@ -299,7 +287,7 @@
     margin-block: calc(var(--spacing) * 3);
   }
   .mt-1 {
-    margin-top: calc(var(--spacing) * 1);
+    margin-top: var(--spacing);
   }
   .mt-2 {
     margin-top: calc(var(--spacing) * 2);
@@ -314,7 +302,7 @@
     margin-right: calc(var(--spacing) * 2);
   }
   .mb-1 {
-    margin-bottom: calc(var(--spacing) * 1);
+    margin-bottom: var(--spacing);
   }
   .mb-2 {
     margin-bottom: calc(var(--spacing) * 2);
@@ -351,6 +339,9 @@
   }
   .inline-flex {
     display: inline-flex;
+  }
+  .table {
+    display: table;
   }
   .h-1\.5 {
     height: calc(var(--spacing) * 1.5);
@@ -401,7 +392,7 @@
     max-height: 300px;
   }
   .min-h-0 {
-    min-height: calc(var(--spacing) * 0);
+    min-height: 0;
   }
   .min-h-\[360px\] {
     min-height: 360px;
@@ -458,7 +449,7 @@
     max-width: var(--container-md);
   }
   .min-w-0 {
-    min-width: calc(var(--spacing) * 0);
+    min-width: 0;
   }
   .min-w-\[60px\] {
     min-width: 60px;
@@ -541,8 +532,8 @@
   .space-y-1 {
     :where(& > :not(:last-child)) {
       --tw-space-y-reverse: 0;
-      margin-block-start: calc(calc(var(--spacing) * 1) * var(--tw-space-y-reverse));
-      margin-block-end: calc(calc(var(--spacing) * 1) * calc(1 - var(--tw-space-y-reverse)));
+      margin-block-start: calc(var(--spacing) * var(--tw-space-y-reverse));
+      margin-block-end: calc(var(--spacing) * calc(1 - var(--tw-space-y-reverse)));
     }
   }
   .space-y-2 {
@@ -685,7 +676,7 @@
     }
   }
   .p-0 {
-    padding: calc(var(--spacing) * 0);
+    padding: 0;
   }
   .p-0\.5 {
     padding: calc(var(--spacing) * 0.5);
@@ -724,7 +715,7 @@
     padding-inline: calc(var(--spacing) * 6);
   }
   .py-1 {
-    padding-block: calc(var(--spacing) * 1);
+    padding-block: var(--spacing);
   }
   .py-1\.5 {
     padding-block: calc(var(--spacing) * 1.5);
