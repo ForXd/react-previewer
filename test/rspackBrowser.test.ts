@@ -200,6 +200,32 @@ export default function Button() {
     );
   });
 
+  it('fails early with a clear error when cross-origin isolation is missing', async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'crossOriginIsolated');
+    Object.defineProperty(globalThis, 'crossOriginIsolated', {
+      configurable: true,
+      value: false
+    });
+
+    try {
+      await expect(
+        compileRspackBrowserProject({
+          entryFile: 'App.tsx',
+          depsInfo: {},
+          files: {
+            'App.tsx': 'export default function App() { return null; }'
+          }
+        })
+      ).rejects.toThrow('requires cross-origin isolation');
+    } finally {
+      if (descriptor) {
+        Object.defineProperty(globalThis, 'crossOriginIsolated', descriptor);
+      } else {
+        delete (globalThis as { crossOriginIsolated?: boolean }).crossOriginIsolated;
+      }
+    }
+  });
+
   it('allows FileProcessor to use a custom compiler and release its result', async () => {
     const cleanup = vi.fn();
     const compile = vi.fn(async () => ({

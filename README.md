@@ -172,6 +172,8 @@ Cross-Origin-Opener-Policy: same-origin
 Cross-Origin-Embedder-Policy: require-corp
 ```
 
+仓库内的 demo/GitHub Pages 产物会注册 `coi-serviceworker.js`，用于在静态部署环境补齐这些响应头。作为库接入时，如果部署服务不能直接设置响应头，需要提供等效的 cross-origin isolation service worker；否则请使用默认 Babel 编译模式。
+
 ```ts
 interface PreviewRouteState {
   pathname: string;
