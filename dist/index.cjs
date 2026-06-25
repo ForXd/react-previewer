@@ -12715,7 +12715,7 @@ var LazyRspackBrowserPreviewCompiler = class {
 		await (await this.compilerPromise).cleanup?.(result);
 	}
 	async getCompiler() {
-		if (!this.compilerPromise) this.compilerPromise = Promise.resolve().then(() => require("./rspackBrowser-_u7AN6lk.cjs")).then((n) => n.rspackBrowser_exports).then(({ RspackBrowserPreviewCompiler }) => new RspackBrowserPreviewCompiler(this.options));
+		if (!this.compilerPromise) this.compilerPromise = Promise.resolve().then(() => require("./rspackBrowser-D56FQPbh.cjs")).then((n) => n.rspackBrowser_exports).then(({ RspackBrowserPreviewCompiler }) => new RspackBrowserPreviewCompiler(this.options));
 		return this.compilerPromise;
 	}
 };

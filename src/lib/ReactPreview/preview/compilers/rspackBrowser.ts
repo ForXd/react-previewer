@@ -9,6 +9,11 @@ import type {
 } from './types';
 
 const DEFAULT_OUTPUT_FILE = 'main.js';
+const CROSS_ORIGIN_ISOLATION_ERROR = [
+  'Rspack browser compilation requires cross-origin isolation because @rspack/browser uses SharedArrayBuffer.',
+  'Serve the preview page with Cross-Origin-Opener-Policy: same-origin and Cross-Origin-Embedder-Policy: require-corp,',
+  'or use the Babel compiler mode in environments that cannot provide those headers.'
+].join(' ');
 
 type RspackConfig = Record<string, unknown>;
 type RspackExternalCallback = (error?: Error | null, result?: string, type?: string) => void;
@@ -462,5 +467,9 @@ function createDefaultRspackWorker(): Worker {
 }
 
 async function loadRspackBrowserModule(): Promise<RspackBrowserModule> {
+  if (globalThis.crossOriginIsolated === false) {
+    throw new Error(CROSS_ORIGIN_ISOLATION_ERROR);
+  }
+
   return await import('@rspack/browser') as RspackBrowserModule;
 }

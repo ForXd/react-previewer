@@ -1,5 +1,5 @@
-import { i as __require, r as __commonJSMin } from "./rspackBrowser-B3pPl3gI.js";
-import { _ as createJSXAttribute, a as generateImportMapScript, b as resolveRelativePath, c as ImportProcessor, d as DEFAULT_SOURCE_ATTRIBUTE_NAMES, f as createSourceAttributeKey, g as logger, h as createModuleLogger, i as generateDynamicDependencyLoader, l as JSXDebugProcessor, m as resolveSourceAttributeNames, n as DEFAULT_DEPENDENCIES, o as transformDepsToEsmLinks, p as createSourceAttributeSelector, r as TRANSFORM_OPTIONS, s as ASTProcessorManager, t as COMPONENT_LIBRARY_STYLE, v as getResolvedFilename, x as _defineProperty, y as hasAttribute } from "./constant-BQ_KebjO.js";
+import { i as __require, r as __commonJSMin } from "./rspackBrowser-DQKoVe32.js";
+import { _ as createJSXAttribute, a as generateImportMapScript, b as resolveRelativePath, c as ImportProcessor, d as DEFAULT_SOURCE_ATTRIBUTE_NAMES, f as createSourceAttributeKey, g as logger, h as createModuleLogger, i as generateDynamicDependencyLoader, l as JSXDebugProcessor, m as resolveSourceAttributeNames, n as DEFAULT_DEPENDENCIES, o as transformDepsToEsmLinks, p as createSourceAttributeSelector, r as TRANSFORM_OPTIONS, s as ASTProcessorManager, t as COMPONENT_LIBRARY_STYLE, v as getResolvedFilename, x as _defineProperty, y as hasAttribute } from "./constant-CBGOutKk.js";
 import React, { Component, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 //#region src/lib/ReactPreview/compiler/dependency/DependencyGraph.ts
 var DependencyGraph = class {
@@ -12713,7 +12713,7 @@ var LazyRspackBrowserPreviewCompiler = class {
 		await (await this.compilerPromise).cleanup?.(result);
 	}
 	async getCompiler() {
-		if (!this.compilerPromise) this.compilerPromise = import("./rspackBrowser-B3pPl3gI.js").then((n) => n.n).then(({ RspackBrowserPreviewCompiler }) => new RspackBrowserPreviewCompiler(this.options));
+		if (!this.compilerPromise) this.compilerPromise = import("./rspackBrowser-DQKoVe32.js").then((n) => n.n).then(({ RspackBrowserPreviewCompiler }) => new RspackBrowserPreviewCompiler(this.options));
 		return this.compilerPromise;
 	}
 };
