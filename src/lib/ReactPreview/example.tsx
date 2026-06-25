@@ -5,6 +5,8 @@ import { demoList } from './test/demo';
 import type { SourceInfo } from './preview/types';
 import type { PreviewCompilerLike } from './preview/compilers/types';
 import { createModuleLogger, type LoggerConfig } from './preview/utils/Logger';
+import { resolveSameOriginGitHubPageAssetUrl } from './preview/utils/assetUrl';
+import rspackBrowserWorkerUrl from './preview/compilers/rspackBrowser.worker.ts?worker&url';
 
 const logger = createModuleLogger('Example');
 
@@ -17,6 +19,21 @@ const compilerModes: Array<{
   { value: 'babel', label: 'Babel' },
   { value: 'rspack-browser', label: 'Rspack' }
 ];
+
+function createDemoRspackWorker(): Worker {
+  const workerUrl = new URL(rspackBrowserWorkerUrl, import.meta.url);
+  const sameOriginWorkerUrl = typeof window === 'undefined'
+    ? workerUrl
+    : resolveSameOriginGitHubPageAssetUrl(workerUrl, window.location.origin);
+
+  return new Worker(
+    sameOriginWorkerUrl,
+    {
+      type: 'module',
+      name: 'react-previewer-demo-rspack-browser'
+    }
+  );
+}
 
 const ExampleUsage: React.FC = () => {
   const [selectedDemo, setSelectedDemo] = useState(demoList[0]);
@@ -114,13 +131,7 @@ const ExampleUsage: React.FC = () => {
         type: 'rspack-browser',
         rspack: {
           cdnDomain: 'https://esm.sh',
-          workerFactory: () => new Worker(
-            new URL('./preview/compilers/rspackBrowser.worker.ts', import.meta.url),
-            {
-              type: 'module',
-              name: 'react-previewer-demo-rspack-browser'
-            }
-          )
+          workerFactory: createDemoRspackWorker
         }
       };
     }
