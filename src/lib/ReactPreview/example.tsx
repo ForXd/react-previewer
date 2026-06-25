@@ -5,7 +5,6 @@ import { demoList } from './test/demo';
 import type { SourceInfo } from './preview/types';
 import type { PreviewCompilerLike } from './preview/compilers/types';
 import { createModuleLogger, type LoggerConfig } from './preview/utils/Logger';
-import { resolveSameOriginGitHubPageAssetUrl } from './preview/utils/assetUrl';
 import rspackBrowserWorkerUrl from './preview/compilers/rspackBrowser.worker.ts?worker&url';
 
 const logger = createModuleLogger('Example');
@@ -21,13 +20,8 @@ const compilerModes: Array<{
 ];
 
 function createDemoRspackWorker(): Worker {
-  const workerUrl = new URL(rspackBrowserWorkerUrl, import.meta.url);
-  const sameOriginWorkerUrl = typeof window === 'undefined'
-    ? workerUrl
-    : resolveSameOriginGitHubPageAssetUrl(workerUrl, window.location.origin);
-
   return new Worker(
-    sameOriginWorkerUrl,
+    new URL(rspackBrowserWorkerUrl, import.meta.url),
     {
       type: 'module',
       name: 'react-previewer-demo-rspack-browser'

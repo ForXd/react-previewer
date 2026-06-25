@@ -22,5 +22,5 @@ export default defineConfig(({ command }) => ({
   build: {
     outDir: 'page',
   },
-  base: command === 'serve' ? '/' : 'https://fastly.jsdelivr.net/gh/ForXd/react-previewer@main/page'
+  base: command === 'serve' ? '/' : './'
 }))
