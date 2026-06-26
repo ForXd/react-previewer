@@ -1,4 +1,4 @@
-const require_rspackBrowser = require("./rspackBrowser-C1q48O-V.cjs");
+const require_rspackBrowser = require("./rspackBrowser-DstwN0An.cjs");
 //#region src/lib/ReactPreview/preview/compilers/rspackBrowser.worker.ts
 self.addEventListener("message", (event) => {
 	if (event.data.type !== "compile") return;

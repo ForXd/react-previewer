@@ -41,6 +41,8 @@ declare function parsePackagePath(packagePath: string): {
     packageName: string;
     subPath: string;
 };
+declare function normalizeDependencyVersion(version: string): string;
+declare function resolveDependencyUrl(packagePath: string, depsInfo: DepsInfo, options?: EsmOptions): string | undefined;
 /**
  * 将依赖信息转换为 esm.sh 链接
  * @param depsInfo 依赖信息对象
@@ -64,5 +66,5 @@ declare function generateDynamicDependencyLoader(depsInfo: DepsInfo, options?: E
     name: string;
     url: string;
 }>): string;
-export { transformDepsToEsmLinks, generateImportMapScript, generateDynamicDependencyLoader, parsePackagePath, type DepsInfo, type EsmOptions, type TransformResult };
+export { transformDepsToEsmLinks, resolveDependencyUrl, normalizeDependencyVersion, generateImportMapScript, generateDynamicDependencyLoader, parsePackagePath, type DepsInfo, type EsmOptions, type TransformResult };
 //# sourceMappingURL=DependencyResolver.d.ts.map

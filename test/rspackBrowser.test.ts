@@ -199,6 +199,80 @@ export default function App() {
     );
   });
 
+  it('rewrites local css imports that include resource queries', async () => {
+    const volume = new FakeVolume();
+    const fakeRspack: RspackBrowserModule = {
+      builtinMemFs: { volume },
+      rspack(_config, callback) {
+        expect(volume.files['/src/App.tsx']).not.toContain("import './style.css?inline'");
+        expect(volume.files['/src/App.tsx']).toContain('__reactPreviewInjectStyle');
+        expect(volume.files['/src/App.tsx']).toContain('button { color: green; }');
+        volume.files['/dist/preview.js'] = 'export default function App() { return null; }';
+        callback(null, { hasErrors: () => false });
+        return null;
+      }
+    };
+
+    await compileRspackBrowserProject(
+      {
+        entryFile: 'App.tsx',
+        depsInfo: {},
+        files: {
+          'App.tsx': `
+import './style.css?inline';
+
+export default function App() {
+  return <button>Save</button>;
+}
+`,
+          'style.css': 'button { color: green; }'
+        }
+      },
+      { outputFileName: 'preview.js', useWorker: false },
+      fakeRspack
+    );
+  });
+
+  it('rewrites external import specifiers in the rspack output to CDN URLs', async () => {
+    const volume = new FakeVolume();
+    const fakeRspack: RspackBrowserModule = {
+      builtinMemFs: { volume },
+      rspack(_config, callback) {
+        volume.files['/dist/preview.js'] = [
+          'import * as ArcoIcon from "@arco-design/web-react/icon";',
+          'import * as React from "react";',
+          'export default function App() { return React.createElement(ArcoIcon.IconPlus); }'
+        ].join('\n');
+        callback(null, { hasErrors: () => false });
+        return null;
+      }
+    };
+
+    const result = await compileRspackBrowserProject(
+      {
+        entryFile: 'App.tsx',
+        depsInfo: { '@arco-design/web-react': '^2.45.0' },
+        files: {
+          'App.tsx': `
+import { IconPlus } from '@arco-design/web-react/icon';
+
+export default function App() {
+  return <IconPlus />;
+}
+`
+        }
+      },
+      { outputFileName: 'preview.js', useWorker: false },
+      fakeRspack
+    );
+
+    expect(result.output).not.toContain('from "@arco-design/web-react/icon"');
+    expect(result.output).toContain(
+      'from "https://esm.sh/@arco-design/web-react@2.45.0/icon?target=es2022&external=react%2Creact-dom"'
+    );
+    expect(result.output).toContain('from "https://esm.sh/react@18.2.0?target=es2022"');
+  });
+
   it('supports custom source metadata attribute names', async () => {
     const volume = new FakeVolume();
     const fakeRspack: RspackBrowserModule = {

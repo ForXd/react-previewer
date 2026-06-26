@@ -3,6 +3,7 @@ import { transform } from '@babel/standalone';
 import { createJSXAttribute, hasAttribute, resolveRelativePath, getResolvedFilename } from '../utils';
 import { createModuleLogger } from '../../preview/utils/Logger';
 import { resolveSourceAttributeNames } from '../../preview/sourceAttributes';
+import { resolveDependencyUrl } from '../../preview/DependencyResolver';
 import type { Node } from '@babel/types';
 
 const logger = createModuleLogger('ASTProcessors');
@@ -47,7 +48,7 @@ export class ImportProcessor implements ASTProcessor {
     if (!moduleName || !filename) return;
 
     // 检查是否是 CSS 导入
-    if (moduleName.endsWith('.css')) {
+    if (isCssImportPath(moduleName)) {
       this.processCSSImport(node, source, options);
       return;
     }
@@ -90,9 +91,10 @@ export class ImportProcessor implements ASTProcessor {
     }
 
     // 本地 CSS 文件处理
-    let resolvedPath = cssPath;
+    const normalizedCssPath = stripResourceQuery(cssPath);
+    let resolvedPath = normalizedCssPath;
     if (cssPath.startsWith('./') || cssPath.startsWith('../')) {
-      resolvedPath = resolveRelativePath(filename, cssPath);
+      resolvedPath = resolveRelativePath(filename, normalizedCssPath);
     }
 
     // 尝试不同的扩展名
@@ -267,7 +269,7 @@ export function injectJSXSourceInfoAndCssImports(
           },
           ImportDeclaration: (path: { node: Node }) => {
             const node = path.node as ExtendedNode;
-            if (node.source?.value.endsWith('.css')) {
+            if (node.source?.value && isCssImportPath(node.source.value)) {
               cssImportProcessor.process(node, code, options);
             }
           },
@@ -287,34 +289,15 @@ function resolveRemoteCssUrl(cssPath: string, depsInfo?: Record<string, string>)
     return cssPath;
   }
 
-  const { packageName, subPath } = parsePackagePath(cssPath);
-  const version = depsInfo?.[packageName] ?? depsInfo?.[cssPath];
-  if (!version) {
-    return cssPath;
-  }
-
-  const baseUrl = `https://esm.sh/${packageName}@${version}`;
-  return subPath ? `${baseUrl}/${subPath}` : baseUrl;
+  return resolveDependencyUrl(cssPath, depsInfo ?? {}, { target: '', external: [] }) ?? cssPath;
 }
 
-function parsePackagePath(packagePath: string): { packageName: string; subPath: string } {
-  if (packagePath.startsWith('@')) {
-    const parts = packagePath.split('/');
-    return {
-      packageName: parts.length >= 2 ? `${parts[0]}/${parts[1]}` : packagePath,
-      subPath: parts.slice(2).join('/')
-    };
-  }
+function isCssImportPath(importPath: string): boolean {
+  return stripResourceQuery(importPath).endsWith('.css');
+}
 
-  const firstSlashIndex = packagePath.indexOf('/');
-  if (firstSlashIndex === -1) {
-    return { packageName: packagePath, subPath: '' };
-  }
-
-  return {
-    packageName: packagePath.slice(0, firstSlashIndex),
-    subPath: packagePath.slice(firstSlashIndex + 1)
-  };
+function stripResourceQuery(importPath: string): string {
+  return importPath.split(/[?#]/, 1)[0] ?? importPath;
 }
 
 function addJSXSourceInfoAttributes(

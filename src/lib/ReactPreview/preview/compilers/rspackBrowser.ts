@@ -1,6 +1,6 @@
 import { injectJSXSourceInfoAndCssImports } from '../../compiler/ast/processors';
 import { DEFAULT_DEPENDENCIES, TRANSFORM_OPTIONS } from '../constant';
-import { transformDepsToEsmLinks } from '../DependencyResolver';
+import { parsePackagePath, resolveDependencyUrl, transformDepsToEsmLinks } from '../DependencyResolver';
 import type {
   PreviewCompiler,
   PreviewCompileInput,
@@ -210,7 +210,8 @@ export async function compileRspackBrowserProject(
   });
 
   const output = volume.readFileSync(`/dist/${outputFileName}`, 'utf-8');
-  const outputText = typeof output === 'string' ? output : new TextDecoder().decode(output);
+  const rawOutputText = typeof output === 'string' ? output : new TextDecoder().decode(output);
+  const outputText = replaceExternalImportSpecifiers(rawOutputText, getRspackDependencies(input.depsInfo));
   const cssRuntime = createCssInjectionRuntime(volume, compilationStats);
 
   return {
@@ -235,7 +236,7 @@ export function createRspackBrowserConfig(
     callback: RspackExternalCallback
   ) => {
     const request = context.request;
-    if (request && externalRequests.has(request)) {
+    if (request && shouldExternalizeRequest(request, allDeps, externalRequests)) {
       callback(null, request, 'module');
       return;
     }
@@ -344,13 +345,24 @@ function isJSXSourceFile(fileName: string): boolean {
 }
 
 function getRspackDependencies(depsInfo: Record<string, string>): Record<string, string> {
-  return {
+  const dependencies: Record<string, string> = {
     ...DEFAULT_DEPENDENCIES,
     'react-dom/client': DEFAULT_DEPENDENCIES['react-dom'],
     'react/jsx-runtime': DEFAULT_DEPENDENCIES.react,
     'react/jsx-dev-runtime': DEFAULT_DEPENDENCIES.react,
     ...depsInfo
   };
+
+  for (const dependencyName of Object.keys(dependencies)) {
+    const { packageName, subPath } = parsePackagePath(dependencyName);
+    if (!subPath || !depsInfo[packageName] || depsInfo[dependencyName]) {
+      continue;
+    }
+
+    dependencies[dependencyName] = depsInfo[packageName];
+  }
+
+  return dependencies;
 }
 
 function createCssInjectionRuntime(volume: RspackBrowserVolume, stats?: RspackStats): string {
@@ -379,6 +391,30 @@ function getRspackAssetNames(stats?: RspackStats): string[] {
   return json.assets
     .map((asset) => asset.name)
     .filter((name): name is string => typeof name === 'string');
+}
+
+function shouldExternalizeRequest(
+  request: string,
+  dependencies: Record<string, string>,
+  externalRequests: Set<string>
+): boolean {
+  return externalRequests.has(request) || !!resolveDependencyUrl(request, dependencies, TRANSFORM_OPTIONS);
+}
+
+function replaceExternalImportSpecifiers(outputText: string, dependencies: Record<string, string>): string {
+  const replaceSpecifier = (specifier: string) => (
+    resolveDependencyUrl(specifier, dependencies, TRANSFORM_OPTIONS) ?? specifier
+  );
+
+  return outputText
+    .replace(/(\bfrom\s*["'])([^"']+)(["'])/g, (match, start, specifier, end) => {
+      const nextSpecifier = replaceSpecifier(specifier);
+      return nextSpecifier === specifier ? match : `${start}${nextSpecifier}${end}`;
+    })
+    .replace(/(\bimport\s*\(\s*["'])([^"']+)(["']\s*\))/g, (match, start, specifier, end) => {
+      const nextSpecifier = replaceSpecifier(specifier);
+      return nextSpecifier === specifier ? match : `${start}${nextSpecifier}${end}`;
+    });
 }
 
 function createRspackBrowserPlugins(

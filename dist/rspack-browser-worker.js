@@ -1,4 +1,4 @@
-import { t as compileRspackBrowserProject } from "./rspackBrowser-BYQJfzoD.js";
+import { t as compileRspackBrowserProject } from "./rspackBrowser-D4bcWV9R.js";
 //#region src/lib/ReactPreview/preview/compilers/rspackBrowser.worker.ts
 self.addEventListener("message", (event) => {
 	if (event.data.type !== "compile") return;
