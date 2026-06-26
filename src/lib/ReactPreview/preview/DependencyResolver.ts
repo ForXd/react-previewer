@@ -36,6 +36,7 @@ interface TransformResult {
 }
 
 const FORCE_BUNDLED_PACKAGES = new Set(['antd']);
+const ABSOLUTE_URL_RE = /^(?:https?:)?\/\//i;
 
 /**
  * 解析包名和子路径
@@ -65,6 +66,79 @@ function parsePackagePath(packagePath: string): { packageName: string; subPath: 
   return { packageName, subPath };
 }
 
+function normalizeDependencyVersion(version: string): string {
+  const normalized = version.trim();
+  if (!normalized) return normalized;
+  if (ABSOLUTE_URL_RE.test(normalized)) return normalized;
+  return normalized.replace(/^[\s~^=v]+/, '');
+}
+
+function createEsmUrl(packagePath: string, version: string, options: EsmOptions = {}): string {
+  const {
+    target = 'es2022',
+    bundle = false,
+    external = [],
+    alias = {},
+    keepNames = false
+  } = options;
+
+  const { packageName, subPath } = parsePackagePath(packagePath);
+  const actualPackageName = alias[packageName] || packageName;
+  let esmUrl = `https://esm.sh/${actualPackageName}@${normalizeDependencyVersion(version)}`;
+
+  if (subPath) {
+    esmUrl += `/${subPath}`;
+  }
+
+  const params = new URLSearchParams();
+
+  if (target) {
+    params.append('target', target);
+  }
+
+  if (bundle || FORCE_BUNDLED_PACKAGES.has(packageName)) {
+    params.append('bundle', '');
+  }
+
+  if (external.length > 0 && packageName !== 'react') {
+    params.append('external', external.join(','));
+  }
+
+  if (keepNames) {
+    params.append('keep-names', '');
+  }
+
+  const queryString = params.toString();
+  return queryString ? `${esmUrl}?${queryString}` : esmUrl;
+}
+
+function resolveDependencyUrl(
+  packagePath: string,
+  depsInfo: DepsInfo,
+  options: EsmOptions = {}
+): string | undefined {
+  if (ABSOLUTE_URL_RE.test(packagePath)) {
+    return packagePath;
+  }
+
+  const exactVersion = depsInfo[packagePath];
+  if (exactVersion) {
+    return ABSOLUTE_URL_RE.test(exactVersion)
+      ? exactVersion
+      : createEsmUrl(packagePath, exactVersion, options);
+  }
+
+  const { packageName } = parsePackagePath(packagePath);
+  const packageVersion = depsInfo[packageName];
+  if (!packageVersion) {
+    return undefined;
+  }
+
+  return ABSOLUTE_URL_RE.test(packageVersion)
+    ? packageVersion
+    : createEsmUrl(packagePath, packageVersion, options);
+}
+
 /**
  * 将依赖信息转换为 esm.sh 链接
  * @param depsInfo 依赖信息对象
@@ -75,62 +149,14 @@ function transformDepsToEsmLinks(
   depsInfo: DepsInfo,
   options: EsmOptions = {}
 ): TransformResult {
-  const {
-    target = 'es2022',
-    bundle = false,
-    external = [],
-    alias = {},
-    keepNames = false
-  } = options;
-
   const dependencies: Record<string, string> = {};
   const imports: Record<string, string> = {};
 
   // 处理每个依赖
-  Object.entries(depsInfo).forEach(([packagePath, version]) => {
-    // 解析包名和子路径
-    const { packageName, subPath } = parsePackagePath(packagePath);
-    
-    // 处理别名
-    const actualPackageName = alias[packageName] || packageName;
-    
-    // 构建基础 URL
-    let esmUrl = `https://esm.sh/${actualPackageName}@${version}`;
-    
-    // 添加子路径
-    if (subPath) {
-      esmUrl += `/${subPath}`;
-    }
-    
-    // 添加查询参数
-    const params = new URLSearchParams();
-    
-    // if (dev) {
-    //   params.append('dev', '');
-    // }
-    
-    if (target) {
-      params.append('target', target);
-    }
-    
-    if (bundle || FORCE_BUNDLED_PACKAGES.has(packageName)) {
-      params.append('bundle', '');
-    }
-    
-    if (external.length > 0 && packageName !== 'react') {
-      params.append('external', external.join(','));
-    }
-    
-    if (keepNames) {
-      params.append('keep-names', '');
-    }
-    
-    // 添加参数到 URL
-    const queryString = params.toString();
-    if (queryString) {
-      esmUrl += `?${queryString}`;
-    }
-    
+  Object.keys(depsInfo).forEach((packagePath) => {
+    const esmUrl = resolveDependencyUrl(packagePath, depsInfo, options);
+    if (!esmUrl) return;
+
     dependencies[packagePath] = esmUrl;
     imports[packagePath] = esmUrl;
   });
@@ -441,6 +467,8 @@ function generateDynamicDependencyLoader(
 // 导出主要函数
 export {
   transformDepsToEsmLinks,
+  resolveDependencyUrl,
+  normalizeDependencyVersion,
   generateImportMapScript,
   generateDynamicDependencyLoader,
   parsePackagePath,
