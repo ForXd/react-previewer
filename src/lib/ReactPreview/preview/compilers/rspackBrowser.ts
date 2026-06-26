@@ -1,4 +1,4 @@
-import { injectJSXSourceInfo } from '../../compiler/ast/processors';
+import { injectJSXSourceInfoAndCssImports } from '../../compiler/ast/processors';
 import { DEFAULT_DEPENDENCIES, TRANSFORM_OPTIONS } from '../constant';
 import { transformDepsToEsmLinks } from '../DependencyResolver';
 import type {
@@ -184,7 +184,7 @@ export async function compileRspackBrowserProject(
   const rspackModule = rspackBrowserModule ?? await loadRspackBrowserModule();
   const outputFileName = options.outputFileName ?? DEFAULT_OUTPUT_FILE;
   const sourceAttributeNames = input.sourceAttributeNames ?? options.sourceAttributeNames;
-  const projectFiles = createProjectFiles(input.files, sourceAttributeNames);
+  const projectFiles = createProjectFiles(input.files, sourceAttributeNames, input.depsInfo);
   const volume = rspackModule.builtinMemFs.volume;
   volume.reset?.();
   volume.fromJSON(projectFiles, '/');
@@ -318,7 +318,8 @@ export function createRspackBrowserConfig(
 
 function createProjectFiles(
   files: Record<string, string>,
-  sourceAttributeNames?: RspackBrowserCompileOptions['sourceAttributeNames']
+  sourceAttributeNames?: RspackBrowserCompileOptions['sourceAttributeNames'],
+  depsInfo?: Record<string, string>
 ): Record<string, string> {
   const projectFiles: Record<string, string> = {
     '/package.json': JSON.stringify({ type: 'module' })
@@ -326,7 +327,12 @@ function createProjectFiles(
 
   for (const [fileName, content] of Object.entries(files)) {
     projectFiles[toProjectPath(fileName)] = isJSXSourceFile(fileName)
-      ? injectJSXSourceInfo(content, { filename: fileName, files, sourceAttributeNames })
+      ? injectJSXSourceInfoAndCssImports(content, {
+        filename: fileName,
+        files,
+        depsInfo,
+        sourceAttributeNames
+      })
       : content;
   }
 

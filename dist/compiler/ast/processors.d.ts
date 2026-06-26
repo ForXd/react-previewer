@@ -17,4 +17,5 @@ export declare class ASTProcessorManager {
     traverseAndProcess(code: string, source: string, options: TransformOptions): string;
 }
 export declare function injectJSXSourceInfo(code: string, options: Pick<TransformOptions, 'filename' | 'files' | 'sourceAttributeNames'>): string;
+export declare function injectJSXSourceInfoAndCssImports(code: string, options: Pick<TransformOptions, 'filename' | 'files' | 'depsInfo' | 'sourceAttributeNames'>): string;
 //# sourceMappingURL=processors.d.ts.map
