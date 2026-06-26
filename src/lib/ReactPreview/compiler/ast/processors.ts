@@ -77,7 +77,7 @@ export class ImportProcessor implements ASTProcessor {
   }
 
   private processCSSImport(node: ExtendedNode, _: string, options: TransformOptions): void {
-    const { filename, files } = options;
+    const { filename, files, depsInfo } = options;
     const cssPath = node.source?.value;
 
     if (!cssPath || !filename) return;
@@ -85,7 +85,7 @@ export class ImportProcessor implements ASTProcessor {
     // 检查是否是远程 CSS 文件
     if (!cssPath.startsWith('./') && !cssPath.startsWith('../') && !cssPath.startsWith('/')) {
       // 远程 CSS 文件，转换为动态加载
-      this.transformToRemoteCSSLoader(node, cssPath);
+      this.transformToRemoteCSSLoader(node, cssPath, resolveRemoteCssUrl(cssPath, depsInfo));
       return;
     }
 
@@ -125,7 +125,7 @@ export class ImportProcessor implements ASTProcessor {
     this.transformToLocalCSSLoader(node, cssPath, cssContent);
   }
 
-  private transformToRemoteCSSLoader(node: ExtendedNode, cssPath: string): void {
+  private transformToRemoteCSSLoader(node: ExtendedNode, cssPath: string, cssUrl = cssPath): void {
     // 将远程 CSS 导入转换为统一资源加载器调用
     node.type = 'ExpressionStatement';
     node.expression = {
@@ -138,13 +138,13 @@ export class ImportProcessor implements ASTProcessor {
           property: { type: 'Identifier', name: '__reactPreviewLoadStyle' }
         },
         arguments: [
-          { type: 'StringLiteral', value: cssPath },
+          { type: 'StringLiteral', value: cssUrl },
           { type: 'StringLiteral', value: cssPath }
         ]
       },
     } as unknown as ExtendedNode;
 
-    logger.debug('Transformed remote CSS import:', cssPath, '-> resource loader');
+    logger.debug('Transformed remote CSS import:', cssPath, '-> resource loader:', cssUrl);
   }
 
   private transformToLocalCSSLoader(node: ExtendedNode, cssPath: string, cssContent: string): void {
@@ -243,6 +243,78 @@ export function injectJSXSourceInfo(
   });
 
   return result.code ?? code;
+}
+
+export function injectJSXSourceInfoAndCssImports(
+  code: string,
+  options: Pick<TransformOptions, 'filename' | 'files' | 'depsInfo' | 'sourceAttributeNames'>
+): string {
+  const cssImportProcessor = new ImportProcessor();
+  const result = transform(code, {
+    ast: true,
+    filename: options.filename,
+    presets: [
+      ['typescript', {
+        allExtensions: true,
+        isTSX: true
+      }]
+    ],
+    plugins: [
+      () => ({
+        visitor: {
+          JSXOpeningElement: (path: { node: Node }) => {
+            addJSXSourceInfoAttributes(path.node as ExtendedNode, options);
+          },
+          ImportDeclaration: (path: { node: Node }) => {
+            const node = path.node as ExtendedNode;
+            if (node.source?.value.endsWith('.css')) {
+              cssImportProcessor.process(node, code, options);
+            }
+          },
+          JSXElement: (path: { node: Node }) => {
+            updateJSXElementEndPosition(path.node as ExtendedNode, options.sourceAttributeNames);
+          }
+        }
+      })
+    ]
+  });
+
+  return result.code ?? code;
+}
+
+function resolveRemoteCssUrl(cssPath: string, depsInfo?: Record<string, string>): string {
+  if (/^https?:\/\//i.test(cssPath) || cssPath.startsWith('//')) {
+    return cssPath;
+  }
+
+  const { packageName, subPath } = parsePackagePath(cssPath);
+  const version = depsInfo?.[packageName] ?? depsInfo?.[cssPath];
+  if (!version) {
+    return cssPath;
+  }
+
+  const baseUrl = `https://esm.sh/${packageName}@${version}`;
+  return subPath ? `${baseUrl}/${subPath}` : baseUrl;
+}
+
+function parsePackagePath(packagePath: string): { packageName: string; subPath: string } {
+  if (packagePath.startsWith('@')) {
+    const parts = packagePath.split('/');
+    return {
+      packageName: parts.length >= 2 ? `${parts[0]}/${parts[1]}` : packagePath,
+      subPath: parts.slice(2).join('/')
+    };
+  }
+
+  const firstSlashIndex = packagePath.indexOf('/');
+  if (firstSlashIndex === -1) {
+    return { packageName: packagePath, subPath: '' };
+  }
+
+  return {
+    packageName: packagePath.slice(0, firstSlashIndex),
+    subPath: packagePath.slice(firstSlashIndex + 1)
+  };
 }
 
 function addJSXSourceInfoAttributes(

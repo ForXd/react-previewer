@@ -1,6 +1,6 @@
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const require_rolldown_runtime = require("./rolldown-runtime-BqCkTl7Q.cjs");
-const require_constant = require("./constant-B81PAp3m.cjs");
+const require_constant = require("./constant-5gZDck7I.cjs");
 let react = require("react");
 react = require_rolldown_runtime.__toESM(react, 1);
 //#region src/lib/ReactPreview/compiler/dependency/DependencyGraph.ts
@@ -12715,7 +12715,7 @@ var LazyRspackBrowserPreviewCompiler = class {
 		await (await this.compilerPromise).cleanup?.(result);
 	}
 	async getCompiler() {
-		if (!this.compilerPromise) this.compilerPromise = Promise.resolve().then(() => require("./rspackBrowser-D56FQPbh.cjs")).then((n) => n.rspackBrowser_exports).then(({ RspackBrowserPreviewCompiler }) => new RspackBrowserPreviewCompiler(this.options));
+		if (!this.compilerPromise) this.compilerPromise = Promise.resolve().then(() => require("./rspackBrowser-C1q48O-V.cjs")).then((n) => n.rspackBrowser_exports).then(({ RspackBrowserPreviewCompiler }) => new RspackBrowserPreviewCompiler(this.options));
 		return this.compilerPromise;
 	}
 };

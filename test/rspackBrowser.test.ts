@@ -104,7 +104,7 @@ describe('rspack browser compiler support', () => {
     expect(config.plugins).toHaveLength(1);
   });
 
-  it('preserves module imports, injects source metadata, and inlines emitted css assets for preview', async () => {
+  it('preserves module imports and rewrites local css imports for preview injection', async () => {
     const volume = new FakeVolume();
     const captured: { config?: Record<string, unknown> } = {};
     const fakeRspack: RspackBrowserModule = {
@@ -113,19 +113,18 @@ describe('rspack browser compiler support', () => {
       rspack(config, callback) {
         captured.config = config;
         expect(volume.files['/src/App.tsx']).toContain("from './Button'");
-        expect(volume.files['/src/App.tsx']).toContain("import './style.css'");
-        expect(volume.files['/src/App.tsx']).not.toContain('__reactPreviewInjectStyle');
+        expect(volume.files['/src/App.tsx']).not.toContain("import './style.css'");
+        expect(volume.files['/src/App.tsx']).toContain('__reactPreviewInjectStyle');
+        expect(volume.files['/src/App.tsx']).toContain('button { color: red; }');
         expect(volume.files['/src/App.tsx']).toContain('data-preview-file="App.tsx"');
         expect(volume.files['/src/Button.tsx']).toContain('data-preview-file="Button.tsx"');
         expect(volume.files['/src/Button.tsx']).toContain('data-preview-line=');
         volume.files['/dist/preview.js'] = 'export default function App() { return null; }';
-        volume.files['/dist/preview.css'] = 'button { color: red; }';
         callback(null, {
           hasErrors: () => false,
           toJson: () => ({
             assets: [
-              { name: 'preview.js' },
-              { name: 'preview.css' }
+              { name: 'preview.js' }
             ]
           })
         });
@@ -161,9 +160,43 @@ export default function Button() {
     expect(captured.config?.entry).toBe('/src/App.tsx');
     expect(result).toEqual({
       outputFileName: 'preview.js',
-      output: 'await window.__reactPreviewInjectStyle("preview.css", "button { color: red; }");\nexport default function App() { return null; }',
+      output: 'export default function App() { return null; }',
       transformedFiles: 3
     });
+  });
+
+  it('rewrites package css imports before rspack compilation', async () => {
+    const volume = new FakeVolume();
+    const fakeRspack: RspackBrowserModule = {
+      builtinMemFs: { volume },
+      rspack(_config, callback) {
+        expect(volume.files['/src/App.tsx']).not.toContain("import '@arco-design/web-react/dist/css/arco.css'");
+        expect(volume.files['/src/App.tsx']).toContain('__reactPreviewLoadStyle');
+        expect(volume.files['/src/App.tsx']).toContain('https://esm.sh/@arco-design/web-react@2.66.1/dist/css/arco.css');
+        expect(volume.files['/src/App.tsx']).toContain('"@arco-design/web-react/dist/css/arco.css"');
+        volume.files['/dist/preview.js'] = 'export default function App() { return null; }';
+        callback(null, { hasErrors: () => false });
+        return null;
+      }
+    };
+
+    await compileRspackBrowserProject(
+      {
+        entryFile: 'App.tsx',
+        depsInfo: { '@arco-design/web-react': '2.66.1' },
+        files: {
+          'App.tsx': `
+import '@arco-design/web-react/dist/css/arco.css';
+
+export default function App() {
+  return <button>Save</button>;
+}
+`
+        }
+      },
+      { outputFileName: 'preview.js', useWorker: false },
+      fakeRspack
+    );
   });
 
   it('supports custom source metadata attribute names', async () => {
