@@ -52,6 +52,7 @@ export interface RspackBrowserProjectResult {
   outputFileName: string;
   output: string;
   transformedFiles: number;
+  sourceMap?: string;
 }
 
 interface RspackAssetInfo {
@@ -213,11 +214,13 @@ export async function compileRspackBrowserProject(
   const rawOutputText = typeof output === 'string' ? output : new TextDecoder().decode(output);
   const outputText = replaceExternalImportSpecifiers(rawOutputText, getRspackDependencies(input.depsInfo));
   const cssRuntime = createCssInjectionRuntime(volume, compilationStats);
+  const sourceMap = readRspackSourceMap(volume, outputFileName);
 
   return {
     outputFileName,
-    output: `${cssRuntime}${outputText}`,
-    transformedFiles: Object.keys(input.files).length
+    output: cssRuntime ? `${outputText}\n${cssRuntime}` : outputText,
+    transformedFiles: Object.keys(input.files).length,
+    ...(sourceMap ? { sourceMap } : {})
   };
 }
 
@@ -249,7 +252,7 @@ export function createRspackBrowserConfig(
     context: '/',
     target: ['web', 'es2020'],
     entry: toProjectPath(input.entryFile),
-    devtool: false,
+    devtool: 'source-map',
     output: {
       path: '/dist',
       filename: outputFileName,
@@ -382,6 +385,18 @@ function createCssInjectionRuntime(volume: RspackBrowserVolume, stats?: RspackSt
   return `${injections.join('\n')}\n`;
 }
 
+function readRspackSourceMap(
+  volume: RspackBrowserVolume,
+  outputFileName: string
+): string | undefined {
+  try {
+    const sourceMap = volume.readFileSync(`/dist/${outputFileName}.map`, 'utf-8');
+    return typeof sourceMap === 'string' ? sourceMap : new TextDecoder().decode(sourceMap);
+  } catch {
+    return undefined;
+  }
+}
+
 function getRspackAssetNames(stats?: RspackStats): string[] {
   const json = stats?.toJson?.({ assets: true });
   if (!isStatsJsonWithAssets(json)) {
@@ -451,6 +466,7 @@ function createPreviewCompileResult(
 
   return {
     fileUrls,
+    sourceMaps: result.sourceMap ? new Map([[url, result.sourceMap]]) : undefined,
     entryFile,
     transformedFiles: result.transformedFiles,
     cleanup: () => URL.revokeObjectURL(url)

@@ -1,5 +1,6 @@
 import type { FileProcessor, TransformOptions } from '../types';
 import { ASTProcessorManager, JSXDebugProcessor, ImportProcessor } from '../ast/processors';
+import { isPreviewDependencyError } from '../../preview/errors';
 
 export class TypeScriptProcessor implements FileProcessor {
   private astProcessorManager: ASTProcessorManager;
@@ -29,6 +30,9 @@ export class TypeScriptProcessor implements FileProcessor {
       );
       return transformedCode;
     } catch (error) {
+      if (isPreviewDependencyError(error)) {
+        throw error;
+      }
       throw new Error(`Failed to transform ${fileName}: ${error}`);
     }
   }

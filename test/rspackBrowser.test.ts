@@ -57,6 +57,7 @@ describe('rspack browser compiler support', () => {
       module: true,
       library: { type: 'module' }
     });
+    expect(config.devtool).toBe('source-map');
     expect(config.experiments).toMatchObject({
       outputModule: true,
       buildHttp: { allowedUris: ['https://'] }
@@ -107,6 +108,12 @@ describe('rspack browser compiler support', () => {
   it('preserves module imports and rewrites local css imports for preview injection', async () => {
     const volume = new FakeVolume();
     const captured: { config?: Record<string, unknown> } = {};
+    const sourceMap = JSON.stringify({
+      version: 3,
+      sources: ['webpack:///./src/Button.tsx'],
+      names: [],
+      mappings: 'AAAA'
+    });
     const fakeRspack: RspackBrowserModule = {
       builtinMemFs: { volume },
       BrowserHttpImportEsmPlugin: FakeBrowserHttpImportEsmPlugin,
@@ -120,6 +127,7 @@ describe('rspack browser compiler support', () => {
         expect(volume.files['/src/Button.tsx']).toContain('data-preview-file="Button.tsx"');
         expect(volume.files['/src/Button.tsx']).toContain('data-preview-line=');
         volume.files['/dist/preview.js'] = 'export default function App() { return null; }';
+        volume.files['/dist/preview.js.map'] = sourceMap;
         callback(null, {
           hasErrors: () => false,
           toJson: () => ({
@@ -161,7 +169,8 @@ export default function Button() {
     expect(result).toEqual({
       outputFileName: 'preview.js',
       output: 'export default function App() { return null; }',
-      transformedFiles: 3
+      transformedFiles: 3,
+      sourceMap
     });
   });
 

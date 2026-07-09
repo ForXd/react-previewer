@@ -287,4 +287,96 @@ p { margin: 0; color: #aab5ce; font-size: 18px; }
   }
 };
 
-export const demoCatalog = [overviewDemo, usersDemo, routingDemo];
+const compileErrorDemo: DemoDefinition = {
+  id: 'compile-error',
+  title: '编译错误',
+  category: 'Error · Compile',
+  description: '故意保留一个 JSX 闭合错误，展示文件名、错误行列与源码上下文。',
+  entryFile: 'App.tsx',
+  files: {
+    'App.tsx': `
+import React from 'react';
+
+export default function App() {
+  const message = 'Fix the highlighted JSX and the preview will recover.';
+
+  return (
+    <main style={{ padding: 48, fontFamily: 'system-ui' }}>
+      <span>Compile error example</span>
+      <h1>One character away.</h1>
+      <p>{message}</p>
+      <button>Repair preview</button
+    </main>
+  );
+}
+`
+  }
+};
+
+const dependencyErrorDemo: DemoDefinition = {
+  id: 'dependency-error',
+  title: '依赖错误',
+  category: 'Error · Dependency',
+  description: '引用一个不存在的 npm 包，展示包名、请求地址与加载失败原因。',
+  entryFile: 'App.tsx',
+  depsInfo: {
+    '@react-previewer/missing-card': '1.0.0'
+  },
+  files: {
+    'App.tsx': `
+import React from 'react';
+import MissingCard from '@react-previewer/missing-card';
+
+export default function App() {
+  return (
+    <main style={{ padding: 48, fontFamily: 'system-ui' }}>
+      <span>Dependency error example</span>
+      <h1>The package request is intentional.</h1>
+      <MissingCard />
+    </main>
+  );
+}
+`
+  }
+};
+
+const runtimeErrorDemo: DemoDefinition = {
+  id: 'runtime-error',
+  title: '运行时错误',
+  category: 'Error · Runtime',
+  description: '代码可以正常编译，但组件渲染时主动抛错，展示运行时堆栈与源码位置。',
+  entryFile: 'App.tsx',
+  files: {
+    'App.tsx': `
+import React from 'react';
+import { CrashPanel } from './CrashPanel';
+
+export default function App() {
+  return <CrashPanel />;
+}
+`,
+    'CrashPanel.tsx': `
+import React from 'react';
+
+export function CrashPanel() {
+  const workspace = { name: 'Northstar', owner: null };
+  throw new Error('Demo runtime crash: workspace owner is missing');
+
+  return (
+    <main style={{ padding: 48, fontFamily: 'system-ui' }}>
+      <h1>{workspace.name}</h1>
+    </main>
+  );
+}
+`
+  }
+};
+
+export const demoCatalog = [
+  overviewDemo,
+  usersDemo,
+  routingDemo,
+  compileErrorDemo,
+  dependencyErrorDemo,
+  runtimeErrorDemo
+];

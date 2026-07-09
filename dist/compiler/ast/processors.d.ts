@@ -6,6 +6,7 @@ export declare class JSXDebugProcessor implements ASTProcessor {
 export declare class ImportProcessor implements ASTProcessor {
     process(node: Node, source: string, options: TransformOptions): void;
     private processImportDeclaration;
+    private createDependencyError;
     private processCSSImport;
     private transformToRemoteCSSLoader;
     private transformToLocalCSSLoader;

@@ -1,6 +1,7 @@
 import type { ErrorInfo } from '../types';
 import { ErrorHandler } from './ErrorHandler';
 import { createModuleLogger } from './Logger';
+import type { DependencyErrorPayload } from '../errors';
 
 const logger = createModuleLogger('MessageHandler');
 
@@ -18,12 +19,6 @@ interface ConsoleLogData {
   args: unknown[];
 }
 
-interface DependencyErrorData {
-  name: string;
-  url: string;
-  error: string;
-}
-
 interface MessageData {
   type: string;
   data: Record<string, unknown>;
@@ -33,14 +28,14 @@ export class MessageHandler {
   private errorHandler: ErrorHandler;
   private onError?: (error: ErrorInfo) => void;
   private onElementClick?: (data: ElementClickData) => void;
-  private onDependencyError?: (data: DependencyErrorData) => void;
+  private onDependencyError?: (error: ErrorInfo) => void;
 
   constructor(
     errorHandler: ErrorHandler,
     callbacks: {
       onError?: (error: ErrorInfo) => void;
       onElementClick?: (data: ElementClickData) => void;
-      onDependencyError?: (data: DependencyErrorData) => void;
+      onDependencyError?: (error: ErrorInfo) => void;
     }
   ) {
     this.errorHandler = errorHandler;
@@ -72,7 +67,8 @@ export class MessageHandler {
           this.handleConsoleLog(data as unknown as ConsoleLogData);
           break;
         case 'dependency-error':
-          this.handleDependencyError(data as unknown as DependencyErrorData);
+        case 'resource-error':
+          this.handleDependencyError(data as unknown as DependencyErrorPayload);
           break;
         default:
           logger.warn('Unknown message type:', type);
@@ -131,7 +127,7 @@ export class MessageHandler {
     }
   }
 
-  private handleDependencyError(data: DependencyErrorData): void {
+  private handleDependencyError(data: DependencyErrorPayload): void {
     try {
       // 验证数据格式
       if (!data || typeof data !== 'object') {
@@ -147,7 +143,7 @@ export class MessageHandler {
       }
 
       logger.warn(`依赖加载失败: ${name} (${url}) - ${error}`);
-      this.onDependencyError?.(data);
+      this.onDependencyError?.(this.errorHandler.processDependencyError(data));
     } catch (error) {
       logger.error('Error handling dependency error:', error);
     }

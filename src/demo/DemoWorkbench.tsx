@@ -10,6 +10,7 @@ import {
 import rspackBrowserWorkerUrl from '../lib/ReactPreview/preview/compilers/rspackBrowser.worker.ts?worker&url';
 import { demoCatalog } from './demoCatalog';
 import { InspectorPanel } from './InspectorPanel';
+import { MonacoCodeEditor } from './MonacoCodeEditor';
 
 type CompilerMode = 'babel' | 'rspack-browser';
 type PreviewSkin = 'paper' | 'ink';
@@ -46,6 +47,10 @@ const normalizePath = (value: string) => {
 
 export default function DemoWorkbench() {
   const [selectedId, setSelectedId] = useState(demoCatalog[0].id);
+  const [workingFiles, setWorkingFiles] = useState<Record<string, string>>(
+    () => ({ ...demoCatalog[0].files })
+  );
+  const [activeFile, setActiveFile] = useState(demoCatalog[0].entryFile);
   const [compilerMode, setCompilerMode] = useState<CompilerMode>('babel');
   const [previewSkin, setPreviewSkin] = useState<PreviewSkin>('paper');
   const [viewportName, setViewportName] = useState<ViewportName>('responsive');
@@ -58,6 +63,9 @@ export default function DemoWorkbench() {
 
   const selectedDemo = demoCatalog.find((demo) => demo.id === selectedId) ?? demoCatalog[0];
   const viewport = viewports[viewportName];
+  const fileNames = Object.keys(workingFiles);
+  const isDirty = fileNames.some((fileName) => workingFiles[fileName] !== selectedDemo.files[fileName])
+    || Object.keys(selectedDemo.files).some((fileName) => !(fileName in workingFiles));
 
   const compiler = useMemo<PreviewCompilerLike>(() => {
     if (compilerMode === 'rspack-browser') {
@@ -99,10 +107,35 @@ export default function DemoWorkbench() {
   }), [previewSkin]);
 
   const selectDemo = (id: string) => {
+    const nextDemo = demoCatalog.find((demo) => demo.id === id) ?? demoCatalog[0];
     setSelectedId(id);
+    setWorkingFiles({ ...nextDemo.files });
+    setActiveFile(nextDemo.entryFile);
     setSourceInfo(null);
     setPreviewPath('/');
     setRouteInput('/');
+    setStatus(createInitialStatus());
+  };
+
+  const updateActiveFile = (value: string) => {
+    setWorkingFiles((currentFiles) => ({
+      ...currentFiles,
+      [activeFile]: value
+    }));
+    setSourceInfo(null);
+    setStatus((currentStatus) => ({
+      ...currentStatus,
+      isLoading: true,
+      phase: 'compiling',
+      error: null
+    }));
+  };
+
+  const resetCode = () => {
+    setWorkingFiles({ ...selectedDemo.files });
+    setActiveFile(selectedDemo.entryFile);
+    setSourceInfo(null);
+    setRefreshKey((key) => key + 1);
     setStatus(createInitialStatus());
   };
 
@@ -118,13 +151,14 @@ export default function DemoWorkbench() {
     : status.phase === 'ready'
       ? 'Ready'
       : status.phase.replace('-', ' ');
+  const statusTone = status.error ? 'error' : status.phase;
 
   return (
     <div className="demo-app">
       <header className="demo-header">
         <a className="demo-brand" href="#top" aria-label="React Previewer demo 首页">
           <span>RP</span>
-          <div><strong>React Previewer</strong><small>Runtime workbench</small></div>
+          <div><strong>React Previewer</strong><small>Live coding workbench</small></div>
         </a>
 
         <div className="demo-header__meta">
@@ -166,12 +200,12 @@ export default function DemoWorkbench() {
           <section className="demo-hero">
             <div>
               <span className="demo-eyebrow">Deep runtime · small interface</span>
-              <h1>预览能力保持纯粹，<br />界面由你来定义。</h1>
+              <h1>在线编辑、即时预览，<br />错误也有迹可循。</h1>
               <p>{selectedDemo.description}</p>
             </div>
             <dl>
-              <div><dt>Status</dt><dd className={`status-${status.phase}`}>{statusLabel}</dd></div>
-              <div><dt>Files</dt><dd>{status.transformedFiles || Object.keys(selectedDemo.files).length}</dd></div>
+              <div><dt>Status</dt><dd className={`status-${statusTone}`}>{statusLabel}</dd></div>
+              <div><dt>Files</dt><dd>{status.transformedFiles || fileNames.length}</dd></div>
               <div><dt>Compile</dt><dd>{status.compileDuration === null ? '—' : `${status.compileDuration}ms`}</dd></div>
             </dl>
           </section>
@@ -191,6 +225,9 @@ export default function DemoWorkbench() {
                 </button>
                 <button type="button" onClick={() => setRefreshKey((key) => key + 1)}>
                   <span aria-hidden="true">↻</span>刷新
+                </button>
+                <button type="button" onClick={resetCode} disabled={!isDirty} aria-label="重置代码">
+                  <span aria-hidden="true">↶</span>重置
                 </button>
               </div>
 
@@ -234,63 +271,117 @@ export default function DemoWorkbench() {
               </div>
             </header>
 
-            <div className={`preview-stage preview-stage--${previewSkin}`}>
-              <div
-                className="browser-shell"
-                style={{ width: viewport.width, maxWidth: '100%' }}
-              >
-                <div className="browser-shell__bar">
-                  <span className="browser-dots" aria-hidden="true"><i /><i /><i /></span>
-                  <form onSubmit={submitRoute}>
-                    <span>preview.local</span>
-                    <input
-                      aria-label="预览路径"
-                      value={routeInput}
-                      onChange={(event) => setRouteInput(event.target.value)}
-                      spellCheck={false}
-                    />
-                    <button type="submit" aria-label="打开预览路径">→</button>
-                  </form>
-                  <span className="browser-shell__size">{viewport.label}</span>
+            <div className="workbench-body">
+              <section className="code-workspace" aria-label="代码工作区">
+                <header className="code-workspace__header">
+                  <div>
+                    <span className="code-workspace__traffic" aria-hidden="true"><i /><i /><i /></span>
+                    <strong>Monaco Editor</strong>
+                  </div>
+                  <span className={isDirty ? 'is-dirty' : undefined}>
+                    {isDirty ? '已修改 · 自动编译' : '自动编译已开启'}
+                  </span>
+                </header>
+
+                <div className="code-file-tabs" role="tablist" aria-label="示例文件">
+                  {fileNames.map((fileName) => (
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={activeFile === fileName}
+                      className={activeFile === fileName ? 'is-active' : undefined}
+                      onClick={() => setActiveFile(fileName)}
+                      key={fileName}
+                    >
+                      <span aria-hidden="true">{fileName.endsWith('.css') ? '#' : '&lt;&gt;'}</span>
+                      {fileName}
+                      {workingFiles[fileName] !== selectedDemo.files[fileName] && <i aria-label="已修改" />}
+                    </button>
+                  ))}
                 </div>
 
-                <div className="browser-shell__runtime" style={{ height: viewport.height }}>
-                  <ReactPreviewer
-                    key={`${selectedDemo.id}:${refreshKey}`}
-                    files={selectedDemo.files}
-                    entryFile={selectedDemo.entryFile}
-                    depsInfo={selectedDemo.depsInfo}
-                    dependencyStyles={selectedDemo.dependencyStyles}
-                    initialPath={previewPath}
-                    compiler={compiler}
-                    isInspecting={isInspecting}
-                    className="demo-runtime-instance"
-                    classNames={classNames}
-                    styles={styles}
-                    style={{ height: '100%', minHeight: '100%' }}
-                    iframeTitle={`${selectedDemo.title} preview`}
-                    onElementClick={setSourceInfo}
-                    onRouteChange={(route) => {
-                      setRouteInput(route.href);
-                      setPreviewPath(route.href);
-                    }}
-                    onStatusChange={setStatus}
+                <div className="code-editor-shell">
+                  <MonacoCodeEditor
+                    demoId={selectedDemo.id}
+                    fileName={activeFile}
+                    value={workingFiles[activeFile] ?? ''}
+                    error={status.error}
+                    onChange={updateActiveFile}
                   />
                 </div>
+
+                <footer className="code-workspace__footer">
+                  <span>{activeFile}</span>
+                  <span>{(workingFiles[activeFile] ?? '').split('\n').length} 行</span>
+                  <span>UTF-8</span>
+                  <span>Spaces: 2</span>
+                </footer>
+              </section>
+
+              <div className={`preview-stage preview-stage--${previewSkin}`}>
+                <div
+                  className="browser-shell"
+                  style={{ width: viewport.width, maxWidth: '100%' }}
+                >
+                  <div className="browser-shell__bar">
+                    <span className="browser-dots" aria-hidden="true"><i /><i /><i /></span>
+                    <form onSubmit={submitRoute}>
+                      <span>preview.local</span>
+                      <input
+                        aria-label="预览路径"
+                        value={routeInput}
+                        onChange={(event) => setRouteInput(event.target.value)}
+                        spellCheck={false}
+                      />
+                      <button type="submit" aria-label="打开预览路径">→</button>
+                    </form>
+                    <span className="browser-shell__size">{viewport.label}</span>
+                  </div>
+
+                  <div className="browser-shell__runtime" style={{ height: viewport.height }}>
+                    <ReactPreviewer
+                      key={`${selectedDemo.id}:${refreshKey}`}
+                      files={workingFiles}
+                      entryFile={selectedDemo.entryFile}
+                      depsInfo={selectedDemo.depsInfo}
+                      dependencyStyles={selectedDemo.dependencyStyles}
+                      initialPath={previewPath}
+                      compiler={compiler}
+                      isInspecting={isInspecting}
+                      className="demo-runtime-instance"
+                      classNames={classNames}
+                      styles={styles}
+                      style={{ height: '100%', minHeight: '100%' }}
+                      iframeTitle={`${selectedDemo.title} preview`}
+                      onElementClick={setSourceInfo}
+                      onRouteChange={(route) => {
+                        setRouteInput(route.href);
+                        setPreviewPath(route.href);
+                      }}
+                      onStatusChange={(nextStatus) => {
+                        setStatus(nextStatus);
+                        const errorFileName = nextStatus.error?.fileName;
+                        if (errorFileName && workingFiles[errorFileName] !== undefined) {
+                          setActiveFile(errorFileName);
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+                <InspectorPanel sourceInfo={sourceInfo} onClose={() => setSourceInfo(null)} />
               </div>
-              <InspectorPanel sourceInfo={sourceInfo} onClose={() => setSourceInfo(null)} />
             </div>
 
             <footer className="workbench-footer">
               <div>
-                <span className={`status-dot status-dot--${status.phase}`} />
+                <span className={`status-dot status-dot--${statusTone}`} />
                 <strong>{selectedDemo.title}</strong>
                 <span>{compilerMode === 'babel' ? 'Babel compiler' : 'Rspack browser compiler'}</span>
               </div>
-              <details>
-                <summary>查看入口代码</summary>
-                <pre>{selectedDemo.files[selectedDemo.entryFile]}</pre>
-              </details>
+              <div className="workbench-footer__live">
+                <span>{isDirty ? '编辑内容已进入实时预览' : '选择文件开始编辑'}</span>
+                <span>{compilerMode === 'babel' ? '120ms debounce' : 'worker compile'}</span>
+              </div>
             </footer>
           </section>
         </main>

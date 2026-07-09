@@ -29,7 +29,7 @@ export interface ReactPreviewerProps {
   dependencyStyles?: Record<string, string | string[]>;
   entryFile?: string;
   initialPath?: string;
-  onError?: (error: Error) => void;
+  onError?: (error: Error, info: ErrorInfo) => void;
   onElementClick?: (sourceInfo: SourceInfo) => void;
   onRouteChange?: (route: PreviewRouteState) => void;
   loggerConfig?: Partial<LoggerConfig>;
@@ -76,14 +76,18 @@ export type PreviewPhase =
   | 'ready'
   | 'error';
 
+export type PreviewErrorType = 'compile' | 'dependency' | 'runtime';
+
 export interface ErrorInfo {
-  type: 'compile' | 'runtime';
+  type: PreviewErrorType;
   message: string;
   stack?: string;
   fileName?: string;
   lineNumber?: number;
   columnNumber?: number;
   codeFrame?: string;
+  dependencyName?: string;
+  dependencyUrl?: string;
 }
 
 export interface SourceInfo {

@@ -190,6 +190,13 @@
   line-height: 1.35;
 }
 
+.react-previewer__error-header p {
+  margin: 4px 0 0;
+  color: var(--rp-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .react-previewer__error-body {
   display: grid;
   gap: 16px;
@@ -211,6 +218,34 @@
 .react-previewer__error-location {
   color: var(--rp-muted);
   font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.react-previewer__dependency-details {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 14px;
+  background: var(--rp-panel);
+  border: 1px solid var(--rp-border);
+  border-radius: 10px;
+}
+
+.react-previewer__dependency-details div {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.react-previewer__dependency-details dt {
+  color: var(--rp-muted);
+  font-size: 11px;
+}
+
+.react-previewer__dependency-details dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font: 11px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 .react-previewer__code {
@@ -242,6 +277,13 @@ pre.react-previewer__code {
 .react-previewer__code-line code {
   padding: 2px 14px;
   white-space: pre;
+}
+
+.react-previewer__code-pointer {
+  grid-column: 2;
+  padding-block: 0 3px;
+  color: #ff8d89;
+  font: 700 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 .react-previewer__code-line--highlighted {

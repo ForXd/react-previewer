@@ -1,4 +1,4 @@
-import { r as e } from "./rspackBrowser-CQRtaM8Y.js";
+import { t as e } from "./rolldown-runtime-DnwLefa7.js";
 //#region \0@oxc-project+runtime@0.127.0/helpers/typeof.js
 function t(e) {
 	"@babel/helpers - typeof";
@@ -87238,6 +87238,10 @@ function E(e, t = {}, n = [], r = !1) {
         this.postStatus(active?.[0]);
       },
 
+      hasBlockingErrors() {
+        return Array.from(this.dependencies.values()).some((dep) => dep.status === 'error');
+      },
+
       postStatus(activeName = '') {
         const progress = this.totalCount > 0 ? Math.round((this.loadedCount / this.totalCount) * 100) : 100;
         const phase = activeName.startsWith('style:') || activeName.startsWith('css:') || activeName.startsWith('inline:') || activeName === 'tailwindcss'
@@ -87458,44 +87462,66 @@ function E(e, t = {}, n = [], r = !1) {
   `;
 }
 //#endregion
-//#region src/lib/ReactPreview/compiler/ast/processors.ts
-var D = p("ASTProcessors"), O = class {
-	process(e, t, n) {
-		e.type === "JSXOpeningElement" && re(e, n);
+//#region src/lib/ReactPreview/preview/errors.ts
+var D = class extends Error {
+	constructor(e) {
+		super(e.message ?? `Unable to resolve dependency "${e.dependencyName}" from ${e.fileName}`), i(this, "type", "dependency"), i(this, "dependencyName", void 0), i(this, "fileName", void 0), i(this, "dependencyUrl", void 0), i(this, "lineNumber", void 0), i(this, "columnNumber", void 0), this.name = "PreviewDependencyError", this.dependencyName = e.dependencyName, this.fileName = e.fileName, this.dependencyUrl = e.dependencyUrl, this.lineNumber = e.lineNumber, this.columnNumber = e.columnNumber;
 	}
-}, k = class {
+};
+function O(e) {
+	return e instanceof D || typeof e == "object" && !!e && e.type === "dependency" && typeof e.dependencyName == "string";
+}
+//#endregion
+//#region src/lib/ReactPreview/compiler/ast/processors.ts
+var k = p("ASTProcessors"), A = class {
+	process(e, t, n) {
+		e.type === "JSXOpeningElement" && ae(e, n);
+	}
+}, j = class {
 	process(e, t, n) {
 		e.type === "ImportDeclaration" && this.processImportDeclaration(e, t, n);
 	}
 	processImportDeclaration(e, t, n) {
 		let { filename: r, files: i, fileUrls: a, depsInfo: o } = n, l = e.source?.value;
 		if (!(!l || !r)) {
-			if (te(l)) {
+			if (re(l)) {
 				this.processCSSImport(e, t, n);
 				return;
 			}
 			if (l.startsWith(".")) {
 				let t = s(r, l), n = c(t, i);
-				D.debug("moduleName: =======", l, t, n);
+				k.debug("moduleName: =======", l, t, n);
 				let o = a?.get(n);
-				o && e.source ? (e.source.value = o, D.debug("Resolved local import:", n, "-> URL:", o)) : D.warn("URL not found for local file:", n);
+				if (o && e.source) e.source.value = o, k.debug("Resolved local import:", n, "-> URL:", o);
+				else throw this.createDependencyError(l, r, e);
 			} else {
 				let t = C(l, o ?? {}, {
 					target: "es2022",
 					external: ["react", "react-dom"]
-				}) ?? l;
-				e.source && (e.source.value = t), D.debug("Resolved external import in ast:", l, "-> ESM URL:", t, o);
+				});
+				if (!t) throw this.createDependencyError(l, r, e);
+				e.source && (e.source.value = t), k.debug("Resolved external import in ast:", l, "-> ESM URL:", t, o);
 			}
 		}
+	}
+	createDependencyError(e, t, n) {
+		return new D({
+			dependencyName: e,
+			fileName: t,
+			lineNumber: n.loc?.start.line,
+			columnNumber: n.loc ? n.loc.start.column + 1 : void 0
+		});
 	}
 	processCSSImport(e, t, n) {
 		let { filename: r, files: i, depsInfo: a } = n, o = e.source?.value;
 		if (!o || !r) return;
 		if (!o.startsWith("./") && !o.startsWith("../") && !o.startsWith("/")) {
-			this.transformToRemoteCSSLoader(e, o, ee(o, a));
+			let t = ne(o, a);
+			if (!t) throw this.createDependencyError(o, r, e);
+			this.transformToRemoteCSSLoader(e, o, t);
 			return;
 		}
-		let c = ne(o), l = c;
+		let c = ie(o), l = c;
 		(o.startsWith("./") || o.startsWith("../")) && (l = s(r, c));
 		let u = [
 			l,
@@ -87503,13 +87529,10 @@ var D = p("ASTProcessors"), O = class {
 			l.replace(/\.css$/, "") + ".css"
 		], d = "";
 		for (let e of u) if (i?.[e]) {
-			d = i[e], D.debug(`Found CSS file: ${o} -> ${e}`);
+			d = i[e], k.debug(`Found CSS file: ${o} -> ${e}`);
 			break;
 		}
-		if (!d) {
-			D.warn(`CSS file not found: ${o}`), e.source && (e.source.value = "\"\"");
-			return;
-		}
+		if (!d) throw this.createDependencyError(o, r, e);
 		this.transformToLocalCSSLoader(e, o, d);
 	}
 	transformToRemoteCSSLoader(e, t, n = t) {
@@ -87536,7 +87559,7 @@ var D = p("ASTProcessors"), O = class {
 					value: t
 				}]
 			}
-		}, D.debug("Transformed remote CSS import:", t, "-> resource loader:", n);
+		}, k.debug("Transformed remote CSS import:", t, "-> resource loader:", n);
 	}
 	transformToLocalCSSLoader(e, t, n) {
 		e.type = "ExpressionStatement", e.expression = {
@@ -87562,9 +87585,9 @@ var D = p("ASTProcessors"), O = class {
 					value: n
 				}]
 			}
-		}, D.debug("Transformed local CSS import:", t, "-> resource loader");
+		}, k.debug("Transformed local CSS import:", t, "-> resource loader");
 	}
-}, A = class {
+}, ee = class {
 	constructor() {
 		i(this, "processors", []);
 	}
@@ -87577,8 +87600,9 @@ var D = p("ASTProcessors"), O = class {
 		});
 	}
 	traverseAndProcess(e, t, n) {
-		return ae((0, l.transform)(e, {
+		return se((0, l.transform)(e, {
 			ast: !0,
+			retainLines: !0,
 			presets: ["react", "typescript"],
 			filename: n.filename,
 			plugins: [() => ({ visitor: {
@@ -87591,16 +87615,17 @@ var D = p("ASTProcessors"), O = class {
 					this.processNode(r, t, n);
 				},
 				JSXElement: (e) => {
-					ie(e.node, n.sourceAttributeNames);
+					oe(e.node, n.sourceAttributeNames);
 				}
 			} })]
 		}).code ?? "");
 	}
 };
-function j(e, t) {
-	let n = new k();
+function te(e, t) {
+	let n = new j();
 	return (0, l.transform)(e, {
 		ast: !0,
+		retainLines: !0,
 		filename: t.filename,
 		presets: [["typescript", {
 			allExtensions: !0,
@@ -87608,31 +87633,31 @@ function j(e, t) {
 		}]],
 		plugins: [() => ({ visitor: {
 			JSXOpeningElement: (e) => {
-				re(e.node, t);
+				ae(e.node, t);
 			},
 			ImportDeclaration: (r) => {
 				let i = r.node;
-				i.source?.value && te(i.source.value) && n.process(i, e, t);
+				i.source?.value && re(i.source.value) && n.process(i, e, t);
 			},
 			JSXElement: (e) => {
-				ie(e.node, t.sourceAttributeNames);
+				oe(e.node, t.sourceAttributeNames);
 			}
 		} })]
 	}).code ?? e;
 }
-function ee(e, t) {
+function ne(e, t) {
 	return /^https?:\/\//i.test(e) || e.startsWith("//") ? e : C(e, t ?? {}, {
 		target: "",
 		external: []
-	}) ?? e;
+	});
 }
-function te(e) {
-	return ne(e).endsWith(".css");
+function re(e) {
+	return ie(e).endsWith(".css");
 }
-function ne(e) {
+function ie(e) {
 	return e.split(/[?#]/, 1)[0] ?? e;
 }
-function re(e, t) {
+function ae(e, t) {
 	let { filename: n, files: r } = t, i = h(t.sourceAttributeNames);
 	if (!e.loc) return;
 	let s = e.loc.start.line, l = e.loc.start.column;
@@ -87657,30 +87682,30 @@ function re(e, t) {
 		e.attributes.push(o);
 	}
 }
-function ie(e, t) {
+function oe(e, t) {
 	let n = e.openingElement, r = e.closingElement, i = h(t);
 	n && r && n.loc && r.loc && (n.attributes || (n.attributes = []), n.attributes = n.attributes.filter((e) => {
 		let t = e.name?.type === "JSXIdentifier" ? e.name.name : "";
 		return t !== i.endLine && t !== i.endColumn;
 	}), n.attributes.push(a(i.endLine, r.loc.end.line.toString()), a(i.endColumn, r.loc.end.column.toString())));
 }
-function ae(e) {
+function se(e) {
 	return /import\s+React(\s|,|\{|$)/.test(e) || /from\s+['"]react['"]/.test(e) ? e : `import React from 'react';\n${e}`;
 }
 //#endregion
 //#region src/lib/ReactPreview/preview/constant.ts
-var oe = {
+var ce = {
 	"@arco-design/web-react": "https://esm.sh/@arco-design/web-react@2.66.1/dist/css/arco.min.css",
 	antd: "https://esm.sh/antd@5.18.0/dist/reset.css"
-}, se = {
+}, le = {
 	react: "18.2.0",
 	"react-dom": "18.2.0"
-}, ce = {
+}, ue = {
 	target: "es2022",
 	bundle: !1,
 	external: ["react", "react-dom"]
 };
 //#endregion
-export { f as _, k as a, i as b, E as c, C as d, w as f, p as g, h, A as i, T as l, g as m, se as n, O as o, _ as p, ce as r, j as s, oe as t, b as u, c as v, s as y };
+export { p as _, j as a, s as b, O as c, b as d, C as f, h as g, g as h, ee as i, E as l, _ as m, le as n, A as o, w as p, ue as r, te as s, ce as t, T as u, f as v, i as x, c as y };
 
-//# sourceMappingURL=constant-CGZrxPcN.js.map
+//# sourceMappingURL=constant-DUnqHhWT.js.map

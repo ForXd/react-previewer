@@ -9,11 +9,6 @@ export interface ElementClickData {
     x: number;
     y: number;
 }
-interface DependencyErrorData {
-    name: string;
-    url: string;
-    error: string;
-}
 export declare class MessageHandler {
     private errorHandler;
     private onError?;
@@ -22,7 +17,7 @@ export declare class MessageHandler {
     constructor(errorHandler: ErrorHandler, callbacks: {
         onError?: (error: ErrorInfo) => void;
         onElementClick?: (data: ElementClickData) => void;
-        onDependencyError?: (data: DependencyErrorData) => void;
+        onDependencyError?: (error: ErrorInfo) => void;
     });
     handleMessage(event: MessageEvent): void;
     private handleRuntimeError;
@@ -30,5 +25,4 @@ export declare class MessageHandler {
     private handleConsoleLog;
     private handleDependencyError;
 }
-export {};
 //# sourceMappingURL=MessageHandler.d.ts.map

@@ -1,4 +1,4 @@
-import { t as e } from "./rspackBrowser-CQRtaM8Y.js";
+import { t as e } from "./rspackBrowser-CFB5s4IO.js";
 //#region src/lib/ReactPreview/preview/compilers/rspackBrowser.worker.ts
 self.addEventListener("message", (e) => {
 	e.data.type === "compile" && t(e.data);

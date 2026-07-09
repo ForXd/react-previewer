@@ -246,6 +246,10 @@ function generateDynamicDependencyLoader(
         this.postStatus(active?.[0]);
       },
 
+      hasBlockingErrors() {
+        return Array.from(this.dependencies.values()).some((dep) => dep.status === 'error');
+      },
+
       postStatus(activeName = '') {
         const progress = this.totalCount > 0 ? Math.round((this.loadedCount / this.totalCount) * 100) : 100;
         const phase = activeName.startsWith('style:') || activeName.startsWith('css:') || activeName.startsWith('inline:') || activeName === 'tailwindcss'

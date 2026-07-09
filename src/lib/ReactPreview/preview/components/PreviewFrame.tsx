@@ -34,7 +34,7 @@ export interface PreviewFrameProps {
   depsInfo?: Record<string, string>;
   dependencyStyles?: Record<string, string | string[]>;
   previewPath?: string;
-  onError?: (error: Error) => void;
+  onError?: (error: Error, info: ErrorInfo) => void;
   onElementClick?: (sourceInfo: SourceInfo) => void;
   onRouteChange?: (route: PreviewRouteState) => void;
   isInspecting?: boolean;
@@ -189,25 +189,30 @@ export function PreviewFrame({
     }
   }, [files, isInspecting]);
 
+  const reportPreviewError = useCallback((errorInfo: ErrorInfo, error?: Error) => {
+    const reportedError = error ?? new Error(errorInfo.message);
+    setErrorInfo(errorInfo);
+    setIsLoading(false);
+    onErrorRef.current?.(reportedError, errorInfo);
+    publishStatus({
+      isLoading: false,
+      phase: 'error',
+      error: errorInfo
+    });
+  }, [publishStatus]);
+
   // 初始化消息处理器
   useEffect(() => {
     messageHandler.current = new MessageHandler(errorHandler.current, {
       onError: (errorInfo) => {
-        setErrorInfo(errorInfo);
-        onErrorRef.current?.(new Error(errorInfo.message));
-        publishStatus({
-          isLoading: false,
-          error: errorInfo
-        });
+        reportPreviewError(errorInfo);
       },
       onElementClick: handleElementClick,
       onDependencyError: (dependencyError) => {
-        logger.warn('依赖加载失败:', dependencyError);
-        // 可以选择显示依赖错误信息，或者继续尝试加载
-        // 这里我们记录错误但不阻止预览继续
+        reportPreviewError(dependencyError);
       },
     });
-  }, [handleElementClick, publishStatus]);
+  }, [handleElementClick, reportPreviewError]);
 
   const writePendingPreviewHtml = useCallback(() => {
     const iframe = iframeRef.current;
@@ -271,7 +276,7 @@ export function PreviewFrame({
       if (compileId !== compileRunRef.current) return;
       const fileUrls = result.fileUrls;
       // fileUrls: Map<fileName, blobUrl>
-      errorHandler.current.setBlobToFileMap(fileUrls);
+      errorHandler.current.setBlobToFileMap(fileUrls, result.sourceMaps);
       transformedCountRef.current = result.transformedFiles;
       renderPreview(fileUrls, result.entryFile);
       compileDurationRef.current = Math.round(performance.now() - startedAt);
@@ -284,19 +289,11 @@ export function PreviewFrame({
       });
     } catch (err) {
       if (compileId !== compileRunRef.current) return;
-      const compileError = errorHandler.current.processCompileError(
-        err instanceof Error ? err : new Error('Unknown error')
-      );
-      setErrorInfo(compileError);
-      onErrorRef.current?.(err instanceof Error ? err : new Error('Unknown error'));
-      setIsLoading(false);
-      publishStatus({
-        isLoading: false,
-        phase: 'error',
-        error: compileError
-      });
+      const reportedError = err instanceof Error ? err : new Error('Unknown error');
+      const compileError = errorHandler.current.processCompileError(reportedError);
+      reportPreviewError(compileError, reportedError);
     }
-  }, [files, depsInfo, entryFile, compiler, sourceAttributeNames, publishStatus, renderPreview]);
+  }, [files, depsInfo, entryFile, compiler, sourceAttributeNames, publishStatus, renderPreview, reportPreviewError]);
 
   // 检查文件内容是否真正改变
   useEffect(() => {
@@ -410,11 +407,6 @@ export function PreviewFrame({
           return;
         }
 
-        if (event.data.type === 'resource-error') {
-          logger.warn('资源加载失败:', event.data.data);
-          return;
-        }
-        
         messageHandler.current?.handleMessage(event);
       } catch (error) {
         logger.error('Error handling message:', error);

@@ -1,4 +1,4 @@
-import { PreviewErrorRenderer, PreviewLoadingRenderer, PreviewRouteState, PreviewStatus, ReactPreviewerClassNames, ReactPreviewerStyles, SourceInfo } from '../types';
+import { ErrorInfo, PreviewErrorRenderer, PreviewLoadingRenderer, PreviewRouteState, PreviewStatus, ReactPreviewerClassNames, ReactPreviewerStyles, SourceInfo } from '../types';
 import { PreviewCompilerLike } from '../compilers/types';
 import { SourceAttributeNameOverrides } from '../sourceAttributes';
 export interface PreviewFrameProps {
@@ -7,7 +7,7 @@ export interface PreviewFrameProps {
     depsInfo?: Record<string, string>;
     dependencyStyles?: Record<string, string | string[]>;
     previewPath?: string;
-    onError?: (error: Error) => void;
+    onError?: (error: Error, info: ErrorInfo) => void;
     onElementClick?: (sourceInfo: SourceInfo) => void;
     onRouteChange?: (route: PreviewRouteState) => void;
     isInspecting?: boolean;
