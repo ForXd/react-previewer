@@ -68,8 +68,10 @@ export class ImportProcessor implements ASTProcessor {
         logger.warn('URL not found for local file:', finalPath);
       }
     } else {
-      // 处理三方依赖导入
-      const esmUrl = depsInfo?.[moduleName] || moduleName;
+      const esmUrl = resolveDependencyUrl(moduleName, depsInfo ?? {}, {
+        target: 'es2022',
+        external: ['react', 'react-dom']
+      }) ?? moduleName;
       if (node.source) {
         node.source.value = esmUrl;
       }

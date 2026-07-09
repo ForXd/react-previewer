@@ -1,10 +1,10 @@
 // components/ErrorBoundary.tsx
-import React, { Component } from 'react';
-import type { ReactNode } from 'react';
+import { Component, type ErrorInfo, type ReactNode } from 'react';
 
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
+  renderFallback?: (error: Error, reset: () => void) => ReactNode;
 }
 
 interface State {
@@ -22,23 +22,32 @@ export class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
   }
 
+  private reset = () => {
+    this.setState({ hasError: false, error: undefined });
+  };
+
   render() {
     if (this.state.hasError) {
-      return this.props.fallback || (
-        <div className="rounded-lg bg-white p-4 shadow-[0_0_0_1px_rgba(255,91,79,0.24),0_2px_2px_rgba(0,0,0,0.04)]">
-          <h3 className="mb-2 text-sm font-semibold text-[#c73a31]">组件渲染错误</h3>
-          <p className="text-sm text-[#4d4d4d]">
-            {this.state.error?.message || '未知错误'}
+      if (this.state.error && this.props.renderFallback) {
+        return this.props.renderFallback(this.state.error, this.reset);
+      }
+
+      return this.props.fallback ?? (
+        <div className="react-previewer__boundary-error" role="alert">
+          <span className="react-previewer__eyebrow">Previewer error</span>
+          <h2>The preview surface crashed</h2>
+          <p>
+            {this.state.error?.message || 'An unknown error occurred.'}
           </p>
           <button
-            onClick={() => this.setState({ hasError: false, error: undefined })}
-            className="mt-3 rounded-md bg-[#171717] px-3 py-1.5 text-sm font-medium text-white hover:bg-black"
+            type="button"
+            onClick={this.reset}
           >
-            重试
+            Try again
           </button>
         </div>
       );

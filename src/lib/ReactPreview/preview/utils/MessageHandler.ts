@@ -1,4 +1,4 @@
-import type { MessageData, ErrorInfo } from '../types';
+import type { ErrorInfo } from '../types';
 import { ErrorHandler } from './ErrorHandler';
 import { createModuleLogger } from './Logger';
 
@@ -22,6 +22,11 @@ interface DependencyErrorData {
   name: string;
   url: string;
   error: string;
+}
+
+interface MessageData {
+  type: string;
+  data: Record<string, unknown>;
 }
 
 export class MessageHandler {

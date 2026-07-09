@@ -65,6 +65,6 @@ declare function generateImportMapScript(importMap: Record<string, string>): str
 declare function generateDynamicDependencyLoader(depsInfo: DepsInfo, options?: EsmOptions, styleResources?: Array<{
     name: string;
     url: string;
-}>): string;
+}>, enableTailwind?: boolean): string;
 export { transformDepsToEsmLinks, resolveDependencyUrl, normalizeDependencyVersion, generateImportMapScript, generateDynamicDependencyLoader, parsePackagePath, type DepsInfo, type EsmOptions, type TransformResult };
 //# sourceMappingURL=DependencyResolver.d.ts.map

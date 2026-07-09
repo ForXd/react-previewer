@@ -189,7 +189,8 @@ ${JSON.stringify({ imports: importMap }, null, 2)}
 function generateDynamicDependencyLoader(
   depsInfo: DepsInfo,
   options: EsmOptions = {},
-  styleResources: Array<{ name: string; url: string }> = []
+  styleResources: Array<{ name: string; url: string }> = [],
+  enableTailwind = false
 ): string {
   const result = transformDepsToEsmLinks(depsInfo, options);
   const dependencies = result.dependencies;
@@ -269,14 +270,16 @@ function generateDynamicDependencyLoader(
     // 添加依赖列表
     const dependencyList = ${JSON.stringify(dependencyList)};
     const styleResourceList = ${JSON.stringify(styleResources)};
-    const tailwindResource = { name: 'tailwindcss', url: 'https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.10' };
+    const tailwindResource = ${enableTailwind
+      ? "{ name: 'tailwindcss', url: 'https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.10' }"
+      : 'null'};
     const resourceList = [
       ...dependencyList,
       ...styleResourceList.map((resource) => ({
         name: \`style:\${resource.name}\`,
         url: resource.url
       })),
-      tailwindResource
+      ...(tailwindResource ? [tailwindResource] : [])
     ];
     dynamicDependencyLoader.addDependencies(resourceList);
     
@@ -417,6 +420,7 @@ function generateDynamicDependencyLoader(
     }
 
     async function preloadTailwind() {
+      if (!tailwindResource) return;
       try {
         dynamicDependencyLoader.setDependencyStatus(tailwindResource.name, 'loading');
         await new Promise((resolve) => {
@@ -453,7 +457,7 @@ function generateDynamicDependencyLoader(
       [
         ...dependencyList.map(dep => preloadDependency(dep.name, dep.url)),
         ...styleResourceList.map(resource => preloadStyle(\`style:\${resource.name}\`, resource.url)),
-        preloadTailwind()
+        ...(tailwindResource ? [preloadTailwind()] : [])
       ]
     ).then(() => {
       window.dispatchEvent(new CustomEvent('dependencies-ready'));

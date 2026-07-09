@@ -1,5 +1,3 @@
-// utils/Logger.ts
-
 const LogLevel = {
   ERROR: 0,
   WARN: 1,
@@ -8,7 +6,7 @@ const LogLevel = {
   TRACE: 4
 } as const;
 
-type LogLevel = typeof LogLevel[keyof typeof LogLevel];
+export type LogLevel = typeof LogLevel[keyof typeof LogLevel];
 
 export interface LoggerConfig {
   enabled: boolean;
@@ -19,7 +17,7 @@ export interface LoggerConfig {
 
 class Logger {
   private config: LoggerConfig = {
-    enabled: true,
+    enabled: false,
     level: LogLevel.INFO,
     prefix: '[ReactPreview]',
     showTimestamp: false
@@ -91,11 +89,6 @@ class Logger {
     }
   }
 
-  log(message: string, ...args: unknown[]): void {
-    this.info(message, ...args);
-  }
-
-  // 便捷方法，用于特定模块的日志
   module(moduleName: string) {
     return {
       error: (message: string, ...args: unknown[]) => 
@@ -107,15 +100,10 @@ class Logger {
       debug: (message: string, ...args: unknown[]) => 
         this.debug(`[${moduleName}] ${message}`, ...args),
       trace: (message: string, ...args: unknown[]) => 
-        this.trace(`[${moduleName}] ${message}`, ...args),
-      log: (message: string, ...args: unknown[]) => 
-        this.log(`[${moduleName}] ${message}`, ...args)
+        this.trace(`[${moduleName}] ${message}`, ...args)
     };
   }
 }
 
-// 导出单例实例
 export const logger = Logger.getInstance();
-
-// 导出便捷的模块日志方法
-export const createModuleLogger = (moduleName: string) => logger.module(moduleName); 
+export const createModuleLogger = (moduleName: string) => logger.module(moduleName);

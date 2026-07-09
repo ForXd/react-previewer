@@ -1,7 +1,6 @@
 import { CodeTransformer } from '../../compiler/CodeTransformer';
 import type { PreviewCompiler, PreviewCompileInput, PreviewCompileResult } from './types';
-import { transformDepsToEsmLinks } from '../DependencyResolver';
-import { DEFAULT_DEPENDENCIES, TRANSFORM_OPTIONS } from '../constant';
+import { DEFAULT_DEPENDENCIES } from '../constant';
 
 export class BabelPreviewCompiler implements PreviewCompiler {
   private codeTransformer = new CodeTransformer();
@@ -11,14 +10,9 @@ export class BabelPreviewCompiler implements PreviewCompiler {
   }
 
   async compile(input: PreviewCompileInput): Promise<PreviewCompileResult> {
-    const advancedResult = transformDepsToEsmLinks(
-      { ...DEFAULT_DEPENDENCIES, ...input.depsInfo },
-      TRANSFORM_OPTIONS
-    );
-
     const fileUrls = await this.codeTransformer.transformFiles(
       input.files,
-      advancedResult.dependencies,
+      { ...DEFAULT_DEPENDENCIES, ...input.depsInfo },
       { sourceAttributeNames: input.sourceAttributeNames }
     );
 
