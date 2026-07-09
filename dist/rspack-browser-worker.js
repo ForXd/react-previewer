@@ -1,31 +1,30 @@
-import { t as compileRspackBrowserProject } from "./rspackBrowser-D4bcWV9R.js";
+import { t as e } from "./rspackBrowser-CQRtaM8Y.js";
 //#region src/lib/ReactPreview/preview/compilers/rspackBrowser.worker.ts
-self.addEventListener("message", (event) => {
-	if (event.data.type !== "compile") return;
-	compile(event.data);
+self.addEventListener("message", (e) => {
+	e.data.type === "compile" && t(e.data);
 });
-async function compile(request) {
+async function t(t) {
 	try {
-		const result = await compileRspackBrowserProject(request.input, {
-			...request.options,
-			useWorker: false
+		let r = await e(t.input, {
+			...t.options,
+			useWorker: !1
 		});
-		post({
+		n({
 			type: "compiled",
-			id: request.id,
-			result
+			id: t.id,
+			result: r
 		});
-	} catch (error) {
-		post({
+	} catch (e) {
+		n({
 			type: "error",
-			id: request.id,
-			message: error instanceof Error ? error.message : String(error),
-			stack: error instanceof Error ? error.stack : void 0
+			id: t.id,
+			message: e instanceof Error ? e.message : String(e),
+			stack: e instanceof Error ? e.stack : void 0
 		});
 	}
 }
-function post(message) {
-	self.postMessage(message);
+function n(e) {
+	self.postMessage(e);
 }
 //#endregion
 

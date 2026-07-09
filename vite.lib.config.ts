@@ -21,6 +21,7 @@ export default defineConfig({
       },
       name: 'ReactPreviewer',
       formats: ['es', 'cjs'],
+      cssFileName: 'styles',
       fileName: (format, entryName) => {
         const extension = format === 'es' ? 'js' : 'cjs';
         return `${entryName}.${extension}`;
@@ -38,7 +39,6 @@ export default defineConfig({
       },
     },
     sourcemap: true,
-    minify: false, // 保持代码可读性
     target: 'es2020',
     outDir: 'dist',
   },

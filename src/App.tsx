@@ -1,12 +1,8 @@
 import './App.css'
-import CodePreviewExample from './lib/ReactPreview/example'
+import DemoWorkbench from './demo/DemoWorkbench'
 
 function App() {
-  return (
-    <>
-      <CodePreviewExample />
-    </>
-  )
+  return <DemoWorkbench />
 }
 
 export default App

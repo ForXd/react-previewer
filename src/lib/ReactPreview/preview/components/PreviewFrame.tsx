@@ -1,5 +1,14 @@
-import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
-import type { ErrorInfo, PreviewRouteState, PreviewStatus, SourceInfo } from '../types';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import type {
+  ErrorInfo,
+  PreviewErrorRenderer,
+  PreviewLoadingRenderer,
+  PreviewRouteState,
+  PreviewStatus,
+  ReactPreviewerClassNames,
+  ReactPreviewerStyles,
+  SourceInfo
+} from '../types';
 import { FileProcessor } from '../utils/FileProcessor';
 import { ErrorHandler } from '../utils/ErrorHandler';
 import { HTMLGenerator } from '../utils/HTMLGenerator';
@@ -15,12 +24,13 @@ import {
   createSourceAttributeKey,
   type SourceAttributeNameOverrides
 } from '../sourceAttributes';
+import { joinClassNames } from '../utils/joinClassNames';
 
 const logger = createModuleLogger('PreviewFrame');
 
 export interface PreviewFrameProps {
   files: Record<string, string>;
-  entryFile: string;
+  entryFile?: string;
   depsInfo?: Record<string, string>;
   dependencyStyles?: Record<string, string | string[]>;
   previewPath?: string;
@@ -30,8 +40,14 @@ export interface PreviewFrameProps {
   isInspecting?: boolean;
   onStatusChange?: (status: PreviewStatus) => void;
   compileDelay?: number;
+  enableTailwind?: boolean;
   compiler?: PreviewCompilerLike;
   sourceAttributeNames?: SourceAttributeNameOverrides;
+  classNames?: ReactPreviewerClassNames;
+  styles?: ReactPreviewerStyles;
+  renderLoading?: PreviewLoadingRenderer;
+  renderError?: PreviewErrorRenderer;
+  iframeTitle?: string;
 }
 
 const createInitialStatus = (): PreviewStatus => ({
@@ -70,10 +86,9 @@ const toRouteState = (data: Record<string, unknown>): PreviewRouteState => {
   return { pathname, search, hash, href };
 };
 
-// 使用 React.memo 避免不必要的重新渲染
-export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
+export function PreviewFrame({
   files,
-  entryFile,
+  entryFile = 'App.tsx',
   depsInfo = {},
   dependencyStyles = {},
   previewPath = '/',
@@ -83,9 +98,15 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
   isInspecting = false,
   onStatusChange,
   compileDelay = 120,
+  enableTailwind = false,
   compiler,
-  sourceAttributeNames
-}) => {
+  sourceAttributeNames,
+  classNames,
+  styles,
+  renderLoading,
+  renderError,
+  iframeTitle = 'React preview'
+}: PreviewFrameProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [errorInfo, setErrorInfo] = useState<ErrorInfo | null>(null);
   const [frameStatus, setFrameStatus] = useState<PreviewStatus>(() => createInitialStatus());
@@ -104,6 +125,7 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
   const currentDependencyStylesRef = useRef<string>('');
   const currentCompilerRef = useRef<string>('');
   const currentSourceAttributeNamesRef = useRef<string>('');
+  const currentTailwindRef = useRef<boolean | null>(null);
   const previewPathRef = useRef(normalizePreviewPath(previewPath));
   
   // 使用 useRef 稳定回调函数的引用
@@ -212,13 +234,14 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
       depsInfo,
       dependencyStyles,
       previewPathRef.current,
-      sourceAttributeNames
+      sourceAttributeNames,
+      enableTailwind
     );
     pendingHtmlRef.current = html;
     setFrameVersion((version) => version + 1);
-  }, [depsInfo, dependencyStyles, sourceAttributeNames]);
+  }, [depsInfo, dependencyStyles, enableTailwind, sourceAttributeNames]);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     writePendingPreviewHtml();
   }, [frameVersion, writePendingPreviewHtml]);
 
@@ -289,6 +312,7 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
     const newDependencyStylesKey = dependencyStylesKey;
     const newCompilerKey = compilerKey;
     const newSourceAttributeNamesKey = sourceAttributeNamesKey;
+    const newEnableTailwind = enableTailwind;
     
     // 只有当文件内容真正改变时才重新处理
     if (
@@ -297,7 +321,8 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
       currentDepsInfoRef.current !== newDepsInfoKey ||
       currentDependencyStylesRef.current !== newDependencyStylesKey ||
       currentCompilerRef.current !== newCompilerKey ||
-      currentSourceAttributeNamesRef.current !== newSourceAttributeNamesKey
+      currentSourceAttributeNamesRef.current !== newSourceAttributeNamesKey ||
+      currentTailwindRef.current !== newEnableTailwind
     ) {
       logger.debug('PreviewFrame: File content changed, reprocessing files');
       logger.debug('Files hash changed:', {
@@ -314,6 +339,7 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
         currentDependencyStylesRef.current = newDependencyStylesKey;
         currentCompilerRef.current = newCompilerKey;
         currentSourceAttributeNamesRef.current = newSourceAttributeNamesKey;
+        currentTailwindRef.current = newEnableTailwind;
         processFilesInternal(scheduledRun);
       }, Math.max(0, compileDelay));
 
@@ -326,6 +352,7 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
     dependencyStyles,
     compiler,
     sourceAttributeNames,
+    enableTailwind,
     processFilesInternal,
     compileDelay
   ]);
@@ -431,87 +458,54 @@ export const PreviewFrame: React.FC<PreviewFrameProps> = React.memo(({
   }, []);
 
   return (
-    <div className="relative w-full h-full">
-      {isLoading && <LoadingOverlay status={frameStatus} />}
+    <div className="react-previewer__surface">
+      {isLoading && (
+        renderLoading ? (
+          <div
+            className={joinClassNames('react-previewer__loading', classNames?.loading)}
+            style={styles?.loading}
+          >
+            {renderLoading(frameStatus)}
+          </div>
+        ) : (
+          <LoadingOverlay
+            status={frameStatus}
+            className={classNames?.loading}
+            style={styles?.loading}
+          />
+        )
+      )}
       
       {errorInfo && (
-        <div className="absolute inset-0 z-10 overflow-auto bg-white">
-          <ErrorDisplay error={errorInfo} files={files} />
-        </div>
+        renderError ? (
+          <div
+            className={joinClassNames('react-previewer__error', classNames?.error)}
+            style={styles?.error}
+          >
+            {renderError(errorInfo, files)}
+          </div>
+        ) : (
+          <ErrorDisplay
+            error={errorInfo}
+            files={files}
+            className={classNames?.error}
+            style={styles?.error}
+          />
+        )
       )}
 
       <iframe
         key={frameVersion}
         ref={iframeRef}
-        title="React preview"
-        className={`w-full h-full border-none transition-opacity duration-200 ${
-          isLoading ? 'opacity-50' : 'opacity-100'
-        }`}
+        title={iframeTitle}
+        className={joinClassNames(
+          'react-previewer__iframe',
+          isLoading && 'react-previewer__iframe--loading',
+          classNames?.iframe
+        )}
+        style={styles?.iframe}
         sandbox="allow-scripts allow-same-origin"
       />
     </div>
   );
-}, (prevProps, nextProps) => {
-  // 检查 isInspecting 状态变化 - 如果检查模式状态改变，需要重新渲染
-  if (prevProps.isInspecting !== nextProps.isInspecting) {
-    logger.debug('PreviewFrame: Re-rendering due to inspect mode change');
-    return false; // false 表示需要重新渲染
-  }
-
-  if (
-    prevProps.onError !== nextProps.onError ||
-    prevProps.onElementClick !== nextProps.onElementClick ||
-    prevProps.onRouteChange !== nextProps.onRouteChange ||
-    prevProps.onStatusChange !== nextProps.onStatusChange ||
-    prevProps.compiler !== nextProps.compiler ||
-    createSourceAttributeKey(prevProps.sourceAttributeNames) !== createSourceAttributeKey(nextProps.sourceAttributeNames)
-  ) {
-    return false;
-  }
-  
-  // 自定义比较函数，只在关键 props 改变时才重新渲染
-  const prevKey = JSON.stringify({
-    filesHash: createFilesHash(prevProps.files),
-    entryFile: prevProps.entryFile,
-    depsInfo: createDepsHash(prevProps.depsInfo || {}),
-    dependencyStyles: createStylesHash(prevProps.dependencyStyles || {}),
-    previewPath: normalizePreviewPath(prevProps.previewPath),
-    compileDelay: prevProps.compileDelay,
-    compiler: getPreviewCompilerConfigKey(prevProps.compiler),
-    sourceAttributeNames: createSourceAttributeKey(prevProps.sourceAttributeNames)
-  });
-  
-  const nextKey = JSON.stringify({
-    filesHash: createFilesHash(nextProps.files),
-    entryFile: nextProps.entryFile,
-    depsInfo: createDepsHash(nextProps.depsInfo || {}),
-    dependencyStyles: createStylesHash(nextProps.dependencyStyles || {}),
-    previewPath: normalizePreviewPath(nextProps.previewPath),
-    compileDelay: nextProps.compileDelay,
-    compiler: getPreviewCompilerConfigKey(nextProps.compiler),
-    sourceAttributeNames: createSourceAttributeKey(nextProps.sourceAttributeNames)
-  });
-  
-  // 如果关键 props 没有改变，返回 true 表示不需要重新渲染
-  if (prevKey === nextKey) {
-    logger.debug('prevKey', prevKey)
-    logger.debug('nextKey', nextKey)
-    logger.debug('PreviewFrame: Skipping re-render, key props unchanged');
-    logger.debug('Files comparison:', {
-      prevFiles: Object.keys(prevProps.files),
-      nextFiles: Object.keys(nextProps.files),
-      prevFilesHash: createFilesHash(prevProps.files),
-      nextFilesHash: createFilesHash(nextProps.files)
-    });
-    return true; // true 表示 props 相等，不需要重新渲染
-  }
-  
-  logger.debug('PreviewFrame: Re-rendering due to key props change');
-  logger.debug('Files comparison:', {
-    prevFiles: Object.keys(prevProps.files),
-    nextFiles: Object.keys(nextProps.files),
-    prevFilesHash: createFilesHash(prevProps.files),
-    nextFilesHash: createFilesHash(nextProps.files)
-  });
-  return false; // false 表示 props 不相等，需要重新渲染
-}); 
+}

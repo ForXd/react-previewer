@@ -1,7 +1,27 @@
-// types.ts
+import type { CSSProperties, ReactNode } from 'react';
 import type { LoggerConfig } from './utils/Logger';
 import type { PreviewCompilerLike } from './compilers/types';
 import type { SourceAttributeNameOverrides } from './sourceAttributes';
+
+export interface ReactPreviewerClassNames {
+  root?: string;
+  loading?: string;
+  error?: string;
+  iframe?: string;
+}
+
+export interface ReactPreviewerStyles {
+  root?: CSSProperties;
+  loading?: CSSProperties;
+  error?: CSSProperties;
+  iframe?: CSSProperties;
+}
+
+export type PreviewLoadingRenderer = (status: PreviewStatus) => ReactNode;
+export type PreviewErrorRenderer = (
+  error: ErrorInfo,
+  files: Record<string, string>
+) => ReactNode;
 
 export interface ReactPreviewerProps {
   files: Record<string, string>;
@@ -14,19 +34,18 @@ export interface ReactPreviewerProps {
   onRouteChange?: (route: PreviewRouteState) => void;
   loggerConfig?: Partial<LoggerConfig>;
   compileDelay?: number;
-  showToolbar?: boolean;
+  enableTailwind?: boolean;
+  isInspecting?: boolean;
   className?: string;
-  defaultViewport?: PreviewViewport;
-  defaultZoom?: number;
+  style?: CSSProperties;
+  classNames?: ReactPreviewerClassNames;
+  styles?: ReactPreviewerStyles;
+  renderLoading?: PreviewLoadingRenderer;
+  renderError?: PreviewErrorRenderer;
+  iframeTitle?: string;
   onStatusChange?: (status: PreviewStatus) => void;
   compiler?: PreviewCompilerLike;
   sourceAttributeNames?: SourceAttributeNameOverrides;
-}
-
-export interface PreviewViewport {
-  label: string;
-  width: number | '100%';
-  height: number | '100%';
 }
 
 export interface PreviewRouteState {
@@ -75,23 +94,4 @@ export interface SourceInfo {
   endColumn: number;
   content: string;
   position: { x: number; y: number };
-}
-
-export interface MessageData {
-  type:
-    | 'runtime-error'
-    | 'element-click'
-    | 'console-log'
-    | 'toggle-inspect'
-    | 'dependency-error'
-    | 'resource-error'
-    | 'resource-status'
-    | 'preview-ready'
-    | 'route-change';
-  data: Record<string, unknown>;
-}
-
-export interface TransformedFile {
-  content: string;
-  url: string;
 }

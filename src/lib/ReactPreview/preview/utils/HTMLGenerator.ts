@@ -17,7 +17,8 @@ export class HTMLGenerator {
     depsInfo: Record<string, string> = {},
     dependencyStyles: Record<string, string | string[]> = {},
     initialPath = '/',
-    sourceAttributeNames?: SourceAttributeNameOverrides
+    sourceAttributeNames?: SourceAttributeNameOverrides,
+    enableTailwind = false
   ): string {
     // 合并默认依赖和传入的依赖
     const allDeps = {
@@ -29,11 +30,16 @@ export class HTMLGenerator {
       ...depsInfo
     };
     const styleResources = this.resolveStyleResources(allDeps, dependencyStyles);
-    const cacheKey = JSON.stringify({ allDeps, styleResources });
+    const cacheKey = JSON.stringify({ allDeps, styleResources, enableTailwind });
     let cached = this.cache.get(cacheKey);
 
     if (!cached) {
-      const dynamicLoaderScript = generateDynamicDependencyLoader(allDeps, TRANSFORM_OPTIONS, styleResources);
+      const dynamicLoaderScript = generateDynamicDependencyLoader(
+        allDeps,
+        TRANSFORM_OPTIONS,
+        styleResources,
+        enableTailwind
+      );
       const result = transformDepsToEsmLinks(allDeps, TRANSFORM_OPTIONS);
       const importMapScript = generateImportMapScript(result.importMap.imports);
       cached = { dynamicLoaderScript, importMapScript };

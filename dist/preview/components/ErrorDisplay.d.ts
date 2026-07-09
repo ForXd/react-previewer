@@ -1,9 +1,11 @@
-import { default as React } from 'react';
+import { CSSProperties } from 'react';
 import { ErrorInfo } from '../types';
 interface ErrorDisplayProps {
     error: ErrorInfo;
     files?: Record<string, string>;
+    className?: string;
+    style?: CSSProperties;
 }
-export declare const ErrorDisplay: React.FC<ErrorDisplayProps>;
+export declare function ErrorDisplay({ error, files, className, style }: ErrorDisplayProps): import("react/jsx-runtime").JSX.Element;
 export {};
 //# sourceMappingURL=ErrorDisplay.d.ts.map

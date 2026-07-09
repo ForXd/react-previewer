@@ -6,7 +6,13 @@ import {
 } from '../src/lib/ReactPreview/preview/DependencyResolver';
 
 describe('dynamic dependency loader', () => {
-  it('loads cross-origin stylesheet and script resources with CORS enabled', () => {
+  it('does not load the Tailwind browser runtime unless requested', () => {
+    const loader = generateDynamicDependencyLoader({ react: '18.2.0' });
+
+    expect(loader).not.toContain('https://cdn.jsdelivr.net/npm/@tailwindcss/browser');
+  });
+
+  it('loads opt-in cross-origin stylesheet and Tailwind resources with CORS enabled', () => {
     const loader = generateDynamicDependencyLoader(
       { react: '18.2.0' },
       {},
@@ -15,7 +21,8 @@ describe('dynamic dependency loader', () => {
           name: '@arco-design/web-react',
           url: 'https://esm.sh/@arco-design/web-react@2.66.1/dist/css/arco.min.css'
         }
-      ]
+      ],
+      true
     );
 
     expect(loader).toContain("element.crossOrigin = 'anonymous'");

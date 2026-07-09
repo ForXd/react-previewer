@@ -5,7 +5,7 @@ declare const LogLevel: {
     readonly DEBUG: 3;
     readonly TRACE: 4;
 };
-type LogLevel = typeof LogLevel[keyof typeof LogLevel];
+export type LogLevel = typeof LogLevel[keyof typeof LogLevel];
 export interface LoggerConfig {
     enabled: boolean;
     level: LogLevel;
@@ -25,14 +25,12 @@ declare class Logger {
     info(message: string, ...args: unknown[]): void;
     debug(message: string, ...args: unknown[]): void;
     trace(message: string, ...args: unknown[]): void;
-    log(message: string, ...args: unknown[]): void;
     module(moduleName: string): {
         error: (message: string, ...args: unknown[]) => void;
         warn: (message: string, ...args: unknown[]) => void;
         info: (message: string, ...args: unknown[]) => void;
         debug: (message: string, ...args: unknown[]) => void;
         trace: (message: string, ...args: unknown[]) => void;
-        log: (message: string, ...args: unknown[]) => void;
     };
 }
 export declare const logger: Logger;
@@ -42,7 +40,6 @@ export declare const createModuleLogger: (moduleName: string) => {
     info: (message: string, ...args: unknown[]) => void;
     debug: (message: string, ...args: unknown[]) => void;
     trace: (message: string, ...args: unknown[]) => void;
-    log: (message: string, ...args: unknown[]) => void;
 };
 export {};
 //# sourceMappingURL=Logger.d.ts.map
