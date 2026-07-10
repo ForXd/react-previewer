@@ -5,6 +5,7 @@ export { ReactPreviewer } from './preview/ReactPreviewer';
 export type {
   ErrorInfo,
   PreviewErrorRenderer,
+  PreviewErrorType,
   PreviewLoadingRenderer,
   PreviewPhase,
   PreviewRouteState,

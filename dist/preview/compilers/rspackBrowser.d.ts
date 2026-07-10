@@ -29,6 +29,7 @@ export interface RspackBrowserProjectResult {
     outputFileName: string;
     output: string;
     transformedFiles: number;
+    sourceMap?: string;
 }
 export declare class RspackBrowserPreviewCompiler implements PreviewCompiler {
     private options;

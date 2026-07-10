@@ -76,7 +76,7 @@ export default function Page() {
 />
 ```
 
-仓库 demo 进一步演示了由调用方实现设备框、地址栏、编译器切换、Paper/Ink 主题和源码检查面板。
+仓库 demo 进一步演示了由调用方实现 Monaco 多文件编辑、实时预览、设备框、地址栏、编译器切换、Paper/Ink 主题和源码检查面板。
 
 ## 依赖与 CSS
 
@@ -149,6 +149,29 @@ Cross-Origin-Embedder-Policy: require-corp
 
 静态站点可使用等效的 cross-origin isolation service worker。仓库 demo 已配置对应脚本。
 
+## 错误与源码位置
+
+默认错误界面区分三类 `ErrorInfo.type`：
+
+- `compile`：语法或编译失败，展示文件、行列和 compiler code frame。
+- `dependency`：相对文件、未声明包、ESM 或 CSS 资源无法解析或加载，展示依赖名与请求 URL（若可用）。
+- `runtime`：代码运行或 React 渲染期间抛错，展示映射回用户文件的行列和可展开堆栈。
+
+Babel 输出保留源码行号；Rspack Browser 输出 source map，运行时 bundle 堆栈会映射回原始文件。行列均按用户可读的一基坐标展示。
+
+调用方可以通过 `renderError` 替换界面，也可以从 `onError` 的第二个参数读取结构化信息：
+
+```tsx
+<ReactPreviewer
+  files={files}
+  onError={(error, info) => {
+    reportPreviewFailure({ error, type: info.type, file: info.fileName });
+  }}
+/>
+```
+
+仓库 demo 提供编译错误、依赖错误和运行时错误三个可编辑示例；修复 Monaco 中的代码后会自动重新编译并恢复预览。
+
 ## Props
 
 | 属性 | 默认值 | 说明 |
@@ -168,12 +191,12 @@ Cross-Origin-Embedder-Policy: require-corp
 | `renderError` | - | 自定义错误内容 |
 | `iframeTitle` | `React preview` | iframe 可访问名称 |
 | `onStatusChange` | - | 编译与资源加载状态 |
-| `onError` | - | 编译或运行错误 |
+| `onError` | - | 编译、依赖或运行错误；第二参数为结构化 `ErrorInfo` |
 | `onElementClick` | - | 检查模式下的源码位置 |
 | `onRouteChange` | - | iframe 路由变化 |
 | `loggerConfig` | 禁用 | 可选诊断日志配置 |
 
-完整类型由包入口导出，包括 `ReactPreviewerProps`、`ReactPreviewerClassNames`、`ReactPreviewerStyles`、`PreviewStatus`、`SourceInfo` 与编译器类型。
+完整类型由包入口导出，包括 `ReactPreviewerProps`、`ReactPreviewerClassNames`、`ReactPreviewerStyles`、`PreviewStatus`、`PreviewErrorType`、`ErrorInfo`、`SourceInfo` 与编译器类型。
 
 ## 从旧版迁移
 

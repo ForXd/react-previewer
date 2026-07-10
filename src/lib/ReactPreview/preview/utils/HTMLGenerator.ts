@@ -298,6 +298,9 @@ export class HTMLGenerator {
       
       // 监听依赖就绪事件
       window.addEventListener('dependencies-ready', () => {
+        if (dynamicDependencyLoader.hasBlockingErrors()) {
+          return;
+        }
         renderApp();
       });
       

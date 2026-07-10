@@ -25,6 +25,7 @@ export interface PreviewCompileInput {
 
 export interface PreviewCompileResult {
   fileUrls: Map<string, string>;
+  sourceMaps?: Map<string, string>;
   entryFile: string;
   transformedFiles: number;
   cleanup?: () => void;

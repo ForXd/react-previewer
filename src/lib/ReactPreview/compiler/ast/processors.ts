@@ -4,6 +4,7 @@ import { createJSXAttribute, hasAttribute, resolveRelativePath, getResolvedFilen
 import { createModuleLogger } from '../../preview/utils/Logger';
 import { resolveSourceAttributeNames } from '../../preview/sourceAttributes';
 import { resolveDependencyUrl } from '../../preview/DependencyResolver';
+import { PreviewDependencyError } from '../../preview/errors';
 import type { Node } from '@babel/types';
 
 const logger = createModuleLogger('ASTProcessors');
@@ -65,18 +66,34 @@ export class ImportProcessor implements ASTProcessor {
         node.source.value = url;
         logger.debug('Resolved local import:', finalPath, '-> URL:', url);
       } else {
-        logger.warn('URL not found for local file:', finalPath);
+        throw this.createDependencyError(moduleName, filename, node);
       }
     } else {
       const esmUrl = resolveDependencyUrl(moduleName, depsInfo ?? {}, {
         target: 'es2022',
         external: ['react', 'react-dom']
-      }) ?? moduleName;
+      });
+      if (!esmUrl) {
+        throw this.createDependencyError(moduleName, filename, node);
+      }
       if (node.source) {
         node.source.value = esmUrl;
       }
       logger.debug('Resolved external import in ast:', moduleName, '-> ESM URL:', esmUrl, depsInfo);
     }
+  }
+
+  private createDependencyError(
+    dependencyName: string,
+    fileName: string,
+    node: ExtendedNode
+  ): PreviewDependencyError {
+    return new PreviewDependencyError({
+      dependencyName,
+      fileName,
+      lineNumber: node.loc?.start.line,
+      columnNumber: node.loc ? node.loc.start.column + 1 : undefined
+    });
   }
 
   private processCSSImport(node: ExtendedNode, _: string, options: TransformOptions): void {
@@ -88,7 +105,11 @@ export class ImportProcessor implements ASTProcessor {
     // 检查是否是远程 CSS 文件
     if (!cssPath.startsWith('./') && !cssPath.startsWith('../') && !cssPath.startsWith('/')) {
       // 远程 CSS 文件，转换为动态加载
-      this.transformToRemoteCSSLoader(node, cssPath, resolveRemoteCssUrl(cssPath, depsInfo));
+      const cssUrl = resolveRemoteCssUrl(cssPath, depsInfo);
+      if (!cssUrl) {
+        throw this.createDependencyError(cssPath, filename, node);
+      }
+      this.transformToRemoteCSSLoader(node, cssPath, cssUrl);
       return;
     }
 
@@ -117,12 +138,7 @@ export class ImportProcessor implements ASTProcessor {
     }
 
     if (!cssContent) {
-      logger.warn(`CSS file not found: ${cssPath}`);
-      // 将 CSS 导入替换为空导入，避免运行时错误
-      if (node.source) {
-        node.source.value = '""';
-      }
-      return;
+      throw this.createDependencyError(cssPath, filename, node);
     }
 
     // 将本地 CSS 导入转换为动态样式注入
@@ -191,6 +207,7 @@ export class ASTProcessorManager {
     // 先使用Babel解析代码并遍历AST，进行位置信息注入
     const result = transform(code, {
       ast: true,
+      retainLines: true,
       presets: ['react', 'typescript'],
       filename: options.filename,
       plugins: [
@@ -225,6 +242,7 @@ export function injectJSXSourceInfo(
 ): string {
   const result = transform(code, {
     ast: true,
+    retainLines: true,
     filename: options.filename,
     presets: [
       ['typescript', {
@@ -256,6 +274,7 @@ export function injectJSXSourceInfoAndCssImports(
   const cssImportProcessor = new ImportProcessor();
   const result = transform(code, {
     ast: true,
+    retainLines: true,
     filename: options.filename,
     presets: [
       ['typescript', {
@@ -286,12 +305,12 @@ export function injectJSXSourceInfoAndCssImports(
   return result.code ?? code;
 }
 
-function resolveRemoteCssUrl(cssPath: string, depsInfo?: Record<string, string>): string {
+function resolveRemoteCssUrl(cssPath: string, depsInfo?: Record<string, string>): string | undefined {
   if (/^https?:\/\//i.test(cssPath) || cssPath.startsWith('//')) {
     return cssPath;
   }
 
-  return resolveDependencyUrl(cssPath, depsInfo ?? {}, { target: '', external: [] }) ?? cssPath;
+  return resolveDependencyUrl(cssPath, depsInfo ?? {}, { target: '', external: [] });
 }
 
 function isCssImportPath(importPath: string): boolean {

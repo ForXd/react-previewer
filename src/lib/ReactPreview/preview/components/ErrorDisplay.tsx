@@ -15,8 +15,26 @@ interface CodeExcerpt {
   highlightedLine: number;
 }
 
+const errorCopy: Record<ErrorInfo['type'], { label: string; title: string; description: string }> = {
+  compile: {
+    label: 'Compile error',
+    title: 'Source could not compile',
+    description: 'The compiler stopped before the preview could run.'
+  },
+  dependency: {
+    label: 'Dependency error',
+    title: 'Dependency could not load',
+    description: 'A referenced dependency could not be loaded.'
+  },
+  runtime: {
+    label: 'Runtime error',
+    title: 'Preview crashed while running',
+    description: 'The app threw an error after compilation completed.'
+  }
+};
+
 function getCodeExcerpt(error: ErrorInfo, files?: Record<string, string>): CodeExcerpt | null {
-  if (!error.fileName || !error.lineNumber || !files?.[error.fileName]) {
+  if (!error.fileName || error.lineNumber === undefined || !files?.[error.fileName]) {
     return null;
   }
 
@@ -34,9 +52,12 @@ function getCodeExcerpt(error: ErrorInfo, files?: Record<string, string>): CodeE
 export function ErrorDisplay({ error, files, className, style }: ErrorDisplayProps) {
   const [isStackExpanded, setIsStackExpanded] = useState(false);
   const excerpt = useMemo(() => getCodeExcerpt(error, files), [error, files]);
-  const location = error.fileName
-    ? [error.fileName, error.lineNumber, error.columnNumber].filter(Boolean).join(':')
-    : null;
+  const copy = errorCopy[error.type];
+  const locationParts: Array<string | number> = [];
+  if (error.fileName) locationParts.push(error.fileName);
+  if (error.lineNumber !== undefined) locationParts.push(error.lineNumber);
+  if (error.columnNumber !== undefined) locationParts.push(error.columnNumber);
+  const location = locationParts.length > 0 ? locationParts.join(':') : null;
 
   return (
     <div
@@ -49,15 +70,23 @@ export function ErrorDisplay({ error, files, className, style }: ErrorDisplayPro
           <span className="react-previewer__error-icon" aria-hidden="true">!</span>
           <div>
             <span className="react-previewer__eyebrow">
-              {error.type === 'compile' ? 'Compile error' : 'Runtime error'}
+              {copy.label}
             </span>
-            <h2>Preview could not render</h2>
+            <h2>{copy.title}</h2>
+            <p>{copy.description}</p>
           </div>
         </header>
 
         <div className="react-previewer__error-body">
           <pre className="react-previewer__error-message">{error.message}</pre>
           {location && <span className="react-previewer__error-location">{location}</span>}
+
+          {error.type === 'dependency' && (error.dependencyName || error.dependencyUrl) && (
+            <dl className="react-previewer__dependency-details">
+              {error.dependencyName && <div><dt>Package</dt><dd>{error.dependencyName}</dd></div>}
+              {error.dependencyUrl && <div><dt>Request</dt><dd>{error.dependencyUrl}</dd></div>}
+            </dl>
+          )}
 
           {error.codeFrame ? (
             <pre className="react-previewer__code">{error.codeFrame}</pre>
@@ -77,6 +106,13 @@ export function ErrorDisplay({ error, files, className, style }: ErrorDisplayPro
                   >
                     <span>{lineNumber}</span>
                     <code>{line || ' '}</code>
+                    {highlighted && error.columnNumber !== undefined && (
+                      <span
+                        className="react-previewer__code-pointer"
+                        aria-label={`Error column ${error.columnNumber}`}
+                        style={{ paddingLeft: `calc(14px + ${Math.max(0, error.columnNumber - 1)}ch)` }}
+                      >^</span>
+                    )}
                   </div>
                 );
               })}
