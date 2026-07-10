@@ -585,8 +585,9 @@ button {
 }
 
 .code-editor-shell {
+  --demo-editor-height: 636px;
   flex: 1;
-  min-height: 636px;
+  min-height: var(--demo-editor-height);
   overflow: hidden;
   background: #111827;
 }
@@ -983,7 +984,7 @@ button {
   }
 
   .code-editor-shell {
-    min-height: 486px;
+    --demo-editor-height: 486px;
   }
 
 }
@@ -1080,7 +1081,7 @@ button {
   }
 
   .code-editor-shell {
-    min-height: 426px;
+    --demo-editor-height: 426px;
   }
 
   .browser-shell {
