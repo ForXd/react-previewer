@@ -103,6 +103,7 @@ export function MonacoCodeEditor({
 
   return (
     <Editor
+      height="var(--demo-editor-height)"
       path={`/${demoId}/${fileName}`}
       language={getLanguage(fileName)}
       value={value}
