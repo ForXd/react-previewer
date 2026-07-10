@@ -15,9 +15,10 @@ import { MonacoCodeEditor } from './MonacoCodeEditor';
 type CompilerMode = 'babel' | 'rspack-browser';
 type PreviewSkin = 'paper' | 'ink';
 type ViewportName = 'responsive' | 'tablet' | 'mobile';
+type WorkbenchView = 'editor' | 'preview';
 
 const viewports: Record<ViewportName, { label: string; width: CSSProperties['width']; height: number }> = {
-  responsive: { label: '响应式', width: '100%', height: 640 },
+  responsive: { label: '响应式', width: '100%', height: 720 },
   tablet: { label: '平板', width: 820, height: 700 },
   mobile: { label: '手机', width: 390, height: 720 }
 };
@@ -59,6 +60,7 @@ export default function DemoWorkbench() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [previewPath, setPreviewPath] = useState('/');
   const [routeInput, setRouteInput] = useState('/');
+  const [workbenchView, setWorkbenchView] = useState<WorkbenchView>('editor');
   const [status, setStatus] = useState<PreviewStatus>(() => createInitialStatus());
 
   const selectedDemo = demoCatalog.find((demo) => demo.id === selectedId) ?? demoCatalog[0];
@@ -146,11 +148,6 @@ export default function DemoWorkbench() {
     setPreviewPath(path);
   };
 
-  const statusLabel = status.error
-    ? 'Error'
-    : status.phase === 'ready'
-      ? 'Ready'
-      : status.phase.replace('-', ' ');
   const statusTone = status.error ? 'error' : status.phase;
 
   return (
@@ -197,20 +194,24 @@ export default function DemoWorkbench() {
         </aside>
 
         <main className="demo-main">
-          <section className="demo-hero">
-            <div>
-              <span className="demo-eyebrow">Deep runtime · small interface</span>
-              <h1>在线编辑、即时预览，<br />错误也有迹可循。</h1>
-              <p>{selectedDemo.description}</p>
-            </div>
-            <dl>
-              <div><dt>Status</dt><dd className={`status-${statusTone}`}>{statusLabel}</dd></div>
-              <div><dt>Files</dt><dd>{status.transformedFiles || fileNames.length}</dd></div>
-              <div><dt>Compile</dt><dd>{status.compileDuration === null ? '—' : `${status.compileDuration}ms`}</dd></div>
-            </dl>
-          </section>
-
           <section className="workbench" aria-label="React Previewer 工作台">
+            <div className="workbench-view-tabs" role="tablist" aria-label="工作台视图">
+              {(['editor', 'preview'] as const).map((view) => (
+                <button
+                  id={`${view}-tab`}
+                  type="button"
+                  role="tab"
+                  aria-controls={`${view}-panel`}
+                  aria-selected={workbenchView === view}
+                  className={workbenchView === view ? 'is-active' : undefined}
+                  onClick={() => setWorkbenchView(view)}
+                  key={view}
+                >
+                  {view === 'editor' ? '编辑器' : '预览'}
+                </button>
+              ))}
+            </div>
+
             <header className="workbench-toolbar">
               <div className="toolbar-group toolbar-group--primary">
                 <button
@@ -272,7 +273,13 @@ export default function DemoWorkbench() {
             </header>
 
             <div className="workbench-body">
-              <section className="code-workspace" aria-label="代码工作区">
+              <section
+                id="editor-panel"
+                className="code-workspace"
+                role="tabpanel"
+                aria-labelledby="editor-tab"
+                hidden={workbenchView !== 'editor'}
+              >
                 <header className="code-workspace__header">
                   <div>
                     <span className="code-workspace__traffic" aria-hidden="true"><i /><i /><i /></span>
@@ -318,7 +325,13 @@ export default function DemoWorkbench() {
                 </footer>
               </section>
 
-              <div className={`preview-stage preview-stage--${previewSkin}`}>
+              <div
+                id="preview-panel"
+                className={`preview-stage preview-stage--${previewSkin} preview-stage--${viewportName}`}
+                role="tabpanel"
+                aria-labelledby="preview-tab"
+                hidden={workbenchView !== 'preview'}
+              >
                 <div
                   className="browser-shell"
                   style={{ width: viewport.width, maxWidth: '100%' }}

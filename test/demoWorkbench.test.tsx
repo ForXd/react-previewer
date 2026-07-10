@@ -77,4 +77,31 @@ describe('DemoWorkbench live editing', () => {
     expect(screen.getByRole('button', { name: /依赖错误/ })).toBeTruthy();
     expect(screen.getByRole('button', { name: /运行时错误/ })).toBeTruthy();
   });
+
+  it('switches the editor and preview through accessible tabs without a page title', () => {
+    render(<DemoWorkbench />);
+
+    expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
+
+    const editorTab = screen.getByRole('tab', { name: '编辑器' });
+    const previewTab = screen.getByRole('tab', { name: '预览' });
+    const editorPanel = document.getElementById('editor-panel');
+    const previewPanel = document.getElementById('preview-panel');
+
+    expect(editorTab.getAttribute('aria-selected')).toBe('true');
+    expect(editorPanel?.hidden).toBe(false);
+    expect(previewPanel?.hidden).toBe(true);
+
+    fireEvent.click(previewTab);
+
+    expect(previewTab.getAttribute('aria-selected')).toBe('true');
+    expect(editorPanel?.hidden).toBe(true);
+    expect(previewPanel?.hidden).toBe(false);
+
+    fireEvent.click(editorTab);
+
+    expect(editorTab.getAttribute('aria-selected')).toBe('true');
+    expect(editorPanel?.hidden).toBe(false);
+    expect(previewPanel?.hidden).toBe(true);
+  });
 });
