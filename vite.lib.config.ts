@@ -9,7 +9,7 @@ export default defineConfig({
       insertTypesEntry: true,
       include: ['src/lib/ReactPreview/**/*'],
       exclude: ['src/lib/ReactPreview/test/**/*'],
-      outDir: 'dist',
+      outDirs: 'dist',
       tsconfigPath: './tsconfig.lib.json',
     }),
   ],

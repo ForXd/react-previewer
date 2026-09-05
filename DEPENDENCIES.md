@@ -42,6 +42,10 @@ npm run test:package
 npm audit --registry=https://registry.npmjs.org
 ```
 
-`test:package` 检查生成后的 ESM / CommonJS 入口能使用宿主 React 渲染。`Validate` 流水线先验证锁文件中的 React 19，再临时安装 React 18.3.1 运行同一套测试和产物检查。本地切换 React 18 后使用 `npm ci` 恢复锁文件环境，再构建并验证 `dist/`、提交 `page/`。`dist/` 只用于 npm 包，保持 Git 忽略；GitHub Pages 部署仅上传 `page/`。
+`test:package` 打包并在仓库外的临时消费者中安装真实 tarball，检查包名导入、ESM / CommonJS、公共类型、CSS 和 worker 导出。临时消费者自动清理，不修改开发工作区的依赖。CI 运行 Node 22.18 / 24.15 × React 18.3.1 / 19.2.8 的消费者矩阵，并保留两代 React 的源代码测试。所有消费者测试相同的 Node 24 构建产物，发布直接复用该 tarball。
+
+Actions 固定到经核对的稳定版本完整 commit SHA，Dependabot 每周创建 Actions 和 npm 更新 PR。Babel、React 与构建工具分别分组；升级时仍需核对主版本迁移说明、TypeScript 官方兼容别名和 Monaco 的定向 override。Node 基线调整时同步 `.node-version`、CI 矩阵及本文。
+
+`dist/` 只用于 npm 包，保持 Git 忽略；GitHub Pages 部署仅上传 `page/`，CI 会拒绝未同步到 Git 的构建结果。
 
 浏览器回归覆盖 Monaco 编辑、Babel / Rspack 多文件编译、React 19 渲染异常与修复、Arco 组件及远程 CSS、路由同步、检查元素与源码定位、主题和移动端布局。自动测试不依赖公共 CDN；浏览器示例运行仍需要 CDN 网络可达。

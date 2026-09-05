@@ -11,6 +11,8 @@ node_modules
 # Library output is generated for npm publishing; GitHub Pages uses page/.
 dist
 dist-ssr
+.artifacts/
+coverage/
 *.local
 
 # Editor directories and files
