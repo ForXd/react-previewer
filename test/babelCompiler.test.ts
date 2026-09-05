@@ -64,28 +64,59 @@ export default function App() { return <IconPlus />; }
     });
 
     const output = await outputBlobs[0].text();
-    expect(output.split('\n')[4]).toContain("throw new Error('Demo runtime crash')");
+    expect(output.split('\n')[4]).toContain(
+      "throw new Error('Demo runtime crash')"
+    );
   });
 
   it.each([
     ["import Missing from './Missing';", './Missing'],
     ["import Missing from '@example/missing';", '@example/missing']
-  ])('reports unresolved import %s as a dependency error', async (importStatement, dependencyName) => {
+  ])(
+    'reports unresolved import %s as a dependency error',
+    async (importStatement, dependencyName) => {
+      const compiler = new BabelPreviewCompiler();
+      await compiler.initialize();
+
+      await expect(
+        compiler.compile({
+          entryFile: 'App.tsx',
+          depsInfo: {},
+          files: {
+            'App.tsx': `${importStatement}\nexport default function App() { return <Missing />; }`
+          }
+        })
+      ).rejects.toMatchObject({
+        name: 'PreviewDependencyError',
+        dependencyName,
+        fileName: 'App.tsx',
+        lineNumber: 1,
+        columnNumber: 1
+      });
+    }
+  );
+
+  it('releases already-created module URLs when a later module fails', async () => {
+    const create = vi
+      .spyOn(URL, 'createObjectURL')
+      .mockReturnValue('blob:partial');
+    const revoke = vi
+      .spyOn(URL, 'revokeObjectURL')
+      .mockImplementation(() => undefined);
     const compiler = new BabelPreviewCompiler();
     await compiler.initialize();
-
-    await expect(compiler.compile({
-      entryFile: 'App.tsx',
-      depsInfo: {},
-      files: {
-        'App.tsx': `${importStatement}\nexport default function App() { return <Missing />; }`
-      }
-    })).rejects.toMatchObject({
-      name: 'PreviewDependencyError',
-      dependencyName,
-      fileName: 'App.tsx',
-      lineNumber: 1,
-      columnNumber: 1
-    });
+    await expect(
+      compiler.compile({
+        entryFile: 'App.tsx',
+        depsInfo: {},
+        files: {
+          'Card.tsx': 'export default () => <div>Card</div>',
+          'App.tsx':
+            "import Card from './Card'; import Missing from 'undeclared-package'; export default () => <><Card /><Missing /></>"
+        }
+      })
+    ).rejects.toThrow();
+    expect(create).toHaveBeenCalledOnce();
+    expect(revoke).toHaveBeenCalledWith('blob:partial');
   });
 });

@@ -1,12 +1,16 @@
-import { useEffect, useRef } from 'react';
-import Editor, { loader, type Monaco, type OnMount } from '@monaco-editor/react';
+import { useEffect, useRef, useState } from 'react';
+import Editor, {
+  loader,
+  type Monaco,
+  type OnMount
+} from '@monaco-editor/react';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api.js';
 import 'monaco-editor/esm/vs/language/css/monaco.contribution.js';
 import * as typescript from 'monaco-editor/esm/vs/language/typescript/monaco.contribution.js';
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import cssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker';
 import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
-import type { ErrorInfo } from '../lib/ReactPreview';
+import type { ErrorInfo, SourceInfo } from '../lib/ReactPreview';
 
 type MonacoEditor = Parameters<OnMount>[0];
 
@@ -34,7 +38,8 @@ const workerScope = self as typeof self & {
 workerScope.MonacoEnvironment = {
   getWorker: (_moduleId, label) => {
     if (label === 'typescript' || label === 'javascript') return new tsWorker();
-    if (label === 'css' || label === 'scss' || label === 'less') return new cssWorker();
+    if (label === 'css' || label === 'scss' || label === 'less')
+      return new cssWorker();
     return new editorWorker();
   }
 };
@@ -56,6 +61,8 @@ const getLanguage = (fileName: string) => {
 };
 
 interface MonacoCodeEditorProps {
+  theme: 'vs' | 'vs-dark';
+  sourceInfo: SourceInfo | null;
   demoId: string;
   fileName: string;
   value: string;
@@ -64,18 +71,22 @@ interface MonacoCodeEditorProps {
 }
 
 export function MonacoCodeEditor({
+  theme,
+  sourceInfo,
   demoId,
   fileName,
   value,
   error,
   onChange
 }: MonacoCodeEditorProps) {
+  const [isMounted, setIsMounted] = useState(false);
   const editorRef = useRef<MonacoEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
 
   const handleMount: OnMount = (editor, monacoApi) => {
     editorRef.current = editor;
     monacoRef.current = monacoApi;
+    setIsMounted(true);
   };
 
   useEffect(() => {
@@ -85,21 +96,42 @@ export function MonacoCodeEditor({
     if (!editor || !monacoApi || !model) return;
 
     monacoApi.editor.setModelMarkers(model, 'react-previewer', []);
-    if (!error || error.fileName !== fileName || error.lineNumber === undefined) return;
+    if (!error || error.fileName !== fileName || error.lineNumber === undefined)
+      return;
 
-    const lineNumber = Math.min(Math.max(1, error.lineNumber), model.getLineCount());
+    const lineNumber = Math.min(
+      Math.max(1, error.lineNumber),
+      model.getLineCount()
+    );
     const maxColumn = model.getLineMaxColumn(lineNumber);
-    const columnNumber = Math.min(Math.max(1, error.columnNumber ?? 1), maxColumn);
-    monacoApi.editor.setModelMarkers(model, 'react-previewer', [{
-      severity: monacoApi.MarkerSeverity.Error,
-      message: error.message,
-      startLineNumber: lineNumber,
-      startColumn: columnNumber,
-      endLineNumber: lineNumber,
-      endColumn: Math.min(columnNumber + 1, maxColumn)
-    }]);
+    const columnNumber = Math.min(
+      Math.max(1, error.columnNumber ?? 1),
+      maxColumn
+    );
+    monacoApi.editor.setModelMarkers(model, 'react-previewer', [
+      {
+        severity: monacoApi.MarkerSeverity.Error,
+        message: error.message,
+        startLineNumber: lineNumber,
+        startColumn: columnNumber,
+        endLineNumber: lineNumber,
+        endColumn: Math.min(columnNumber + 1, maxColumn)
+      }
+    ]);
     editor.revealPositionInCenter({ lineNumber, column: columnNumber });
-  }, [error, fileName]);
+  }, [error, fileName, demoId, isMounted]);
+
+  useEffect(() => {
+    if (!isMounted || !sourceInfo || sourceInfo.file !== fileName) return;
+    editorRef.current?.setSelection({
+      startLineNumber: sourceInfo.startLine,
+      startColumn: sourceInfo.startColumn,
+      endLineNumber: sourceInfo.endLine,
+      endColumn: sourceInfo.endColumn
+    });
+    editorRef.current?.revealLineInCenter(sourceInfo.startLine);
+    editorRef.current?.focus();
+  }, [sourceInfo, fileName, isMounted]);
 
   return (
     <Editor
@@ -107,7 +139,7 @@ export function MonacoCodeEditor({
       path={`/${demoId}/${fileName}`}
       language={getLanguage(fileName)}
       value={value}
-      theme="vs-dark"
+      theme={theme}
       onMount={handleMount}
       onChange={(nextValue) => onChange(nextValue ?? '')}
       beforeMount={() => {
@@ -135,8 +167,8 @@ export function MonacoCodeEditor({
         bracketPairColorization: { enabled: true },
         fontFamily: '"SFMono-Regular", Consolas, "Liberation Mono", monospace',
         fontLigatures: true,
-        fontSize: 12,
-        lineHeight: 20,
+        fontSize: 13,
+        lineHeight: 22,
         lineNumbersMinChars: 3,
         minimap: { enabled: false },
         padding: { top: 14, bottom: 14 },

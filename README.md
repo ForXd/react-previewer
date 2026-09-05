@@ -78,6 +78,11 @@ export default function Page() {
 
 仓库 demo 进一步演示了由调用方实现 Monaco 多文件编辑、实时预览、设备框、地址栏、编译器切换、Paper/Ink 主题和源码检查面板。
 
+- 示例可以搜索；切换场景会保留各自草稿，重置只作用于当前示例。草稿仅保留在当前页面会话中。
+- 编辑器和预览使用页签切换，支持方向键、Home / End；选择设备尺寸或检查元素会打开预览。
+- 检查面板可以直接打开对应源文件并选中代码范围；底部状态栏展示真实编译状态与耗时。
+- Paper / Ink 统一工作台与编辑器主题，iframe 内的业务界面仍由示例代码定义。
+
 ## 依赖与 CSS
 
 `depsInfo` 声明 iframe 内的第三方 ESM 依赖。React 与 React DOM 已内置默认版本，其他依赖应显式声明：
@@ -125,7 +130,9 @@ export default function Page() {
 
 ## 编译器
 
-默认使用 Babel。Rspack Browser 适合更接近 bundler 的浏览器编译路径：
+默认使用 Babel。编译任务按预览实例串行执行，连续修改只采用最新结果；过期结果和卸载后的资源会被释放。自定义编译 adapter 或 `workerFactory` 建议保持稳定引用，需要更换实现时传入新实例。
+
+Rspack Browser 适合更接近 bundler 的浏览器编译路径：
 
 ```tsx
 <ReactPreviewer
