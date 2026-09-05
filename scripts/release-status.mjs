@@ -12,11 +12,15 @@ export async function getReleaseStatus({ name, version, refType, refName }, requ
     assert.equal(refType, 'branch', 'Publishing requires main or a version tag');
     assert.equal(refName, 'main', 'Only main can publish without a version tag');
   }
-  const response = await request(`https://registry.npmjs.org/${encodeURIComponent(name)}/${version}`);
+  const response = await request(`https://registry.npmjs.org/${encodeURIComponent(name)}/${version}`, {
+    signal: AbortSignal.timeout(10_000), headers: { 'Cache-Control': 'no-cache' }
+  });
   if (response.status === 404) return { published: false, version, tag };
   if (!response.ok) throw new Error(`npm version lookup failed: HTTP ${response.status}`);
-  assert.equal((await response.json()).version, version, 'npm returned an unexpected version');
-  return { published: true, version, tag };
+  const published = await response.json();
+  assert.equal(published.version, version, 'npm returned an unexpected version');
+  assert.match(published.gitHead ?? '', /^[a-f0-9]{40}$/, 'Published version must identify its source commit');
+  return { published: true, version, tag, commit: published.gitHead };
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
@@ -29,6 +33,6 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
   });
   console.log(`${name}@${version}: ${release.published ? 'already published; skipping npm publish' : 'ready to publish'}`);
   if (process.env.GITHUB_OUTPUT) {
-    fs.appendFileSync(process.env.GITHUB_OUTPUT, `published=${release.published}\ntag=${release.tag}\n`);
+    fs.appendFileSync(process.env.GITHUB_OUTPUT, `published=${release.published}\ntag=${release.tag}\ncommit=${release.commit ?? process.env.GITHUB_SHA}\n`);
   }
 }

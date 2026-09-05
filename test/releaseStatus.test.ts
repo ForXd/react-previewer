@@ -7,12 +7,18 @@ describe('automatic npm release eligibility', () => {
   it('publishes a main version only when npm confirms it is absent', async () => {
     const request = vi.fn().mockResolvedValue(new Response(null, { status: 404 }));
     expect(await getReleaseStatus(release, request)).toEqual({ published: false, version: '0.1.0', tag: 'v0.1.0' });
-    expect(request).toHaveBeenCalledWith('https://registry.npmjs.org/%40zllling%2Freact-previewer/0.1.0');
+    expect(request).toHaveBeenCalledWith('https://registry.npmjs.org/%40zllling%2Freact-previewer/0.1.0', expect.objectContaining({ signal: expect.any(AbortSignal) }));
   });
 
   it('skips an already published version after another main merge', async () => {
+    const commit = 'a'.repeat(40);
+    const request = vi.fn().mockResolvedValue(Response.json({ version: '0.1.0', gitHead: commit }));
+    expect(await getReleaseStatus(release, request)).toMatchObject({ published: true, commit });
+  });
+
+  it('does not recreate a release against the current merge when npm lacks source metadata', async () => {
     const request = vi.fn().mockResolvedValue(Response.json({ version: '0.1.0' }));
-    expect((await getReleaseStatus(release, request)).published).toBe(true);
+    await expect(getReleaseStatus(release, request)).rejects.toThrow('source commit');
   });
 
   it('does not interpret registry outages as permission to publish', async () => {

@@ -1,5 +1,9 @@
 # React Previewer
 
+[![npm version](https://img.shields.io/npm/v/@zllling/react-previewer)](https://www.npmjs.com/package/@zllling/react-previewer)
+[![CI](https://github.com/ForXd/react-previewer/actions/workflows/npm-publish.yml/badge.svg)](https://github.com/ForXd/react-previewer/actions/workflows/npm-publish.yml)
+[在线示例](https://forxd.github.io/react-previewer/) · [GitHub Releases](https://github.com/ForXd/react-previewer/releases)
+
 面向组件编辑器、低代码平台和在线示例的 React 代码预览运行时。它在隔离 iframe 中编译并运行 TSX/JSX，支持多文件、本地 CSS、第三方 ESM 依赖、运行时错误、路由同步和源码定位。
 
 `ReactPreviewer` 只负责预览能力。工具栏、设备尺寸、地址栏和产品视觉都由调用方组合，避免库组件替应用决定界面。
@@ -223,20 +227,18 @@ Babel 输出保留源码行号；Rspack Browser 输出 source map，运行时 bu
 ```bash
 npm ci
 npm run dev
-npm test
-npm run lint
-npm run build:lib
-npm run build:page
-npm run test:package
+npm run check
 ```
 
-GitHub Pages 只部署提交到仓库的 `page/`。`dist/` 是 npm 组件库产物，已从 Git 跟踪中移除；本地构建及 `npm publish` 的 `prepublishOnly` 会生成它，npm 包仍包含 `dist/`。
+`npm run check` 覆盖 lint、类型、测试、库与 demo 构建、`page/` 同步和真实 npm 安装包验证。修改 demo 后，需要先运行 `npm run build:page` 并提交生成的 `page/`，再运行同步检查。CI 还会在 Node 22 / 24 和 React 18 / 19 的组合下安装同一个 tarball，验证 ESM / CommonJS、公共类型、CSS 和 worker 入口。
+
+GitHub Pages 只部署提交到仓库且通过验证的 `page/`。`dist/` 保持 Git 忽略；本地构建和 `npm pack` / `npm publish` 的 `prepack` 会生成它，npm 包仍包含 `dist/`。贡献流程、版本管理和 CI 说明见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
 
 架构说明见 [DESIGN.md](./DESIGN.md)。
 
 ## 发布到 npm
 
-npm 包关联 GitHub 仓库 `ForXd/react-previewer`，使用 `npm-publish.yml` 的 OIDC Trusted Publisher。无需在工作流内保存 npm 发布 token；每次发布都运行测试、构建、安全审计和 ESM / CommonJS 产物检查，并生成来源证明及 GitHub Release。
+npm 包关联 GitHub 仓库 `ForXd/react-previewer`，使用 `npm-publish.yml` 的 OIDC Trusted Publisher。无需在工作流内保存 npm 发布 token；发布与 Pages 复用 PR 的完整验证，发布的 tarball 就是消费者矩阵验证过的那个文件。上传后会等待 registry 可见并核对 tarball 完整性，再创建 GitHub Release。
 
 更新版本与锁文件、构建并提交 `page/` 后，**合并到 `main` 即自动检查并发布 npm 上不存在的新版本**。同一版本的后续合并会跳过重复发包；registry 请求失败时会停止，不会误判成新版本。发布成功后自动创建对应 tag 和 GitHub Release。
 
@@ -248,6 +250,12 @@ git push origin v0.1.0
 ```
 
 npm Trusted Publisher 的配置为：GitHub 用户 `ForXd`、仓库 `react-previewer`、工作流文件 `npm-publish.yml`，允许直接 `npm publish`。配置方式见 [npm 官方说明](https://docs.npmjs.com/trusted-publishers/)。
+
+### 为什么 GitHub 的 Packages 为空？
+
+这里发布到的是 **npmjs.com**（`registry.npmjs.org`）。仓库侧栏的 **Packages** 展示的是 **GitHub Packages**（`npm.pkg.github.com`）中关联到该仓库的包。源码关联、OIDC 来源证明和 GitHub Release 不会将 npm 包复制到另一个 registry；侧栏为空不代表 npm 发布失败。
+
+普通使用者直接执行上面的 `npm install` 即可。若以后确实需要 GitHub Packages，应独立设计该 registry 的发布、命名空间与安装认证流程；它的 npm 包安装包括公开包也需要认证。详见 [GitHub npm registry 文档](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-npm-registry)。
 
 ## License
 

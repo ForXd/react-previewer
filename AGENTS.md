@@ -6,6 +6,9 @@
 - For source changes, run `npm run build` and `npm run build:page` before submitting. `npm run build` is the library build alias.
 - When changes affect the ReactPreview demo or GitHub preview page, run `npm run build:page` and commit the generated `page/` output.
 - For library changes, run `npm run build:lib` before submitting.
+- Run `npm run check` for engineering or source changes. It includes lint, tests, both builds, the committed Pages check and a real tarball consumer test.
+- `npm run test:package` builds no source itself: build the library first. Use `-- --react 18.3.1` for a local React 18 consumer check; it uses an isolated temporary directory.
+- Keep `npm-publish.yml` as the publishing workflow filename because npm Trusted Publisher trusts that identity. Publish only the tarball validated by CI.
 - Keep generated preview artifacts in sync with the source changes so GitHub Pages reflects the latest behavior.
 - Commit generated `page/` output for demo or GitHub Pages changes. Pages deploys only `page/` and does not need `dist/`.
 - Keep `dist/` ignored and out of Git. Generate and validate it locally and during npm publishing; do not force-add library build output.
