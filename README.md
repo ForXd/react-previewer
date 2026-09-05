@@ -238,7 +238,9 @@ GitHub Pages 只部署提交到仓库的 `page/`。`dist/` 是 npm 组件库产�
 
 npm 包关联 GitHub 仓库 `ForXd/react-previewer`，使用 `npm-publish.yml` 的 OIDC Trusted Publisher。无需在工作流内保存 npm 发布 token；每次发布都运行测试、构建、安全审计和 ESM / CommonJS 产物检查，并生成来源证明及 GitHub Release。
 
-更新版本与锁文件、构建并提交 `page/` 后，将匹配版本的 tag 推送到 GitHub 即自动发布。例如，版本为 `0.1.0` 时使用 `v0.1.0`。建议先合并版本变更，再在对应提交上打 tag；工作流会拒绝 tag 与 `package.json` 版本不一致的发布。
+更新版本与锁文件、构建并提交 `page/` 后，**合并到 `main` 即自动检查并发布 npm 上不存在的新版本**。同一版本的后续合并会跳过重复发包；registry 请求失败时会停止，不会误判成新版本。发布成功后自动创建对应 tag 和 GitHub Release。
+
+也支持手动推送匹配版本的 tag，或在 Actions 中手动重试。例如，版本为 `0.1.0` 时使用 `v0.1.0`；工作流会拒绝 tag 与 `package.json` 版本不一致的发布。
 
 ```bash
 git tag v0.1.0

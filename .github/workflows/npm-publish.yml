@@ -2,13 +2,15 @@ name: Publish Package
 
 on:
   push:
+    branches: [main]
     tags: ['v*']
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: npm-${{ github.ref }}
+  group: npm-publish
   cancel-in-progress: false
 
 jobs:
@@ -24,15 +26,9 @@ jobs:
           node-version-file: .node-version
           registry-url: https://registry.npmjs.org/
           package-manager-cache: false
-      - name: Verify release tag
-        run: |
-          node --input-type=module <<'JS'
-          import assert from 'node:assert/strict';
-          import fs from 'node:fs';
-          const { version } = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-          assert.equal(process.env.GITHUB_REF_NAME, `v${version}`, 'Tag must match package.json');
-          assert.match(version, /^\d+\.\d+\.\d+$/, 'Only stable versions use this workflow');
-          JS
+      - name: Check whether the version is already published
+        id: release
+        run: node scripts/release-status.mjs
       - run: npm ci
       - run: npm run lint
       - run: npm test
@@ -41,8 +37,13 @@ jobs:
       - run: npm run test:package
       - run: npm audit --audit-level=low
       - name: Publish to npm with trusted publishing
+        if: steps.release.outputs.published == 'false'
         run: npm publish --access public --provenance
       - name: Create GitHub release
-        run: gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes --title "$GITHUB_REF_NAME"
+        run: |
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --target "$GITHUB_SHA" --generate-notes --title "$RELEASE_TAG"
+          fi
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
