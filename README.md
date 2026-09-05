@@ -2,105 +2,89 @@
 
 [![npm version](https://img.shields.io/npm/v/@zllling/react-previewer)](https://www.npmjs.com/package/@zllling/react-previewer)
 [![CI](https://github.com/ForXd/react-previewer/actions/workflows/npm-publish.yml/badge.svg)](https://github.com/ForXd/react-previewer/actions/workflows/npm-publish.yml)
-[在线示例](https://forxd.github.io/react-previewer/) · [GitHub Releases](https://github.com/ForXd/react-previewer/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/ForXd/react-previewer/blob/main/LICENSE)
 
-面向组件编辑器、低代码平台和在线示例的 React 代码预览运行时。它在隔离 iframe 中编译并运行 TSX/JSX，支持多文件、本地 CSS、第三方 ESM 依赖、运行时错误、路由同步和源码定位。
+在 React 应用中嵌入可实时更新的代码预览。
 
-`ReactPreviewer` 只负责预览能力。工具栏、设备尺寸、地址栏和产品视觉都由调用方组合，避免库组件替应用决定界面。
+React Previewer 在浏览器中编译 TSX / JSX，并在 iframe 内渲染结果，适用于组件文档、在线编辑器、交互式教程和低代码平台。通过文件映射和少量配置即可接入，也可以扩展编译器、状态反馈和界面样式。
+
+**[在线体验](https://forxd.github.io/react-previewer/)** · [npm](https://www.npmjs.com/package/@zllling/react-previewer) · [版本发布](https://github.com/ForXd/react-previewer/releases) · [反馈问题](https://github.com/ForXd/react-previewer/issues)
+
+## 特性
+
+- **多文件预览**：支持 TSX / JSX、相对路径导入和本地 CSS，修改文件后自动重新编译。
+- **浏览器编译**：内置 Babel 和 Rspack Browser，支持接入自定义编译器。
+- **依赖加载**：声明第三方 ESM 依赖及样式资源，可选启用 Tailwind Browser。
+- **状态与错误反馈**：提供编译和资源加载进度，以及编译、依赖和运行时错误信息。
+- **源码定位与路由同步**：检查预览中的元素以获取源码位置，通过回调同步 iframe 路由。
+- **界面定制**：提供样式插槽与加载、错误渲染接口，可与宿主应用的设计系统组合。
+
+库组件提供预览区域；编辑器、工具栏、设备尺寸和主题由应用组合。[在线示例](https://forxd.github.io/react-previewer/) 展示了基于 Monaco 的多文件编辑、设备预览、编译器切换、明暗主题和源码检查。
 
 ## 安装
+
+在已有的 React 项目中安装：
 
 ```bash
 npm install @zllling/react-previewer
 ```
 
+支持 React / React DOM 18.2+ 或 19.x，提供 ESM、CommonJS 和 TypeScript 类型声明。预览运行于浏览器，第三方依赖默认通过 esm.sh 加载。
+
+## 快速开始
+
+导入组件及样式，将文件内容传入 `files`，并为预览区域设置高度：
+
 ```tsx
 import { ReactPreviewer } from '@zllling/react-previewer';
 import '@zllling/react-previewer/styles.css';
-```
 
-## 基本用法
-
-```tsx
 const files = {
   'App.tsx': `
-import React from 'react';
+import { useState } from 'react';
 import './styles.css';
 
 export default function App() {
-  return <div className="card">Hello React Previewer</div>;
+  const [count, setCount] = useState(0);
+
+  return (
+    <button className="counter" onClick={() => setCount(count + 1)}>
+      Count: {count}
+    </button>
+  );
 }
-  `,
+`,
   'styles.css': `
-.card {
-  padding: 24px;
-  border-radius: 12px;
-  background: white;
+body { margin: 0; padding: 24px; }
+.counter {
+  padding: 12px 20px;
+  color: white;
+  background: #5167f6;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
 }
-  `
+`
 };
 
-export default function Page() {
-  return <ReactPreviewer files={files} entryFile="App.tsx" />;
+export default function Playground() {
+  return (
+    <ReactPreviewer
+      files={files}
+      entryFile="App.tsx"
+      style={{ height: 400, borderRadius: 12 }}
+    />
+  );
 }
 ```
 
-## 调用方自定义样式
+`files` 的键是虚拟文件路径，值是源代码。入口文件默认是 `App.tsx`，需要默认导出 React 组件。将编辑器内容更新到 `files` 即可驱动实时预览。
 
-根节点保留常规的 `className` / `style`，内部反馈层通过四个稳定 slot 开放：`root`、`loading`、`error`、`iframe`。
+以下配置示例沿用上面的 `files`。
 
-```tsx
-<ReactPreviewer
-  files={files}
-  className="product-preview"
-  classNames={{
-    root: 'product-preview--paper',
-    loading: 'product-preview__loading',
-    error: 'product-preview__error',
-    iframe: 'product-preview__iframe'
-  }}
-  styles={{
-    root: {
-      borderRadius: 18,
-      boxShadow: '0 28px 80px rgba(29, 38, 56, 0.16)'
-    },
-    loading: { backdropFilter: 'blur(14px)' },
-    iframe: { backgroundColor: '#f8fafc' }
-  }}
-/>
-```
+## 依赖与样式
 
-默认 loading 与 error 也可以替换内容，而不需要接触编译实现：
-
-```tsx
-<ReactPreviewer
-  files={files}
-  renderLoading={(status) => <Spinner label={status.phase} />}
-  renderError={(error) => <ProductErrorState message={error.message} />}
-/>
-```
-
-仓库 demo 进一步演示了由调用方实现 Monaco 多文件编辑、实时预览、设备框、地址栏、编译器切换、Paper/Ink 主题和源码检查面板。
-
-- 示例可以搜索；切换场景会保留各自草稿，重置只作用于当前示例。草稿仅保留在当前页面会话中。
-- 编辑器和预览使用页签切换，支持方向键、Home / End；选择设备尺寸或检查元素会打开预览。
-- 检查面板可以直接打开对应源文件并选中代码范围；底部状态栏展示真实编译状态与耗时。
-- Paper / Ink 统一工作台与编辑器主题，iframe 内的业务界面仍由示例代码定义。
-
-## 依赖与 CSS
-
-`depsInfo` 声明 iframe 内的第三方 ESM 依赖。React 与 React DOM 默认使用 19.2.8；指定 `depsInfo.react` 时 React DOM 与 JSX runtime 会跟随该版本，其他依赖应显式声明：
-
-```tsx
-<ReactPreviewer
-  files={files}
-  depsInfo={{
-    '@arco-design/web-react': '2.66.16'
-  }}
-/>
-```
-
-本地 CSS import 会编译为 iframe 内样式；包 CSS 和远程 CSS 会进入资源加载生命周期。
+使用 `depsInfo` 指定预览代码所需的包版本，使用 `dependencyStyles` 配置对应的 CSS URL。样式可以是单个 URL，也可以是 URL 数组。
 
 ```tsx
 <ReactPreviewer
@@ -112,151 +96,92 @@ export default function Page() {
 />
 ```
 
-需要在 iframe 中使用 Tailwind Browser 时显式启用，避免普通预览无条件下载额外 CDN 脚本：
+预览中的 React / React DOM 默认使用 19.2.8，独立于宿主应用的版本。可以通过 `depsInfo.react` 指定版本；未单独配置的 React DOM 和 JSX runtime 会使用同一版本。
 
-```tsx
-<ReactPreviewer files={files} enableTailwind />
-```
+本地 CSS 可直接在预览代码中通过 `import './styles.css'` 引入。使用 Tailwind 工具类时，设置 `enableTailwind` 即可加载 Tailwind Browser runtime；默认关闭。
 
-## 检查模式与路由
+## 界面与交互
 
-检查模式是受控状态。调用方决定何时开启，并负责展示点击结果：
+`className` / `style` 控制根节点，`classNames` / `styles` 支持 `root`、`loading`、`error`、`iframe` 四个样式插槽。可以替换加载和错误内容：
 
 ```tsx
 <ReactPreviewer
   files={files}
-  isInspecting={isInspecting}
-  onElementClick={(sourceInfo) => setSelectedSource(sourceInfo)}
-  initialPath="/projects/42"
-  onRouteChange={(route) => setAddressValue(route.href)}
+  style={{ height: 400, borderRadius: 16 }}
+  styles={{ iframe: { backgroundColor: '#f8fafc' } }}
+  renderLoading={(status) => <p role="status">正在预览：{status.phase}</p>}
+  renderError={(error) => <p role="alert">{error.message}</p>}
 />
 ```
+
+启用 `isInspecting` 后，`onElementClick` 返回所选元素的源文件、行列范围和内容，可用于联动编辑器。路由通过 `initialPath` 配置，通过 `onRouteChange` 读取变化：
+
+```tsx
+<ReactPreviewer
+  files={files}
+  isInspecting
+  onElementClick={(source) => console.log(source.file, source.startLine)}
+  initialPath="/projects/42"
+  onRouteChange={(route) => console.log(route.href)}
+/>
+```
+
+通过 `onStatusChange` 可读取编译阶段、耗时和资源加载进度；`onError` 的第二个参数提供结构化错误信息，类型为 `compile`、`dependency` 或 `runtime`。默认错误界面在信息可用时展示源码位置、代码片段和堆栈。
 
 ## 编译器
 
-默认使用 Babel。编译任务按预览实例串行执行，连续修改只采用最新结果；过期结果和卸载后的资源会被释放。自定义编译 adapter 或 `workerFactory` 建议保持稳定引用，需要更换实现时传入新实例。
+| 模式 | 配置 | 适用场景 |
+| --- | --- | --- |
+| Babel | `compiler="babel"`（默认） | TSX / JSX 转换与日常组件预览 |
+| Rspack Browser | `compiler="rspack-browser"` | 在浏览器中使用 Rspack 打包预览代码 |
+| 自定义 | `compiler={adapter}` | 实现 `PreviewCompiler` 接口，扩展编译流程 |
 
-Rspack Browser 适合更接近 bundler 的浏览器编译路径：
-
-```tsx
-<ReactPreviewer
-  files={files}
-  compiler={{
-    type: 'rspack-browser',
-    rspack: {
-      cdnDomain: 'https://esm.sh',
-      workerFactory: () => new Worker(workerUrl, { type: 'module' })
-    }
-  }}
-/>
-```
-
-`@rspack/browser` 依赖 `SharedArrayBuffer`，承载页面必须启用 cross-origin isolation：
+Rspack Browser 使用 Web Worker 和 WebAssembly，需要承载页面启用跨源隔离：
 
 ```text
 Cross-Origin-Opener-Policy: same-origin
 Cross-Origin-Embedder-Policy: require-corp
 ```
 
-静态站点可使用等效的 cross-origin isolation service worker。仓库 demo 已配置对应脚本。
+静态站点可通过等效的跨源隔离 service worker 配置，在线示例提供了相应实现。部署时需确保 Worker 与 WebAssembly 资源可访问；可以通过 `compiler.rspack.workerFactory` 自定义 Worker，包提供 `@zllling/react-previewer/rspack-browser-worker` 入口。
 
-## 错误与源码位置
+自定义编译器实例和 `workerFactory` 应保持稳定引用。配置类型见 [编译器接口](https://github.com/ForXd/react-previewer/blob/main/src/lib/ReactPreview/preview/compilers/types.ts)。
 
-默认错误界面区分三类 `ErrorInfo.type`：
-
-- `compile`：语法或编译失败，展示文件、行列和 compiler code frame。
-- `dependency`：相对文件、未声明包、ESM 或 CSS 资源无法解析或加载，展示依赖名与请求 URL（若可用）。
-- `runtime`：代码运行或 React 渲染期间抛错，展示映射回用户文件的行列和可展开堆栈。
-
-Babel 输出保留源码行号；Rspack Browser 输出 source map，运行时 bundle 堆栈会映射回原始文件。行列均按用户可读的一基坐标展示。
-
-调用方可以通过 `renderError` 替换界面，也可以从 `onError` 的第二个参数读取结构化信息：
-
-```tsx
-<ReactPreviewer
-  files={files}
-  onError={(error, info) => {
-    reportPreviewFailure({ error, type: info.type, file: info.fileName });
-  }}
-/>
-```
-
-仓库 demo 提供编译错误、依赖错误和运行时错误三个可编辑示例；修复 Monaco 中的代码后会自动重新编译并恢复预览。
-
-## Props
+## API 概览
 
 | 属性 | 默认值 | 说明 |
 | --- | --- | --- |
-| `files` | 必填 | 文件名到源代码的映射 |
-| `entryFile` | `App.tsx` | 入口文件 |
-| `depsInfo` | `{}` | 第三方依赖版本 |
-| `dependencyStyles` | `{}` | 依赖对应的 CSS URL |
-| `compiler` | `babel` | Babel、Rspack Browser 或自定义编译 adapter |
-| `compileDelay` | `120` | 文件变化后的编译去抖毫秒数 |
-| `enableTailwind` | `false` | 是否加载 Tailwind Browser runtime |
-| `initialPath` | `/` | iframe 的 pathname、query 和 hash |
-| `isInspecting` | `false` | 是否启用元素源码定位 |
-| `className` / `style` | - | 根节点样式 |
-| `classNames` / `styles` | - | `root`、`loading`、`error`、`iframe` slot 样式 |
-| `renderLoading` | - | 自定义 loading 内容 |
-| `renderError` | - | 自定义错误内容 |
-| `iframeTitle` | `React preview` | iframe 可访问名称 |
-| `onStatusChange` | - | 编译与资源加载状态 |
-| `onError` | - | 编译、依赖或运行错误；第二参数为结构化 `ErrorInfo` |
-| `onElementClick` | - | 检查模式下的源码位置 |
-| `onRouteChange` | - | iframe 路由变化 |
-| `loggerConfig` | 禁用 | 可选诊断日志配置 |
+| `files` | 必填 | 文件路径到源代码的映射 |
+| `entryFile` | `App.tsx` | 入口组件文件 |
+| `depsInfo` | `{}` | 预览依赖及版本 |
+| `dependencyStyles` | `{}` | 依赖对应的样式 URL 或 URL 数组 |
+| `compiler` | `babel` | 内置编译器名称、配置对象或自定义实例 |
+| `compileDelay` | `120` | 文件变化后的编译去抖时间，单位 ms |
+| `enableTailwind` | `false` | 加载 Tailwind Browser runtime |
+| `initialPath` | `/` | 预览路由，支持 pathname、query 和 hash |
+| `isInspecting` | `false` | 启用元素源码检查 |
+| `className` / `style` | — | 根节点样式 |
+| `classNames` / `styles` | — | 各样式插槽配置 |
+| `renderLoading` / `renderError` | — | 自定义加载与错误内容 |
+| `iframeTitle` | `React preview` | iframe 的可访问名称 |
+| `onStatusChange` | — | 接收 `PreviewStatus` |
+| `onError` | — | 接收 `Error` 与结构化 `ErrorInfo` |
+| `onElementClick` | — | 接收元素的 `SourceInfo` |
+| `onRouteChange` | — | 接收 `PreviewRouteState` |
 
-完整类型由包入口导出，包括 `ReactPreviewerProps`、`ReactPreviewerClassNames`、`ReactPreviewerStyles`、`PreviewStatus`、`PreviewErrorType`、`ErrorInfo`、`SourceInfo` 与编译器类型。
+完整属性见 [ReactPreviewerProps](https://github.com/ForXd/react-previewer/blob/main/src/lib/ReactPreview/preview/types.ts)。公共类型均可从 `@zllling/react-previewer` 导入。
 
-## 从旧版迁移
+## 本地开发
 
-内置工作台 UI 已移出库组件：
-
-- 删除 `showToolbar`、`defaultViewport`、`defaultZoom`。
-- 用调用方布局控制设备尺寸和缩放。
-- 用受控 `isInspecting` 替代工具栏内部检查状态。
-- 内部的 `PreviewFrame`、工具栏、错误组件和编译实现不再从包入口导出。
-
-这样公共 interface 更小，内部重构不会迫使调用方同步修改。
-
-## 开发与验证
-
-使用 `.node-version` 指定的 Node 24.15.0，支持的最低环境为 Node 22.18 / 24.11。宿主支持 React 18 / 19；TypeScript 7 负责类型检查，类型声明和 ESLint 使用官方 TypeScript 6 兼容包。完整版本与迁移决策见 [DEPENDENCIES.md](./DEPENDENCIES.md)。
+使用 [.node-version](https://github.com/ForXd/react-previewer/blob/main/.node-version) 指定的 Node.js 版本：
 
 ```bash
 npm ci
 npm run dev
-npm run check
 ```
 
-`npm run check` 覆盖 lint、类型、测试、库与 demo 构建、`page/` 同步和真实 npm 安装包验证。修改 demo 后，需要先运行 `npm run build:page` 并提交生成的 `page/`，再运行同步检查。CI 还会在 Node 22 / 24 和 React 18 / 19 的组合下安装同一个 tarball，验证 ESM / CommonJS、公共类型、CSS 和 worker 入口。
-
-GitHub Pages 只部署提交到仓库且通过验证的 `page/`。`dist/` 保持 Git 忽略；本地构建和 `npm pack` / `npm publish` 的 `prepack` 会生成它，npm 包仍包含 `dist/`。贡献流程、版本管理和 CI 说明见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
-
-架构说明见 [DESIGN.md](./DESIGN.md)。
-
-## 发布到 npm
-
-npm 包关联 GitHub 仓库 `ForXd/react-previewer`，使用 `npm-publish.yml` 的 OIDC Trusted Publisher。无需在工作流内保存 npm 发布 token；发布与 Pages 复用 PR 的完整验证，发布的 tarball 就是消费者矩阵验证过的那个文件。上传后会等待 registry 可见并核对 tarball 完整性，再创建 GitHub Release。
-
-更新版本与锁文件、构建并提交 `page/` 后，**合并到 `main` 即自动检查并发布 npm 上不存在的新版本**。同一版本的后续合并会跳过重复发包；registry 请求失败时会停止，不会误判成新版本。发布成功后自动创建对应 tag 和 GitHub Release。
-
-也支持手动推送匹配版本的 tag，或在 Actions 中手动重试。例如，版本为 `0.1.0` 时使用 `v0.1.0`；工作流会拒绝 tag 与 `package.json` 版本不一致的发布。
-
-```bash
-git tag v0.1.0
-git push origin v0.1.0
-```
-
-npm Trusted Publisher 的配置为：GitHub 用户 `ForXd`、仓库 `react-previewer`、工作流文件 `npm-publish.yml`，允许直接 `npm publish`。配置方式见 [npm 官方说明](https://docs.npmjs.com/trusted-publishers/)。
-
-### 为什么 GitHub 的 Packages 为空？
-
-这里发布到的是 **npmjs.com**（`registry.npmjs.org`）。仓库侧栏的 **Packages** 展示的是 **GitHub Packages**（`npm.pkg.github.com`）中关联到该仓库的包。源码关联、OIDC 来源证明和 GitHub Release 不会将 npm 包复制到另一个 registry；侧栏为空不代表 npm 发布失败。
-
-普通使用者直接执行上面的 `npm install` 即可。若以后确实需要 GitHub Packages，应独立设计该 registry 的发布、命名空间与安装认证流程；它的 npm 包安装包括公开包也需要认证。详见 [GitHub npm registry 文档](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-npm-registry)。
+提交前运行 `npm run check`，执行代码规范、类型、测试、构建和安装包验证。贡献流程与发布约定见 [贡献指南](https://github.com/ForXd/react-previewer/blob/main/CONTRIBUTING.md)；模块边界见 [架构设计](https://github.com/ForXd/react-previewer/blob/main/DESIGN.md)，依赖说明见 [依赖清单](https://github.com/ForXd/react-previewer/blob/main/DEPENDENCIES.md)。
 
 ## License
 
-MIT
+[MIT](https://github.com/ForXd/react-previewer/blob/main/LICENSE)
