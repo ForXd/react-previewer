@@ -28,7 +28,7 @@ export default defineConfig({
       },
     },
     rollupOptions: {
-      external: ['react', 'react-dom', 'react-dom/client', '@rspack/browser'],
+      external: [/^react(?:-dom)?(?:\/.*)?$/, '@rspack/browser'],
       output: {
         globals: {
           react: 'React',

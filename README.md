@@ -85,13 +85,13 @@ export default function Page() {
 
 ## 依赖与 CSS
 
-`depsInfo` 声明 iframe 内的第三方 ESM 依赖。React 与 React DOM 已内置默认版本，其他依赖应显式声明：
+`depsInfo` 声明 iframe 内的第三方 ESM 依赖。React 与 React DOM 默认使用 19.2.8；指定 `depsInfo.react` 时 React DOM 与 JSX runtime 会跟随该版本，其他依赖应显式声明：
 
 ```tsx
 <ReactPreviewer
   files={files}
   depsInfo={{
-    '@arco-design/web-react': '2.66.1'
+    '@arco-design/web-react': '2.66.16'
   }}
 />
 ```
@@ -101,9 +101,9 @@ export default function Page() {
 ```tsx
 <ReactPreviewer
   files={files}
-  depsInfo={{ antd: '5.18.0' }}
+  depsInfo={{ antd: '6.6.2' }}
   dependencyStyles={{
-    antd: 'https://esm.sh/antd@5.18.0/dist/reset.css'
+    antd: 'https://esm.sh/antd@6.6.2/dist/reset.css'
   }}
 />
 ```
@@ -218,16 +218,34 @@ Babel 输出保留源码行号；Rspack Browser 输出 source map，运行时 bu
 
 ## 开发与验证
 
+使用 `.node-version` 指定的 Node 24.15.0，支持的最低环境为 Node 22.18 / 24.11。宿主支持 React 18 / 19；TypeScript 7 负责类型检查，类型声明和 ESLint 使用官方 TypeScript 6 兼容包。完整版本与迁移决策见 [DEPENDENCIES.md](./DEPENDENCIES.md)。
+
 ```bash
-npm install
+npm ci
 npm run dev
 npm test
 npm run lint
 npm run build:lib
 npm run build:page
+npm run test:package
 ```
 
+GitHub Pages 只部署提交到仓库的 `page/`。`dist/` 是 npm 组件库产物，已从 Git 跟踪中移除；本地构建及 `npm publish` 的 `prepublishOnly` 会生成它，npm 包仍包含 `dist/`。
+
 架构说明见 [DESIGN.md](./DESIGN.md)。
+
+## 发布到 npm
+
+npm 包关联 GitHub 仓库 `ForXd/react-previewer`，使用 `npm-publish.yml` 的 OIDC Trusted Publisher。无需在工作流内保存 npm 发布 token；每次发布都运行测试、构建、安全审计和 ESM / CommonJS 产物检查，并生成来源证明及 GitHub Release。
+
+更新版本与锁文件、构建并提交 `page/` 后，将匹配版本的 tag 推送到 GitHub 即自动发布。例如，版本为 `0.1.0` 时使用 `v0.1.0`。建议先合并版本变更，再在对应提交上打 tag；工作流会拒绝 tag 与 `package.json` 版本不一致的发布。
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+npm Trusted Publisher 的配置为：GitHub 用户 `ForXd`、仓库 `react-previewer`、工作流文件 `npm-publish.yml`，允许直接 `npm publish`。配置方式见 [npm 官方说明](https://docs.npmjs.com/trusted-publishers/)。
 
 ## License
 

@@ -28,10 +28,13 @@ vi.mock('@monaco-editor/react', () => ({
   loader: { config: vi.fn() }
 }));
 
-vi.mock('monaco-editor/esm/vs/editor/editor.api.js', () => ({}));
-vi.mock('monaco-editor/esm/vs/language/css/monaco.contribution.js', () => ({}));
+vi.mock('monaco-editor/editor/editor.api.js', () => ({}));
+vi.mock('monaco-editor/languages/definitions/css/register.js', () => ({}));
+vi.mock('monaco-editor/languages/definitions/javascript/register.js', () => ({}));
+vi.mock('monaco-editor/languages/definitions/typescript/register.js', () => ({}));
+vi.mock('monaco-editor/languages/features/css/register.js', () => ({}));
 vi.mock(
-  'monaco-editor/esm/vs/language/typescript/monaco.contribution.js',
+  'monaco-editor/languages/features/typescript/register.js',
   () => ({})
 );
 

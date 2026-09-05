@@ -278,7 +278,7 @@ export default function App() {
     expect(result.output).toContain(
       'from "https://esm.sh/@arco-design/web-react@2.45.0/icon?target=es2022&external=react%2Creact-dom"'
     );
-    expect(result.output).toContain('from "https://esm.sh/react@18.2.0?target=es2022"');
+    expect(result.output).toContain('from "https://esm.sh/react@19.2.8?target=es2022"');
   });
 
   it('supports custom source metadata attribute names', async () => {

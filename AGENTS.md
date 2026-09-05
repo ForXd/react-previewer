@@ -7,5 +7,6 @@
 - When changes affect the ReactPreview demo or GitHub preview page, run `npm run build:page` and commit the generated `page/` output.
 - For library changes, run `npm run build:lib` before submitting.
 - Keep generated preview artifacts in sync with the source changes so GitHub Pages reflects the latest behavior.
-- Include generated `dist/` output for library changes and generated `page/` output for demo or GitHub Pages changes when those files are produced by the build.
+- Commit generated `page/` output for demo or GitHub Pages changes. Pages deploys only `page/` and does not need `dist/`.
+- Keep `dist/` ignored and out of Git. Generate and validate it locally and during npm publishing; do not force-add library build output.
 - After validation, commit the complete source and generated artifact changes, push the branch, and open an MR/PR to `main`.

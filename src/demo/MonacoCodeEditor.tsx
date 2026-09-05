@@ -4,30 +4,18 @@ import Editor, {
   type Monaco,
   type OnMount
 } from '@monaco-editor/react';
-import * as monaco from 'monaco-editor/esm/vs/editor/editor.api.js';
-import 'monaco-editor/esm/vs/language/css/monaco.contribution.js';
-import * as typescript from 'monaco-editor/esm/vs/language/typescript/monaco.contribution.js';
-import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
-import cssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker';
-import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
+import * as monaco from 'monaco-editor/editor/editor.api.js';
+import 'monaco-editor/languages/definitions/css/register.js';
+import 'monaco-editor/languages/definitions/javascript/register.js';
+import 'monaco-editor/languages/definitions/typescript/register.js';
+import 'monaco-editor/languages/features/css/register.js';
+import * as typescript from 'monaco-editor/languages/features/typescript/register.js';
+import editorWorker from 'monaco-editor/editor/editor.worker?worker';
+import cssWorker from 'monaco-editor/languages/features/css/css.worker?worker';
+import tsWorker from 'monaco-editor/languages/features/typescript/ts.worker?worker';
 import type { ErrorInfo, SourceInfo } from '../lib/ReactPreview';
 
 type MonacoEditor = Parameters<OnMount>[0];
-
-interface TypeScriptDefaults {
-  setCompilerOptions: (options: Record<string, unknown>) => void;
-  setDiagnosticsOptions: (options: Record<string, unknown>) => void;
-}
-
-interface TypeScriptLanguageApi {
-  JsxEmit: { ReactJSX: number };
-  ModuleResolutionKind: { NodeJs: number };
-  ScriptTarget: { ES2022: number };
-  typescriptDefaults: TypeScriptDefaults;
-  javascriptDefaults: TypeScriptDefaults;
-}
-
-const typescriptApi = typescript as unknown as TypeScriptLanguageApi;
 
 const workerScope = self as typeof self & {
   MonacoEnvironment?: {
@@ -146,17 +134,17 @@ export function MonacoCodeEditor({
         const compilerOptions = {
           allowNonTsExtensions: true,
           allowJs: true,
-          jsx: typescriptApi.JsxEmit.ReactJSX,
-          moduleResolution: typescriptApi.ModuleResolutionKind.NodeJs,
-          target: typescriptApi.ScriptTarget.ES2022
+          jsx: typescript.JsxEmit.ReactJSX,
+          moduleResolution: typescript.ModuleResolutionKind.NodeJs,
+          target: typescript.ScriptTarget.ES2020
         };
-        typescriptApi.typescriptDefaults.setCompilerOptions(compilerOptions);
-        typescriptApi.javascriptDefaults.setCompilerOptions(compilerOptions);
-        typescriptApi.typescriptDefaults.setDiagnosticsOptions({
+        typescript.typescriptDefaults.setCompilerOptions(compilerOptions);
+        typescript.javascriptDefaults.setCompilerOptions(compilerOptions);
+        typescript.typescriptDefaults.setDiagnosticsOptions({
           noSemanticValidation: true,
           noSuggestionDiagnostics: true
         });
-        typescriptApi.javascriptDefaults.setDiagnosticsOptions({
+        typescript.javascriptDefaults.setDiagnosticsOptions({
           noSemanticValidation: true,
           noSuggestionDiagnostics: true
         });

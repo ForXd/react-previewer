@@ -123,6 +123,7 @@ Home and End. Inspector selections can open the corresponding file and range.
   tabs and preview controls. Monaco is mocked only in these interaction tests;
   real editor/iframe behavior is checked in the browser.
 - Run `npm test`, `npm run lint`, `npm run build`, `npm run build:lib`, and
-  `npm run build:page`. Commit both generated `dist/` and `page/` output.
+  `npm run build:page`. Commit generated `page/` output for GitHub Pages. Keep `dist/` ignored;
+  validate it locally and generate it during npm publishing.
 - Browser verification covers Babel and Rspack rendering, an editable error and
   recovery, routing, source inspection, themes and desktop/mobile layouts.

@@ -8,7 +8,7 @@ export const usersDemo: DemoDefinition = {
   description: '第三方组件、包子路径图标与远程样式加载。',
   entryFile: 'App.tsx',
   depsInfo: {
-    '@arco-design/web-react': '2.66.1'
+    '@arco-design/web-react': '2.66.16'
   },
   files: {
     'App.tsx': `
@@ -58,7 +58,7 @@ export default function App() {
           <Input prefix={<IconSearch />} placeholder="Search members" value={query} onChange={setQuery} allowClear />
           <span>{users.length} members</span>
         </div>
-        <Table columns={columns} data={users} rowKey="id" pagination={false} />
+        <Table columns={columns} data={users} rowKey="id" pagination={false} scroll={{ x: 560 }} />
       </Card>
     </main>
   );
@@ -74,8 +74,8 @@ body { margin: 0; color: #1d2433; background: #f4f6fa; }
 .user-card { max-width: 1040px; margin: auto; border-radius: 18px !important; box-shadow: 0 22px 60px rgba(30, 42, 68, .08); }
 .table-tools { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
 .table-tools .arco-input-wrapper { max-width: 320px; border-radius: 9px; }
-.table-tools > span { color: #8490a4; font-size: 12px; }
-.member { display: grid; gap: 2px; }
+.table-tools > span { flex-shrink: 0; color: #8490a4; font-size: 12px; }
+.member { display: grid; gap: 2px; white-space: nowrap; }
 .member span { color: #8791a3; font-size: 12px; }
 @media (max-width: 620px) { .user-page > header { align-items: flex-start; flex-direction: column; } }
 `

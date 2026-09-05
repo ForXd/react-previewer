@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ErrorInfo, PreviewStatus, ReactPreviewerProps } from '../types';
 import { getPreviewCompilerConfigKey } from '../compilers';
 import { createSourceAttributeKey } from '../sourceAttributes';
@@ -26,12 +26,14 @@ type PreviewDocument = { version: number; html: string };
 /** Connects the compilation session and iframe protocol to one status snapshot. */
 export function usePreviewRuntime(props: ReactPreviewerProps) {
   const latest = useRef(props);
-  latest.current = props;
+  useLayoutEffect(() => {
+    latest.current = props;
+  });
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const sessionRef = useRef<CompilationSession | null>(null);
   const errorHandler = useRef(new ErrorHandler());
-  const statusRef = useRef(createInitialStatus());
-  const [status, setStatus] = useState(statusRef.current);
+  const [status, setStatus] = useState(createInitialStatus);
+  const statusRef = useRef(status);
   const [document, setDocument] = useState<PreviewDocument>({
     version: 0,
     html: ''

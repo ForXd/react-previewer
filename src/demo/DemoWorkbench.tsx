@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { version } from '../../package.json';
 import { useDemoWorkspace } from './useDemoWorkspace';
 import {
   compilers,
@@ -40,7 +41,7 @@ export default function DemoWorkbench() {
           <small>Playground</small>
         </a>
         <div className="demo-header__meta">
-          <span className="demo-version">v0.0.7</span>
+          <span className="demo-version">v{version}</span>
           <a
             href="https://github.com/ForXd/react-previewer"
             target="_blank"

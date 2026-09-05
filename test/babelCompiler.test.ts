@@ -6,6 +6,31 @@ describe('Babel preview compiler', () => {
     vi.restoreAllMocks();
   });
 
+  it.each(['18.3.1', '19.2.8'])('compiles TSX without a React import using the requested React %s runtime', async (version) => {
+    const outputBlobs: Blob[] = [];
+    vi.spyOn(URL, 'createObjectURL').mockImplementation((blob) => {
+      outputBlobs.push(blob);
+      return `blob:preview-${outputBlobs.length}`;
+    });
+    const compiler = new BabelPreviewCompiler();
+    await compiler.initialize();
+    await compiler.compile({
+      entryFile: 'App.tsx',
+      depsInfo: { react: version },
+      files: {
+        'App.tsx': `import { ReactNode } from 'react';
+const label: ReactNode = 'Stable runtime';
+export default function App() { return <main>{label}</main>; }`
+      }
+    });
+    const output = await outputBlobs[0].text();
+    expect(output).toContain(`react@${version}/jsx-runtime`);
+    expect(output).not.toContain('jsx-dev-runtime');
+    expect(output).not.toContain('ReactNode');
+    expect(output).not.toContain('React.createElement');
+    expect(output).toContain('data-preview-file');
+  });
+
   it('resolves package subpath imports from the declared base package version', async () => {
     const outputBlobs: Blob[] = [];
     vi.spyOn(URL, 'createObjectURL').mockImplementation((blob) => {

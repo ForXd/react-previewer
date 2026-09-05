@@ -275,7 +275,7 @@ function generateDynamicDependencyLoader(
     const dependencyList = ${JSON.stringify(dependencyList)};
     const styleResourceList = ${JSON.stringify(styleResources)};
     const tailwindResource = ${enableTailwind
-      ? "{ name: 'tailwindcss', url: 'https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.10' }"
+      ? "{ name: 'tailwindcss', url: 'https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3' }"
       : 'null'};
     const resourceList = [
       ...dependencyList,
