@@ -79,6 +79,7 @@ export class CodeTransformer {
           transformOptions
         );
       } catch (error) {
+        this.cleanup(fileUrls);
         logger.error(`Failed to process ${fileName}:`, error);
         throw error;
       }

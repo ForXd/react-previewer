@@ -37,9 +37,24 @@ export interface PreviewCompiler {
   cleanup?(result?: PreviewCompileResult): void | Promise<void>;
 }
 
-export type PreviewCompilerLike = PreviewCompilerType | PreviewCompilerConfig | PreviewCompiler;
+export type PreviewCompilerLike =
+  | PreviewCompilerType
+  | PreviewCompilerConfig
+  | PreviewCompiler;
 
-export function isPreviewCompiler(value: PreviewCompilerLike | undefined): value is PreviewCompiler {
+// Adapter objects and worker factories are behavior, so their identity is part
+// of the configuration even when their serializable options are identical.
+const identities = new WeakMap<object, number>();
+let nextIdentity = 0;
+
+function identity(value: object): number {
+  if (!identities.has(value)) identities.set(value, ++nextIdentity);
+  return identities.get(value)!;
+}
+
+export function isPreviewCompiler(
+  value: PreviewCompilerLike | undefined
+): value is PreviewCompiler {
   return typeof value === 'object' && value !== null && 'compile' in value;
 }
 
@@ -64,9 +79,11 @@ export function normalizePreviewCompilerConfig(
   };
 }
 
-export function getPreviewCompilerConfigKey(compiler?: PreviewCompilerLike): string {
+export function getPreviewCompilerConfigKey(
+  compiler?: PreviewCompilerLike
+): string {
   if (isPreviewCompiler(compiler)) {
-    return 'custom';
+    return `custom:${identity(compiler)}`;
   }
 
   const config = normalizePreviewCompilerConfig(compiler);
@@ -77,6 +94,9 @@ export function getPreviewCompilerConfigKey(compiler?: PreviewCompilerLike): str
           cdnDomain: config.rspack.cdnDomain,
           outputFileName: config.rspack.outputFileName,
           useWorker: config.rspack.useWorker,
+          workerFactory: config.rspack.workerFactory
+            ? identity(config.rspack.workerFactory)
+            : undefined,
           sourceAttributeNames: config.rspack.sourceAttributeNames
         }
       : undefined

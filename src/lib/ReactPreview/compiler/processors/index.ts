@@ -22,7 +22,7 @@ export class TypeScriptProcessor implements FileProcessor {
 
   async process(content: string, fileName: string, options?: TransformOptions): Promise<string> {
     try {
-      // 统一走 traverseAndProcess，保证自动注入 import React
+      // Keep JSX runtime and source instrumentation in the same transform.
       const transformedCode = this.astProcessorManager.traverseAndProcess(
         content,
         content,
@@ -33,7 +33,7 @@ export class TypeScriptProcessor implements FileProcessor {
       if (isPreviewDependencyError(error)) {
         throw error;
       }
-      throw new Error(`Failed to transform ${fileName}: ${error}`);
+      throw new Error(`Failed to transform ${fileName}: ${error}`, { cause: error });
     }
   }
 }

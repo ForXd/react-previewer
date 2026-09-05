@@ -1,0 +1,286 @@
+.workbench {
+  overflow: hidden;
+  background: var(--demo-panel);
+  border: 1px solid var(--demo-line);
+  border-radius: var(--demo-radius);
+  box-shadow: 0 4px 20px rgb(24 36 58 / 3%);
+}
+.workbench-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 49px;
+  padding-inline: 16px;
+  border-bottom: 1px solid var(--demo-line);
+}
+.workbench-view-tabs {
+  display: flex;
+  align-self: stretch;
+  gap: 18px;
+}
+.workbench-view-tabs button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 4px;
+  color: var(--demo-muted);
+  background: transparent;
+  border: 0;
+  font-size: 12px;
+}
+.workbench-view-tabs button.is-active {
+  color: var(--demo-accent);
+  font-weight: 550;
+}
+.workbench-view-tabs button.is-active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--demo-accent);
+  border-radius: 2px 2px 0 0;
+}
+.workspace-hint {
+  color: var(--demo-muted);
+  font-size: 10px;
+}
+.workbench-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--demo-line);
+}
+.toolbar-actions,
+.toolbar-segment,
+.toolbar-display {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.toolbar-actions {
+  padding-right: 12px;
+  border-right: 1px solid var(--demo-line);
+}
+.toolbar-actions button,
+.toolbar-segment button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 5px 8px;
+  color: var(--demo-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.toolbar-actions button:hover,
+.toolbar-segment button:hover {
+  background: var(--demo-hover);
+}
+.toolbar-actions button.is-active {
+  color: var(--demo-accent);
+  background: var(--demo-accent-soft);
+}
+.toolbar-segment {
+  padding: 2px;
+  background: var(--demo-background);
+  border: 1px solid var(--demo-line);
+  border-radius: 7px;
+}
+.toolbar-segment button {
+  min-height: 26px;
+}
+.toolbar-segment button.is-active {
+  color: var(--demo-ink);
+  background: var(--demo-panel);
+  border-color: var(--demo-line);
+  box-shadow: 0 1px 3px #00000006;
+}
+.toolbar-display {
+  gap: 10px;
+  margin-left: auto;
+}
+.toolbar-display .toolbar-segment:first-child button span {
+  display: none;
+}
+.toolbar-display .toolbar-segment:first-child button {
+  padding-inline: 7px;
+}
+.toolbar-display .toolbar-segment:last-child svg {
+  width: 13px;
+}
+.code-workspace {
+  min-width: 0;
+  background: var(--demo-panel);
+}
+.code-workspace__tabs {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 42px;
+  gap: 12px;
+  padding-right: 16px;
+  background: var(--demo-background);
+  border-bottom: 1px solid var(--demo-line);
+}
+.code-file-tabs {
+  display: flex;
+  overflow-x: auto;
+  align-self: stretch;
+  min-width: 0;
+}
+.code-file-tabs button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 12px 15px;
+  color: var(--demo-muted);
+  background: transparent;
+  border: 0;
+  border-right: 1px solid var(--demo-line);
+  box-shadow: inset 0 2px transparent;
+  white-space: nowrap;
+  font: 10px var(--demo-mono);
+}
+.code-file-tabs button.is-active {
+  color: var(--demo-ink);
+  background: var(--demo-panel);
+  box-shadow: inset 0 2px var(--demo-accent);
+}
+.code-file-tabs svg {
+  color: var(--demo-accent);
+  width: 13px;
+  height: 13px;
+}
+.css-icon {
+  color: var(--demo-success);
+  font-size: 15px;
+}
+.editor-auto {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--demo-muted);
+  font-size: 10px;
+  white-space: nowrap;
+}
+.code-editor-shell {
+  --demo-editor-height: clamp(320px, calc(100dvh - 380px), 900px);
+  height: var(--demo-editor-height);
+  min-width: 0;
+  overflow: hidden;
+}
+.code-editor-loading {
+  display: grid;
+  place-items: center;
+  height: var(--demo-editor-height);
+  color: var(--demo-muted);
+  font-size: 12px;
+}
+.code-workspace__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 16px;
+  color: var(--demo-muted);
+  border-top: 1px solid var(--demo-line);
+  font: 9px var(--demo-mono);
+}
+.code-workspace__footer > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.code-workspace__footer svg {
+  width: 12px;
+  height: 12px;
+  color: var(--demo-accent);
+}
+.footer-divider {
+  width: 1px;
+  height: 10px;
+  margin-inline: 4px;
+  background: var(--demo-line);
+}
+.workbench-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 42px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--demo-line);
+  color: var(--demo-muted);
+  font-size: 10px;
+}
+.workbench-status,
+.workbench-footer__meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.workbench-status strong {
+  color: var(--demo-ink);
+  font-size: 10px;
+  font-weight: 500;
+}
+.compile-duration {
+  padding: 3px 5px;
+  background: var(--demo-background);
+  border-radius: 4px;
+  font: 9px var(--demo-mono);
+}
+.workbench-footer__meta > span + span {
+  padding-left: 10px;
+  border-left: 1px solid var(--demo-line);
+}
+.draft-label {
+  color: var(--demo-warning);
+}
+@media (max-width: 1100px) {
+  .toolbar-display {
+    gap: 6px;
+  }
+  .workbench-toolbar {
+    gap: 8px;
+    padding-inline: 10px;
+  }
+}
+@media (max-width: 560px) {
+  .workspace-hint,
+  .editor-auto {
+    display: none;
+  }
+  .toolbar-display {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .code-workspace__tabs {
+    padding-right: 0;
+  }
+  .code-file-tabs {
+    flex: 1;
+  }
+  .code-file-tabs button {
+    padding-inline: 10px;
+  }
+  .code-editor-shell {
+    --demo-editor-height: 460px;
+  }
+  .workbench-footer {
+    padding-inline: 12px;
+  }
+  .workbench-footer__meta {
+    font-size: 9px;
+  }
+}

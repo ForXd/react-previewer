@@ -6,12 +6,19 @@
     "declarationMap": true,
     "jsx": "react-jsx",
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "types": ["vite/client"],
-    "forceConsistentCasingInFileNames": true
+    "types": [
+      "vite/client"
+    ],
+    "forceConsistentCasingInFileNames": true,
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ]
   },
   "include": [
     "src/lib/ReactPreview/**/*"
@@ -22,4 +29,4 @@
     "**/*.test.*",
     "**/*.spec.*"
   ]
-} 
+}

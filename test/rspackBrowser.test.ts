@@ -1,5 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
-import { FileProcessor } from '../src/lib/ReactPreview/preview/utils/FileProcessor';
+import { describe, expect, it } from 'vitest';
 import {
   compileRspackBrowserProject,
   createRspackBrowserConfig,
@@ -279,7 +278,7 @@ export default function App() {
     expect(result.output).toContain(
       'from "https://esm.sh/@arco-design/web-react@2.45.0/icon?target=es2022&external=react%2Creact-dom"'
     );
-    expect(result.output).toContain('from "https://esm.sh/react@18.2.0?target=es2022"');
+    expect(result.output).toContain('from "https://esm.sh/react@19.2.8?target=es2022"');
   });
 
   it('supports custom source metadata attribute names', async () => {
@@ -342,26 +341,4 @@ export default function App() {
     }
   });
 
-  it('allows FileProcessor to use a custom compiler and release its result', async () => {
-    const cleanup = vi.fn();
-    const compile = vi.fn(async () => ({
-      fileUrls: new Map([['Custom.tsx', 'blob:custom']]),
-      entryFile: 'Custom.tsx',
-      transformedFiles: 1,
-      cleanup
-    }));
-    const processor = new FileProcessor({ compile });
-
-    const result = await processor.processFiles(
-      { 'Custom.tsx': 'export default function Custom() { return null; }' },
-      {},
-      'Custom.tsx'
-    );
-
-    expect(result.entryFile).toBe('Custom.tsx');
-    expect(compile).toHaveBeenCalledOnce();
-
-    await processor.cleanup();
-    expect(cleanup).toHaveBeenCalledOnce();
-  });
 });

@@ -6,6 +6,31 @@ describe('Babel preview compiler', () => {
     vi.restoreAllMocks();
   });
 
+  it.each(['18.3.1', '19.2.8'])('compiles TSX without a React import using the requested React %s runtime', async (version) => {
+    const outputBlobs: Blob[] = [];
+    vi.spyOn(URL, 'createObjectURL').mockImplementation((blob) => {
+      outputBlobs.push(blob);
+      return `blob:preview-${outputBlobs.length}`;
+    });
+    const compiler = new BabelPreviewCompiler();
+    await compiler.initialize();
+    await compiler.compile({
+      entryFile: 'App.tsx',
+      depsInfo: { react: version },
+      files: {
+        'App.tsx': `import { ReactNode } from 'react';
+const label: ReactNode = 'Stable runtime';
+export default function App() { return <main>{label}</main>; }`
+      }
+    });
+    const output = await outputBlobs[0].text();
+    expect(output).toContain(`react@${version}/jsx-runtime`);
+    expect(output).not.toContain('jsx-dev-runtime');
+    expect(output).not.toContain('ReactNode');
+    expect(output).not.toContain('React.createElement');
+    expect(output).toContain('data-preview-file');
+  });
+
   it('resolves package subpath imports from the declared base package version', async () => {
     const outputBlobs: Blob[] = [];
     vi.spyOn(URL, 'createObjectURL').mockImplementation((blob) => {
@@ -64,28 +89,59 @@ export default function App() { return <IconPlus />; }
     });
 
     const output = await outputBlobs[0].text();
-    expect(output.split('\n')[4]).toContain("throw new Error('Demo runtime crash')");
+    expect(output.split('\n')[4]).toContain(
+      "throw new Error('Demo runtime crash')"
+    );
   });
 
   it.each([
     ["import Missing from './Missing';", './Missing'],
     ["import Missing from '@example/missing';", '@example/missing']
-  ])('reports unresolved import %s as a dependency error', async (importStatement, dependencyName) => {
+  ])(
+    'reports unresolved import %s as a dependency error',
+    async (importStatement, dependencyName) => {
+      const compiler = new BabelPreviewCompiler();
+      await compiler.initialize();
+
+      await expect(
+        compiler.compile({
+          entryFile: 'App.tsx',
+          depsInfo: {},
+          files: {
+            'App.tsx': `${importStatement}\nexport default function App() { return <Missing />; }`
+          }
+        })
+      ).rejects.toMatchObject({
+        name: 'PreviewDependencyError',
+        dependencyName,
+        fileName: 'App.tsx',
+        lineNumber: 1,
+        columnNumber: 1
+      });
+    }
+  );
+
+  it('releases already-created module URLs when a later module fails', async () => {
+    const create = vi
+      .spyOn(URL, 'createObjectURL')
+      .mockReturnValue('blob:partial');
+    const revoke = vi
+      .spyOn(URL, 'revokeObjectURL')
+      .mockImplementation(() => undefined);
     const compiler = new BabelPreviewCompiler();
     await compiler.initialize();
-
-    await expect(compiler.compile({
-      entryFile: 'App.tsx',
-      depsInfo: {},
-      files: {
-        'App.tsx': `${importStatement}\nexport default function App() { return <Missing />; }`
-      }
-    })).rejects.toMatchObject({
-      name: 'PreviewDependencyError',
-      dependencyName,
-      fileName: 'App.tsx',
-      lineNumber: 1,
-      columnNumber: 1
-    });
+    await expect(
+      compiler.compile({
+        entryFile: 'App.tsx',
+        depsInfo: {},
+        files: {
+          'Card.tsx': 'export default () => <div>Card</div>',
+          'App.tsx':
+            "import Card from './Card'; import Missing from 'undeclared-package'; export default () => <><Card /><Missing /></>"
+        }
+      })
+    ).rejects.toThrow();
+    expect(create).toHaveBeenCalledOnce();
+    expect(revoke).toHaveBeenCalledWith('blob:partial');
   });
 });

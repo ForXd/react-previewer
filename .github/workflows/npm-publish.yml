@@ -1,33 +1,48 @@
-# This workflow will run tests using node and then publish a package to GitHub Packages when a release is created
-# For more information see: https://docs.github.com/en/actions/publishing-packages/publishing-nodejs-packages
-
 name: Publish Package
 
 on:
-  release:
-    types: [created]
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - run: npm ci
-
   publish-npm:
-    needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version-file: .node-version
           registry-url: https://registry.npmjs.org/
+          package-manager-cache: false
+      - name: Verify release tag
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const { version } = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          assert.equal(process.env.GITHUB_REF_NAME, `v${version}`, 'Tag must match package.json');
+          assert.match(version, /^\d+\.\d+\.\d+$/, 'Only stable versions use this workflow');
+          JS
       - run: npm ci
-      - run: npm run build:lib
-      - run: npm publish --access public
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - run: npm run build:page
+      - run: npm run test:package
+      - run: npm audit --audit-level=low
+      - name: Publish to npm with trusted publishing
+        run: npm publish --access public --provenance
+      - name: Create GitHub release
+        run: gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes --title "$GITHUB_REF_NAME"
         env:
-          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+          GH_TOKEN: ${{ github.token }}

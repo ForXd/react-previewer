@@ -208,7 +208,10 @@ export class ASTProcessorManager {
     const result = transform(code, {
       ast: true,
       retainLines: true,
-      presets: ['react', 'typescript'],
+      presets: [
+        ['react', { runtime: 'automatic', development: false }],
+        ['typescript', { onlyRemoveTypeImports: false }]
+      ],
       filename: options.filename,
       plugins: [
         // 自定义插件，用于处理AST
@@ -230,9 +233,7 @@ export class ASTProcessorManager {
       ]
     });
 
-    // 在位置信息注入后，再注入 React 导入
-    const processedCode = result.code ?? '';
-    return ensureReactImport(processedCode);
+    return result.code ?? '';
   }
 }
 
@@ -246,11 +247,12 @@ export function injectJSXSourceInfo(
     filename: options.filename,
     presets: [
       ['typescript', {
-        allExtensions: true,
-        isTSX: true
+        ignoreExtensions: true,
+        onlyRemoveTypeImports: false
       }]
     ],
     plugins: [
+      'syntax-jsx',
       () => ({
         visitor: {
           JSXOpeningElement: (path: { node: Node }) => {
@@ -278,11 +280,12 @@ export function injectJSXSourceInfoAndCssImports(
     filename: options.filename,
     presets: [
       ['typescript', {
-        allExtensions: true,
-        isTSX: true
+        ignoreExtensions: true,
+        onlyRemoveTypeImports: false
       }]
     ],
     plugins: [
+      'syntax-jsx',
       () => ({
         visitor: {
           JSXOpeningElement: (path: { node: Node }) => {
@@ -387,14 +390,4 @@ function updateJSXElementEndPosition(node: ExtendedNode, sourceAttributeNames?: 
       createJSXAttribute(attributes.endColumn, closingElement.loc.end.column.toString())
     );
   }
-}
-
-// 工具函数：自动注入 import React
-function ensureReactImport(code: string): string {
-  // 检查是否已 import React
-  if (/import\s+React(\s|,|\{|$)/.test(code) || /from\s+['"]react['"]/.test(code)) {
-    return code;
-  }
-  // 强制注入
-  return `import React from 'react';\n${code}`;
 }

@@ -1,6 +1,6 @@
 import { CodeTransformer } from '../../compiler/CodeTransformer';
 import type { PreviewCompiler, PreviewCompileInput, PreviewCompileResult } from './types';
-import { DEFAULT_DEPENDENCIES } from '../constant';
+import { getPreviewDependencies } from '../constant';
 
 export class BabelPreviewCompiler implements PreviewCompiler {
   private codeTransformer = new CodeTransformer();
@@ -12,7 +12,7 @@ export class BabelPreviewCompiler implements PreviewCompiler {
   async compile(input: PreviewCompileInput): Promise<PreviewCompileResult> {
     const fileUrls = await this.codeTransformer.transformFiles(
       input.files,
-      { ...DEFAULT_DEPENDENCIES, ...input.depsInfo },
+      getPreviewDependencies(input.depsInfo),
       { sourceAttributeNames: input.sourceAttributeNames }
     );
 

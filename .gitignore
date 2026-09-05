@@ -8,6 +8,7 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+# Library output is generated for npm publishing; GitHub Pages uses page/.
 dist
 dist-ssr
 *.local
