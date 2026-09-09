@@ -19,7 +19,8 @@ function run(args, env = {}) {
 const host = 'http://127.0.0.1:5173';
 const preview = 'http://127.0.0.1:5174/ai-preview.html';
 run(['--env-file-if-exists=.env.ai', 'scripts/ai-server.mjs'], {
-  AI_HOST_ORIGIN: host
+  AI_HOST_ORIGIN: host,
+  AI_PORT: '8787'
 });
 run(
   [

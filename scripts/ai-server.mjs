@@ -8,7 +8,8 @@ export function createAiServer({
   baseUrl = process.env.AI_BASE_URL || 'https://api.groq.com/openai/v1',
   model = process.env.AI_MODEL || 'openai/gpt-oss-120b',
   allowedOrigin = process.env.AI_HOST_ORIGIN || 'http://127.0.0.1:5173',
-  fetchImpl = fetch
+  fetchImpl = fetch,
+  timeoutMs = 120_000
 } = {}) {
   let active = 0;
   let starts = [];
@@ -37,8 +38,13 @@ export function createAiServer({
     starts.push(Date.now());
     active++;
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 120_000);
-    res.on('close', () => controller.abort());
+    const cancel = () => {
+      controller.abort();
+      // AbortController only reaches fetch; also release an unfinished upload.
+      if (!req.complete) req.destroy();
+    };
+    const timer = setTimeout(cancel, timeoutMs);
+    res.on('close', cancel);
     try {
       const chunks = [];
       let bytes = 0;
@@ -134,6 +140,7 @@ export function createAiServer({
       }
       res.end();
     } catch {
+      if (res.destroyed) return;
       if (!res.headersSent) json(502, '生成超时或连接失败，请重试');
       else res.end();
     } finally {

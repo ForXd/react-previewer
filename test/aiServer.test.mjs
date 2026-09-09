@@ -1,3 +1,4 @@
+import http from 'node:http';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createAiServer } from '../scripts/ai-server.mjs';
 const servers = [];
@@ -78,4 +79,27 @@ describe('AI API boundary', () => {
     await response.body.cancel();
     await vi.waitFor(() => expect(signal.aborted).toBe(true));
   });
+});
+
+// An incomplete body must not hold both concurrency slots until Node's default timeout.
+it('releases concurrency slots when slow uploads exceed the generation deadline', async () => {
+  const url = await start({
+    timeoutMs: 100,
+    fetchImpl: async () => new Response('data: [DONE]\n\n')
+  });
+  const upload = () =>
+    new Promise((resolve) => {
+      const req = http.request(url, {
+        method: 'POST',
+        headers: {
+          origin: 'http://127.0.0.1:5173',
+          'content-type': 'application/json'
+        }
+      });
+      req.on('error', () => resolve());
+      req.on('close', () => resolve());
+      req.write('{"prompt":');
+    });
+  await Promise.all([upload(), upload()]);
+  expect((await request(url)).status).toBe(200);
 });
