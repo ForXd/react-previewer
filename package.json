@@ -35,7 +35,9 @@
     "package:pack": "node scripts/pack-package.mjs",
     "test:package": "node scripts/verify-package.mjs",
     "check:page": "node scripts/check-page.mjs",
-    "check": "npm run lint && npm test && npm run build && npm run build:page && npm run check:page && npm run test:package"
+    "check": "npm run lint && npm test && npm run build && npm run build:page && npm run check:page && npm run test:package",
+    "dev:ai": "node scripts/dev-ai.mjs",
+    "start:ai": "node --env-file-if-exists=.env.ai scripts/ai-server.mjs"
   },
   "keywords": [
     "react",

@@ -41,6 +41,7 @@ export default function DemoWorkbench() {
           <small>Playground</small>
         </a>
         <div className="demo-header__meta">
+          <a href="#ai">AI 生成页面 ↗</a>
           <span className="demo-version">v{version}</span>
           <a
             href="https://github.com/ForXd/react-previewer"
