@@ -185,3 +185,7 @@ npm run dev
 ## License
 
 [MIT](https://github.com/ForXd/react-previewer/blob/main/LICENSE)
+
+## AI 页面生成
+
+运行 `npm run dev:ai` 可使用需求输入、流式代码生成和自动预览。先复制 `.env.ai.example` 为 `.env.ai` 并配置服务端模型 Key。支持继续修改、停止生成和手机宽度预览；生成代码在独立来源运行。启动、模型配置与部署步骤见 [AI Studio 文档](docs/ai-studio.md)。
