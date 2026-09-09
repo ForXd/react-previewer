@@ -44,10 +44,10 @@ export default function AiWorkbench() {
     setNotice('预览已更新，可以继续输入修改需求。');
     setError('');
   }, []);
-  const reportPreviewError = useCallback(
-    (message: string) => setError(`预览失败：${message}`),
-    []
-  );
+  const reportPreviewError = useCallback((message: string) => {
+    setError(`预览失败：${message}`);
+    setNotice('未切换预览，可继续修改需求后重试。');
+  }, []);
   const stop = () => {
     request.current?.controller.abort();
     request.current = null;
