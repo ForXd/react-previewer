@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties, type FormEvent } from 'react';
+import { useMemo, useState, type CSSProperties, type FormEvent, type KeyboardEvent } from 'react';
 import {
   ReactPreviewer,
   type PreviewCompilerLike,
@@ -45,6 +45,19 @@ const normalizePath = (value: string) => {
   const path = value.trim();
   return !path ? '/' : path.startsWith('/') ? path : `/${path}`;
 };
+
+function navigateTabs(event: KeyboardEvent<HTMLDivElement>) {
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+  const tabs = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
+  const currentIndex = tabs.indexOf(event.target as HTMLButtonElement);
+  if (currentIndex === -1) return;
+  event.preventDefault();
+  const nextIndex = event.key === 'Home' ? 0
+    : event.key === 'End' ? tabs.length - 1
+      : (currentIndex + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+  tabs[nextIndex].focus();
+  tabs[nextIndex].click();
+}
 
 export default function DemoWorkbench() {
   const [selectedId, setSelectedId] = useState(demoCatalog[0].id);
@@ -109,6 +122,7 @@ export default function DemoWorkbench() {
   }), [previewSkin]);
 
   const selectDemo = (id: string) => {
+    if (id === selectedId) return;
     const nextDemo = demoCatalog.find((demo) => demo.id === id) ?? demoCatalog[0];
     setSelectedId(id);
     setWorkingFiles({ ...nextDemo.files });
@@ -175,6 +189,7 @@ export default function DemoWorkbench() {
               <button
                 type="button"
                 className={demo.id === selectedDemo.id ? 'is-active' : undefined}
+                aria-pressed={demo.id === selectedDemo.id}
                 onClick={() => selectDemo(demo.id)}
                 key={demo.id}
               >
@@ -186,16 +201,15 @@ export default function DemoWorkbench() {
           </nav>
 
           <section className="style-note">
-            <span className="demo-eyebrow">Caller-owned UI</span>
-            <h3>样式留在调用方</h3>
-            <p>设备框、工具栏与视觉主题都属于这个 demo；ReactPreviewer 只负责运行代码。</p>
-            <pre>{`classNames={{\n  root: 'demo-runtime',\n  loading: 'custom-loading',\n  iframe: 'custom-frame'\n}}\nstyles={{\n  root: { borderRadius: ${previewSkin === 'paper' ? 16 : 8} }\n}}`}</pre>
+            <span className="demo-eyebrow">Quick start</span>
+            <h3>从代码到预览</h3>
+            <p>选择示例并编辑文件，修改会自动编译。切换到「预览」查看效果，再用设备宽度和主题检查呈现。</p>
           </section>
         </aside>
 
         <main className="demo-main">
           <section className="workbench" aria-label="React Previewer 工作台">
-            <div className="workbench-view-tabs" role="tablist" aria-label="工作台视图">
+            <div className="workbench-view-tabs" role="tablist" aria-label="工作台视图" onKeyDown={navigateTabs}>
               {(['editor', 'preview'] as const).map((view) => (
                 <button
                   id={`${view}-tab`}
@@ -203,6 +217,7 @@ export default function DemoWorkbench() {
                   role="tab"
                   aria-controls={`${view}-panel`}
                   aria-selected={workbenchView === view}
+                  tabIndex={workbenchView === view ? 0 : -1}
                   className={workbenchView === view ? 'is-active' : undefined}
                   onClick={() => setWorkbenchView(view)}
                   key={view}
@@ -217,14 +232,17 @@ export default function DemoWorkbench() {
                 <button
                   type="button"
                   className={isInspecting ? 'is-active' : undefined}
+                  aria-pressed={isInspecting}
+                  title={isInspecting ? '退出元素检查' : '在预览中检查元素'}
                   onClick={() => {
+                    setWorkbenchView('preview');
                     setIsInspecting((value) => !value);
                     setSourceInfo(null);
                   }}
                 >
                   <span aria-hidden="true">⌖</span>{isInspecting ? '退出检查' : '检查元素'}
                 </button>
-                <button type="button" onClick={() => setRefreshKey((key) => key + 1)}>
+                <button type="button" title="重新运行预览" onClick={() => setRefreshKey((key) => key + 1)}>
                   <span aria-hidden="true">↻</span>刷新
                 </button>
                 <button type="button" onClick={resetCode} disabled={!isDirty} aria-label="重置代码">
@@ -232,11 +250,12 @@ export default function DemoWorkbench() {
                 </button>
               </div>
 
-              <div className="toolbar-segment" aria-label="编译器">
+              <div className="toolbar-segment" role="group" aria-label="编译器">
                 {(['babel', 'rspack-browser'] as const).map((mode) => (
                   <button
                     type="button"
                     className={compilerMode === mode ? 'is-active' : undefined}
+                    aria-pressed={compilerMode === mode}
                     onClick={() => setCompilerMode(mode)}
                     key={mode}
                   >
@@ -245,24 +264,26 @@ export default function DemoWorkbench() {
                 ))}
               </div>
 
-              <div className="toolbar-segment" aria-label="预览主题">
+              <div className="toolbar-segment" role="group" aria-label="预览主题">
                 {(['paper', 'ink'] as const).map((skin) => (
                   <button
                     type="button"
                     className={previewSkin === skin ? 'is-active' : undefined}
+                    aria-pressed={previewSkin === skin}
                     onClick={() => setPreviewSkin(skin)}
                     key={skin}
                   >
-                    {skin === 'paper' ? 'Paper' : 'Ink'}
+                    {skin === 'paper' ? '浅色' : '深色'}
                   </button>
                 ))}
               </div>
 
-              <div className="toolbar-segment toolbar-segment--viewport" aria-label="预览宽度">
+              <div className="toolbar-segment toolbar-segment--viewport" role="group" aria-label="预览宽度">
                 {(Object.entries(viewports) as Array<[ViewportName, typeof viewport]>).map(([name, item]) => (
                   <button
                     type="button"
                     className={viewportName === name ? 'is-active' : undefined}
+                    aria-pressed={viewportName === name}
                     onClick={() => setViewportName(name)}
                     key={name}
                   >
@@ -290,24 +311,27 @@ export default function DemoWorkbench() {
                   </span>
                 </header>
 
-                <div className="code-file-tabs" role="tablist" aria-label="示例文件">
-                  {fileNames.map((fileName) => (
+                <div className="code-file-tabs" role="tablist" aria-label="示例文件" onKeyDown={navigateTabs}>
+                  {fileNames.map((fileName, index) => (
                     <button
+                      id={`file-tab-${index}`}
                       type="button"
                       role="tab"
                       aria-selected={activeFile === fileName}
+                      aria-controls="code-editor-panel"
+                      tabIndex={activeFile === fileName ? 0 : -1}
                       className={activeFile === fileName ? 'is-active' : undefined}
                       onClick={() => setActiveFile(fileName)}
                       key={fileName}
                     >
-                      <span aria-hidden="true">{fileName.endsWith('.css') ? '#' : '&lt;&gt;'}</span>
+                      <span aria-hidden="true">{fileName.endsWith('.css') ? '#' : '<>'}</span>
                       {fileName}
                       {workingFiles[fileName] !== selectedDemo.files[fileName] && <i aria-label="已修改" />}
                     </button>
                   ))}
                 </div>
 
-                <div className="code-editor-shell">
+                <div className="code-editor-shell" id="code-editor-panel" role="tabpanel" aria-labelledby={`file-tab-${fileNames.indexOf(activeFile)}`}>
                   <MonacoCodeEditor
                     demoId={selectedDemo.id}
                     fileName={activeFile}
@@ -392,8 +416,8 @@ export default function DemoWorkbench() {
                 <span>{compilerMode === 'babel' ? 'Babel compiler' : 'Rspack browser compiler'}</span>
               </div>
               <div className="workbench-footer__live">
-                <span>{isDirty ? '编辑内容已进入实时预览' : '选择文件开始编辑'}</span>
-                <span>{compilerMode === 'babel' ? '120ms debounce' : 'worker compile'}</span>
+                <span role="status">{status.error ? '预览出错 · 请检查代码' : status.isLoading ? '正在编译与加载…' : '预览已就绪'}</span>
+                <span>{isDirty ? '已修改 · 自动编译' : '选择文件开始编辑'}</span>
               </div>
             </footer>
           </section>
