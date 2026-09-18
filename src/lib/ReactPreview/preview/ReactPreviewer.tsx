@@ -46,7 +46,7 @@ export function ReactPreviewer({
         <PreviewFrame
           {...previewProps}
           files={files}
-          previewPath={initialPath}
+          initialPath={initialPath}
           classNames={classNames}
           styles={styles}
           renderError={renderError}

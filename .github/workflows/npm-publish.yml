@@ -1,33 +1,99 @@
-# This workflow will run tests using node and then publish a package to GitHub Packages when a release is created
-# For more information see: https://docs.github.com/en/actions/publishing-packages/publishing-nodejs-packages
-
 name: Publish Package
 
 on:
-  release:
-    types: [created]
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-publish
+  cancel-in-progress: false
 
 jobs:
-  build:
+  validate:
+    uses: ./.github/workflows/validate.yml
+
+  release-status:
+    needs: validate
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      published: ${{ steps.release.outputs.published }}
+      tag: ${{ steps.release.outputs.tag }}
+      commit: ${{ steps.release.outputs.commit }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: 20
-      - run: npm ci
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - name: Only release commits already on main
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+      - name: Check the version in the official npm registry
+        id: release
+        run: node scripts/release-status.mjs
 
   publish-npm:
-    needs: build
+    needs: [validate, release-status]
+    if: needs.release-status.outputs.published == 'false'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: 20
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
           registry-url: https://registry.npmjs.org/
-      - run: npm ci
-      - run: npm run build:lib
-      - run: npm publish --access public
+          package-manager-cache: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: npm-package
+          path: .artifacts
+      - name: Publish the exact package tested by the consumer matrix
+        run: npm publish .artifacts/*.tgz --access public --provenance --ignore-scripts
+      - name: Wait for registry propagation and verify archive integrity
+        run: node scripts/verify-release.mjs .artifacts/*.tgz
+
+  github-release:
+    needs: [validate, release-status, publish-npm]
+    if: >-
+      always() && !cancelled() &&
+      needs.validate.result == 'success' &&
+      needs.release-status.result == 'success' &&
+      (needs.publish-npm.result == 'success' || needs.release-status.outputs.published == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Create or recover the GitHub release at the published source commit
         env:
-          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.release-status.outputs.tag }}
+          RELEASE_COMMIT: ${{ needs.release-status.outputs.commit }}
+        run: |
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --target "$RELEASE_COMMIT" --generate-notes --title "$RELEASE_TAG"
+          fi
+
+  pages:
+    needs: validate
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/static.yml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write

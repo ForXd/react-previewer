@@ -28,7 +28,7 @@ describe('dynamic dependency loader', () => {
     expect(loader).toContain("element.crossOrigin = 'anonymous'");
     expect(loader).toContain('applyCrossOrigin(link, url)');
     expect(loader).toContain('applyCrossOrigin(script, tailwindResource.url)');
-    expect(loader).toContain('https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.10');
+    expect(loader).toContain('https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3');
   });
 
   it('normalizes npm range versions when creating esm.sh URLs', () => {

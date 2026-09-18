@@ -1,4 +1,4 @@
-import { COMPONENT_LIBRARY_STYLE, TRANSFORM_OPTIONS } from '../constant';
+import { COMPONENT_LIBRARY_STYLE, TRANSFORM_OPTIONS, getPreviewDependencies } from '../constant';
 import { generateDynamicDependencyLoader, transformDepsToEsmLinks, generateImportMapScript } from '../DependencyResolver';
 import {
   createSourceAttributeSelector,
@@ -21,14 +21,7 @@ export class HTMLGenerator {
     enableTailwind = false
   ): string {
     // 合并默认依赖和传入的依赖
-    const allDeps = {
-      'react': '18.2.0',
-      'react-dom': '18.2.0',
-      'react-dom/client': '18.2.0',
-      'react/jsx-runtime': '18.2.0',
-      'react/jsx-dev-runtime': '18.2.0',
-      ...depsInfo
-    };
+    const allDeps = getPreviewDependencies(depsInfo);
     const styleResources = this.resolveStyleResources(allDeps, dependencyStyles);
     const cacheKey = JSON.stringify({ allDeps, styleResources, enableTailwind });
     let cached = this.cache.get(cacheKey);
@@ -268,7 +261,14 @@ export class HTMLGenerator {
           window.React = React;
           App = await import('${entryUrl}');
           
-          const root = createRoot(document.getElementById('root'));
+          const root = createRoot(document.getElementById('root'), {
+            // React 19 reports render errors through this callback instead of
+            // rethrowing them. React 18 uses the window error listener below.
+            onUncaughtError: (error) => sendMessage('runtime-error', {
+              message: error?.message || String(error),
+              stack: error?.stack
+            })
+          });
           root.render(React.createElement(App.default));
           
           setTimeout(() => {

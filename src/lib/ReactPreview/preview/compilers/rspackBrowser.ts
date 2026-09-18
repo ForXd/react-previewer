@@ -1,5 +1,5 @@
 import { injectJSXSourceInfoAndCssImports } from '../../compiler/ast/processors';
-import { DEFAULT_DEPENDENCIES, TRANSFORM_OPTIONS } from '../constant';
+import { getPreviewDependencies, TRANSFORM_OPTIONS } from '../constant';
 import { parsePackagePath, resolveDependencyUrl, transformDepsToEsmLinks } from '../DependencyResolver';
 import type {
   PreviewCompiler,
@@ -348,13 +348,7 @@ function isJSXSourceFile(fileName: string): boolean {
 }
 
 function getRspackDependencies(depsInfo: Record<string, string>): Record<string, string> {
-  const dependencies: Record<string, string> = {
-    ...DEFAULT_DEPENDENCIES,
-    'react-dom/client': DEFAULT_DEPENDENCIES['react-dom'],
-    'react/jsx-runtime': DEFAULT_DEPENDENCIES.react,
-    'react/jsx-dev-runtime': DEFAULT_DEPENDENCIES.react,
-    ...depsInfo
-  };
+  const dependencies = getPreviewDependencies(depsInfo);
 
   for (const dependencyName of Object.keys(dependencies)) {
     const { packageName, subPath } = parsePackagePath(dependencyName);
