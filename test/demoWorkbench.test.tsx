@@ -68,6 +68,9 @@ describe('DemoWorkbench live editing', () => {
     );
     expect(previewFiles['App.tsx']).toBe(editedApp);
 
+    fireEvent.click(screen.getByRole('button', { name: /数据概览/ }));
+    expect(JSON.parse(screen.getByTestId('preview-files').textContent ?? '{}')['App.tsx']).toBe(editedApp);
+
     fireEvent.click(screen.getByRole('tab', { name: 'MetricCard.tsx' }));
     const editedCard =
       'export function MetricCard() { return <article>Edited card</article>; }';
@@ -124,6 +127,39 @@ describe('DemoWorkbench live editing', () => {
     expect(editorTab.getAttribute('aria-selected')).toBe('true');
     expect(editorPanel?.hidden).toBe(false);
     expect(previewPanel?.hidden).toBe(true);
+  });
+
+  it('supports keyboard navigation across view and file tabs', () => {
+    render(<DemoWorkbench />);
+    const editorTab = screen.getByRole('tab', { name: '编辑器' });
+    const previewTab = screen.getByRole('tab', { name: '预览' });
+    fireEvent.keyDown(editorTab, { key: 'ArrowRight' });
+    expect(document.activeElement).toBe(previewTab);
+    expect(previewTab.getAttribute('aria-selected')).toBe('true');
+    expect(editorTab.tabIndex).toBe(-1);
+    fireEvent.keyDown(previewTab, { key: 'Home' });
+    expect(document.activeElement).toBe(editorTab);
+
+    const appTab = screen.getByRole('tab', { name: 'App.tsx' });
+    fireEvent.keyDown(appTab, { key: 'ArrowRight' });
+    const cardTab = screen.getByRole('tab', { name: 'MetricCard.tsx' });
+    expect(document.activeElement).toBe(cardTab);
+    expect(cardTab.getAttribute('aria-selected')).toBe('true');
+    expect(document.getElementById('code-file-panel')?.getAttribute('aria-labelledby')).toBe(cardTab.id);
+    fireEvent.keyDown(cardTab, { key: 'End' });
+    const fileTabs = document.querySelectorAll('.code-file-tabs [role="tab"]');
+    expect(document.activeElement).toBe(fileTabs[fileTabs.length - 1]);
+    fireEvent.keyDown(document.activeElement!, { key: 'ArrowRight' });
+    expect(document.activeElement).toBe(appTab);
+  });
+
+  it('opens the preview when element inspection is enabled', () => {
+    render(<DemoWorkbench />);
+    const inspectButton = screen.getByRole('button', { name: '检查元素' });
+    fireEvent.click(inspectButton);
+    expect(inspectButton.getAttribute('aria-pressed')).toBe('true');
+    expect(document.getElementById('preview-panel')?.hidden).toBe(false);
+    expect(screen.getByRole('tab', { name: '预览' }).getAttribute('aria-selected')).toBe('true');
   });
 });
 
